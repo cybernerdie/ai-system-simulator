@@ -21,6 +21,8 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
         ...(config.streaming ? ['streaming'] : []),
         ...(config.jsonMode ? ['JSON mode'] : []),
         ...(config.promptCache ? ['cached prompt'] : []),
+        ...(config.fineTuned ? ['fine-tuned'] : []),
+        ...(config.version === 'latest' ? ['latest (unpinned)'] : []),
       ];
     case 'gpu_llm':
       return [String(config.model).replace('open-', '').toUpperCase(), `${config.gpus} GPU${Number(config.gpus) > 1 ? 's' : ''}`, `batch ${config.batch}`, String(config.quant).toUpperCase()];
@@ -45,6 +47,11 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
       return [
         { full: 'full history', window: `last ${config.windowTurns} turns`, summary: 'rolling summary', retrieval: 'long-term memory' }[String(config.strategy)] ?? '',
       ];
+    case 'stt':
+    case 'tts':
+      return [config.streaming ? 'streaming' : 'waits for the whole thing'];
+    case 'user_limits':
+      return [`${config.perUserRpm} req/min per user`];
     case 'input_guard':
       return [`strict ${Number(config.strictness).toFixed(2)}`];
     default:

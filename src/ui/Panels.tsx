@@ -16,6 +16,7 @@ export const ms = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${M
 export const usd = (v: number) => `$${v < 10 ? v.toFixed(2) : v.toFixed(0)}`;
 
 export const METRIC_META: Record<GoalMetric, { label: string; fmt: (v: number) => string }> = {
+  piiLeak: { label: 'Personal data leaked', fmt: pct },
   accuracy: { label: 'Accuracy', fmt: pct },
   hallucination: { label: 'Hallucination', fmt: pct },
   injection: { label: 'Injection success', fmt: pct },
@@ -27,7 +28,7 @@ export const METRIC_META: Record<GoalMetric, { label: string; fmt: (v: number) =
 
 /* ---------- palette ---------- */
 
-const GROUPS = ['Retrieval', 'Memory', 'Generation', 'Inference', 'Efficiency', 'Safety', 'Quality'] as const;
+const GROUPS = ['Retrieval', 'Memory', 'Generation', 'Inference', 'Voice', 'Efficiency', 'Safety', 'Quality'] as const;
 
 export function Palette({ onAdd }: { onAdd: (t: ComponentType) => void }) {
   return (
@@ -94,10 +95,12 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
           series: history.map((h) => h.avgHistoryTokens),
         }
       : { key: 'rec', label: 'Recall', value: m.recall == null ? '—' : pct(m.recall), series: history.map((h) => h.recall ?? 0) },
-    { key: 'inj', label: 'Injection', value: pct(m.injection), series: history.map((h) => h.injection), metric: 'injection' },
+    goals.some((g) => g.metric === 'piiLeak')
+      ? { key: 'pii', label: 'PII leaked', value: pct(m.piiLeak), series: history.map((h) => h.piiLeak), metric: 'piiLeak' as const }
+      : { key: 'inj', label: 'Injection', value: pct(m.injection), series: history.map((h) => h.injection), metric: 'injection' as const },
     { key: 'err', label: 'Errors', value: pct(m.errorRate), series: history.map((h) => h.errorRate), metric: 'errorRate' },
     { key: 'p50', label: 'p50 latency', value: ms(m.p50), series: history.map((h) => h.p50), metric: 'p50' },
-    { key: 'ttft', label: 'First token', value: ms(m.ttftP50), series: history.map((h) => h.ttftP50), metric: 'ttftP50' },
+    { key: 'ttft', label: m.voice ? 'First audio' : 'First token', value: ms(m.ttftP50), series: history.map((h) => h.ttftP50), metric: 'ttftP50' },
     { key: 'cost', label: 'Cost / 1k', value: usd(m.costPer1k), series: history.map((h) => h.costPer1k), metric: 'costPer1k' },
   ];
   const hidden = new Set(m.qualityVisible ? [] : ['acc', 'hal', 'inj', 'rec']);
@@ -337,7 +340,7 @@ function Mission({
                     {unknown ? '?' : ok === null ? <span className="goal-ring" /> : ok ? <Check size={11} strokeWidth={3} /> : <X size={11} strokeWidth={3} />}
                   </span>
                   <span className="goal-text">
-                    {meta.label} {g.op === '>=' ? 'at least' : 'at most'} {meta.fmt(g.value)}
+                    {g.metric === 'ttftP50' && s.traffic.voice ? 'First audio' : meta.label} {g.op === '>=' ? 'at least' : 'at most'} {meta.fmt(g.value)}
                   </span>
                   {m && <span className="goal-now">{unknown ? 'unknown' : meta.fmt(m[g.metric])}</span>}
                 </li>

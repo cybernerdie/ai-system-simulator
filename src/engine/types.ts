@@ -16,7 +16,11 @@ export type ComponentType =
   | 'fallback'
   | 'agent_team'
   | 'validator'
-  | 'batch_queue';
+  | 'batch_queue'
+  | 'pii_redactor'
+  | 'stt'
+  | 'tts'
+  | 'user_limits';
 
 export type ConfigValue = number | string | boolean;
 export type NodeConfig = Record<string, ConfigValue>;
@@ -72,6 +76,16 @@ export interface TrafficProfile {
   systemPromptTokens?: number;
   /** Background jobs (summarise, tag, extract) that nobody is waiting on. */
   batchShare?: number;
+  /** Requests for your own custom task (your labels, your format, your house style). */
+  taskShare?: number;
+  /** The provider has silently updated the model behind the "latest" alias. */
+  driftLatest?: boolean;
+  /** Requests that contain personal data (names, emails, health or card details). */
+  piiShare?: number;
+  /** A voice app: users speak and expect to hear the answer. */
+  voice?: boolean;
+  /** Share of traffic coming from a handful of abusive / scripted accounts. */
+  abuseShare?: number;
 }
 
 export type Outcome =
@@ -103,7 +117,10 @@ export type Cause =
   | 'handoff_loss'
   | 'invalid_output'
   | 'stale_index'
-  | 'parse_miss';
+  | 'parse_miss'
+  | 'task_unknown'
+  | 'model_drift'
+  | 'voice_pipeline';
 
 export type StepTone = 'ok' | 'bad' | 'warn' | 'neutral';
 
@@ -172,11 +189,18 @@ export interface Metrics {
   offlineInRealtime: boolean;
   /** A big fixed system prompt is being paid for in full on every call. */
   bigUncachedPrompt: boolean;
+  /** Share of requests with personal data that reached a third-party model unredacted. */
+  piiLeak: number;
+  /** Abusive accounts are running unchecked. */
+  abuseUnchecked: boolean;
+  /** A voice app: first-token time is time to first audio. */
+  voice: boolean;
   /** A handful of individual requests from this tick, failures first. */
   samples: RequestSample[];
 }
 
 export type GoalMetric =
+  | 'piiLeak'
   | 'accuracy'
   | 'hallucination'
   | 'injection'

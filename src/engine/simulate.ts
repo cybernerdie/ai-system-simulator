@@ -43,6 +43,9 @@ interface Req {
   /** multi-part research task with this many sub-questions (0 = not one) */
   subtasks: number;
   structured: boolean;
+  task: boolean;
+  pii: boolean;
+  abuser: boolean;
   stale: boolean;
   table: boolean;
   offline: boolean;
@@ -73,6 +76,7 @@ interface Trace {
   parseMiss?: boolean;
   staleHit?: boolean;
   question: string;
+  piiLeak?: boolean;
   historyTokens?: number;
   batchTokens?: number;
   qkind: RequestSample['kind'];
@@ -142,6 +146,9 @@ export const CAUSE_TEXT: Record<Cause, string> = {
   handoff_loss: 'Details got lost as the work passed between agents, so the combined answer missed something.',
   provider_down: 'The model provider was failing requests, and nothing retried or failed over to another model.',
   gpu_saturated: 'Your GPUs were already at full capacity, so the request queued until it timed out.',
+  task_unknown: 'An off-the-shelf model doesn\'t know your labels, format or house style, so it guessed.',
+  model_drift: 'The provider updated the model behind "latest", and your prompt no longer works the way it did.',
+  voice_pipeline: 'A voice request needs speech-to-text in and text-to-speech out; part of that chain is missing.',
   forgot_context: 'The user referred back to something said earlier, but that part of the conversation was no longer in the prompt.',
 };
 
@@ -234,6 +241,13 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   const agent = first('agent');
   const judge = first('output_guard');
   const memory = first('memory');
+  const redactor = first('pii_redactor');
+  const stt = first('stt');
+  const tts = first('tts');
+  const limits = first('user_limits');
+  const perUserRpm = limits ? cfgNum(limits, 'perUserRpm', 60) : Infinity;
+  /** An abusive account fires roughly this many requests per minute. */
+  const ABUSER_RPM = 600;
   const validator = first('validator');
   const batchQ = first('batch_queue');
   const basePrompt = traffic.systemPromptTokens ?? BASE_PROMPT_TOKENS;
@@ -322,6 +336,9 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     const req: Req = {
       subtasks: 0,
       structured: false,
+      task: false,
+      pii: false,
+      abuser: false,
       stale: false,
       table: false,
       offline: false,
@@ -345,6 +362,14 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       req.repeat = false;
     }
     if ((traffic.structuredShare ?? 0) > 0 && !req.adversarial) req.structured = rng() < traffic.structuredShare!;
+    if ((traffic.taskShare ?? 0) > 0 && !req.adversarial && !req.kb && rng() < traffic.taskShare!) req.task = true;
+    if ((traffic.piiShare ?? 0) > 0 && !req.adversarial) req.pii = rng() < traffic.piiShare!;
+    if ((traffic.abuseShare ?? 0) > 0 && !req.adversarial && rng() < traffic.abuseShare!) {
+      req.abuser = true;
+      req.kb = false;
+      req.repeat = false;
+      req.pii = false;
+    }
     if (req.kb && (traffic.staleShare ?? 0) > 0) req.stale = rng() < traffic.staleShare!;
     if (req.kb && (traffic.tableShare ?? 0) > 0) req.table = rng() < traffic.tableShare!;
     if ((traffic.batchShare ?? 0) > 0 && !req.adversarial) {
@@ -399,6 +424,38 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       t.cost += usd;
       if (text) step(n, text, tone, d);
     };
+
+    // 0a. Per-user limits: scripted accounts hit the cap, people don't
+    if (req.abuser) {
+      if (limits && rng() >= perUserRpm / ABUSER_RPM) {
+        touch(limits, 3, 0, `Blocked: this account sent ${ABUSER_RPM} requests/min (limit ${perUserRpm})`, 'ok');
+        t.outcome = 'blocked';
+        t.ttft = t.latency;
+        continue;
+      }
+      if (limits) touch(limits, 3, 0, 'Under the per-user limit, let through', 'warn');
+      t.steps.push({ kind: 'users', text: 'Scripted account hammering the API with long prompts', tone: 'warn' });
+    } else if (limits) touch(limits, 3, 0);
+
+    // 0b. Voice: audio has to become text first
+    if (traffic.voice) {
+      if (!stt) {
+        t.steps.push({ kind: 'stt', text: 'Audio arrived, but nothing turns speech into text', tone: 'bad' });
+        t.outcome = 'failed';
+        t.cause = 'voice_pipeline';
+        t.ttft = t.latency;
+        continue;
+      }
+      const streamed = stt.config.streaming === true;
+      touch(stt, streamed ? 280 : 1300, 0.00012, streamed ? 'Transcribed while the user was speaking' : 'Waited for the user to finish, then transcribed the whole clip', streamed ? 'ok' : 'warn');
+    }
+
+    // 0c. Personal data: redact before anything leaves your systems
+    let redacted = false;
+    if (req.pii && redactor) {
+      redacted = rng() < 0.985;
+      touch(redactor, 25, 0.00003, redacted ? 'Swapped personal details for placeholders' : 'Missed a piece of personal data', redacted ? 'ok' : 'bad');
+    } else if (redactor) touch(redactor, 25, 0.00003);
 
     // 1. Input guardrail
     if (inputGuard) {
@@ -546,7 +603,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
         0,
         { nodeId: router.id, kind: 'router', text: sizes.size >= 2 ? `${req.easy ? 'Easy' : 'Hard'} request, sent to the ${size} model` : 'Only one model size, nothing to route', tone: 'neutral', ms: 12 },
       );
-    const inputTokens = basePrompt + chunksToLLM * cs.tokens + historyTokens;
+    const inputTokens = (basePrompt + chunksToLLM * cs.tokens + historyTokens) * (req.abuser ? 8 : 1);
 
     // Provider reliability: retries on the same host, then optional failover
     const pErr = errOf(llm);
@@ -582,6 +639,10 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     }
     const m = P(llm);
     const streaming = llm.config.streaming === true;
+    if (req.pii && !redacted && m.host !== 'self') {
+      t.piiLeak = true;
+      t.steps.push({ nodeId: llm.id, kind: 'llm', text: `Personal data sent unredacted to ${hostLabel(m.host)}`, tone: 'bad' });
+    }
 
     let steps = 1;
     let stepTokens = AGENT_STEP_TOKENS;
@@ -749,6 +810,32 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     const beforeLLM = t.latency;
     t.latency += llmMs;
     t.ttft = streaming ? beforeLLM + firstTokenMs : t.latency;
+    if (traffic.voice) {
+      if (!tts) {
+        t.steps.push({ kind: 'tts', text: 'The answer is text, but nothing turns it into speech', tone: 'bad' });
+        t.outcome = 'failed';
+        t.cause = 'voice_pipeline';
+        continue;
+      }
+      const streamedAudio = tts.config.streaming === true;
+      const full = 300 + OUTPUT_TOKENS * 6;
+      if (streamedAudio && streaming) t.ttft = t.ttft + 250;
+      else if (streamedAudio) t.ttft = t.latency + 250;
+      else t.ttft = t.latency + full;
+      t.latency += full * 0.4;
+      t.cost += 0.00025;
+      t.touched.push(tts.id);
+      step(
+        tts,
+        streamedAudio && streaming
+          ? 'Started speaking after the first sentence'
+          : streamedAudio
+            ? 'Waited for the full text answer, then started speaking'
+            : 'Synthesised the whole answer before playing any audio',
+        streamedAudio && streaming ? 'ok' : 'warn',
+        streamedAudio ? 250 : full,
+      );
+    }
 
     // 5. Decide the answer
     if (req.adversarial) {
@@ -764,10 +851,20 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       if (!toolOk) unsure(toolCause!);
       else if (!remembered) unsure('forgot_context');
       else if (req.kb && !grounded) unsure(retrievalOn ? 'retrieval_miss' : 'no_knowledge');
-      else {
+      else if (traffic.driftLatest && m.floating && rng() < 0.16) {
+        // the provider shipped a new model behind "latest"; prompts tuned for the old one regress
+        t.outcome = 'hallucinated';
+        t.cause = 'model_drift';
+      } else if (req.task) {
+        if (rng() < m.taskAcc * (redacted ? 0.98 : 1)) t.outcome = 'correct';
+        else {
+          t.outcome = 'hallucinated';
+          t.cause = m.fineTuned ? 'weak_reasoning' : 'task_unknown';
+        }
+      } else {
         let acc = req.easy ? m.accEasy : m.accHard;
         if (req.kb) acc = (acc + (1 - acc) * 0.5) * noisePenalty; // the right chunk in context makes it easier
-        acc *= historyPenalty * researchPenalty * (k ? teamPenalty : 1);
+        acc *= historyPenalty * researchPenalty * (k ? teamPenalty : 1) * (redacted ? 0.98 : 1);
         if (rng() >= acc) {
           // a reviewer agent catches some mistakes and sends them back once
           if (team && k && reviewer && rng() < 0.55) {
@@ -807,12 +904,13 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
 
     // Structured output: your code needs valid JSON
     if (req.structured && (t.outcome === 'correct' || t.outcome === 'hallucinated')) {
-      let broken = rng() < m.invalidRate;
+      const invalidRate = traffic.driftLatest && m.floating ? Math.min(0.5, m.invalidRate * 4 + 0.03) : m.invalidRate;
+      let broken = rng() < invalidRate;
       if (broken && validator) {
         const extra = (m.ttftBase + inputTokens * m.prefillMsPerTok + 200 * m.msPerOutTok) * jitter(rng);
         t.latency += extra;
         t.cost += (inputTokens * m.inPerM + 200 * m.outPerM) / 1_000_000;
-        broken = rng() < m.invalidRate;
+        broken = rng() < invalidRate;
         step(validator, broken ? 'Invalid JSON twice, gave up' : 'Invalid JSON, asked the model again with the error: fixed', broken ? 'bad' : 'warn', extra);
       } else if (validator) step(validator, 'Valid against the schema', 'ok', 2);
       if (broken) {
@@ -925,11 +1023,11 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     if (t.cause) causes[t.cause] = (causes[t.cause] ?? 0) + 1;
   }
   const isError = (t: Trace) => t.outcome === 'rate_limited' || t.outcome === 'overflow' || t.outcome === 'failed';
-  const legit = traces.filter((t) => !t.req.adversarial && !isError(t));
+  const legit = traces.filter((t) => !t.req.adversarial && !t.req.abuser && !isError(t));
   const adv = traces.filter((t) => t.req.adversarial && !isError(t));
   const kbT = traces.filter((t) => t.req.kb && t.recallHit !== undefined);
   // background jobs have nobody waiting on them, so they don't count towards latency
-  const waited = traces.filter((t) => t.outcome !== 'rate_limited' && t.cause !== 'provider_down' && !t.req.offline);
+  const waited = traces.filter((t) => t.outcome !== 'rate_limited' && t.cause !== 'provider_down' && !t.req.offline && !t.req.abuser);
   const lat = waited.map((t) => t.latency).sort((a, b) => a - b);
   const ttfts = waited.map((t) => t.ttft).sort((a, b) => a - b);
 
@@ -948,7 +1046,10 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     }
   }
   const servedCost = traces.filter((t) => t.outcome !== 'rate_limited').reduce((s, t) => s + t.cost, 0);
-  const costPer1k = (servedCost / Math.max(1, N - outcomes.rate_limited)) * 1000 + gpuPer1k;
+  // what each *real* user request costs you: abusive traffic inflates it
+  const realServed = traces.filter((t) => t.outcome !== 'rate_limited' && !t.req.abuser).length;
+  const costPer1k = (servedCost / Math.max(1, realServed)) * 1000 + gpuPer1k;
+  const piiReqs = traces.filter((t) => t.req.pii);
 
   const errOfHost = (n: SimNode) => (prof.has(n.id) ? errOf(n) : 0);
   // Per-node stats for the canvas
@@ -1037,6 +1138,9 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     singleAgentResearch: (traffic.complexShare ?? 0) > 0 && !!agent && !team,
     teamResearch: (traffic.complexShare ?? 0) > 0 && !!team,
     offlineInRealtime: (traffic.batchShare ?? 0) > 0 && !batchQ,
+    piiLeak: piiReqs.length ? piiReqs.filter((t) => t.piiLeak).length / piiReqs.length : 0,
+    abuseUnchecked: (traffic.abuseShare ?? 0) > 0 && !limits,
+    voice: !!traffic.voice,
     bigUncachedPrompt: basePrompt > 3000 && llms.some((l) => !P(l).promptCache),
     qualityVisible,
     avgHistoryTokens,
@@ -1069,7 +1173,7 @@ function labelOf(n: SimNode) {
   const names: Record<ComponentType, string> = {
     users: 'Users', input_guard: 'Input Guardrail', semantic_cache: 'Semantic Cache', router: 'Model Router',
     embedding: 'Embedding Model', vector_db: 'Vector DB', keyword_search: 'Keyword Search', reranker: 'Reranker',
-    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory', eval_harness: 'Eval Harness', gpu_llm: 'Self-hosted Model', fallback: 'Retry & Fallback', agent_team: 'Agent Team', validator: 'Output Validator', batch_queue: 'Batch Queue',
+    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory', eval_harness: 'Eval Harness', gpu_llm: 'Self-hosted Model', fallback: 'Retry & Fallback', agent_team: 'Agent Team', validator: 'Output Validator', batch_queue: 'Batch Queue', pii_redactor: 'PII Redactor', stt: 'Speech-to-Text', tts: 'Text-to-Speech', user_limits: 'Per-user Limits',
   };
   return names[n.type];
 }

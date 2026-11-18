@@ -1,6 +1,6 @@
 import type { Cause, Goal, GoalMetric, Metrics } from './types';
 
-export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent' | 'background_jobs' | 'uncached_prompt';
+export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent' | 'background_jobs' | 'uncached_prompt' | 'pii_leak' | 'abuse' | 'slow_voice';
 
 export interface Pressure {
   key: PressureKey;
@@ -100,6 +100,36 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     why: 'Every request resends a huge, unchanging system prompt and pays full price to process it, plus the time to read it.',
     try: 'Turn on prompt caching on the model, so the fixed start of every prompt is read from cache for a fraction of the price.',
   },
+  task_unknown: {
+    title: 'The model doesn\'t know your task',
+    why: 'Your requests use your own labels, format and house style. An off-the-shelf model has never seen them, so it guesses, even a large one.',
+    try: 'Fine-tune a model on a few thousand of your own examples. A fine-tuned small model often beats a general large one on a narrow task, for a fraction of the price.',
+  },
+  model_drift: {
+    title: 'Silent model update',
+    why: 'You\'re on the provider\'s "latest" alias. They shipped a new model version, and prompts tuned for the old one now regress. Nothing in your code changed.',
+    try: 'Pin a specific model version. Upgrade on purpose, after your evals pass on the new one.',
+  },
+  voice_pipeline: {
+    title: 'Broken voice pipeline',
+    why: 'Voice needs a chain: speech-to-text in, the model, text-to-speech out. Part of the chain is missing.',
+    try: 'Connect Users → Speech-to-Text → … → LLM → Text-to-Speech.',
+  },
+  slow_voice: {
+    title: 'Dead air',
+    why: 'People expect a reply to start within about a second. Your pipeline waits for each step to finish completely before the next one starts: transcribe everything, generate everything, synthesise everything.',
+    try: 'Stream every stage: transcribe while the user speaks, stream tokens from the model, and start speaking the first sentence immediately. A faster model helps too.',
+  },
+  pii_leak: {
+    title: 'Personal data leaving your systems',
+    why: 'Requests contain names, emails and health or card details, and they\'re sent as-is to a third-party model provider. That\'s a compliance problem, whatever the provider promises.',
+    try: 'Add a PII Redactor before the model to swap personal details for placeholders, or keep sensitive traffic on a self-hosted model.',
+  },
+  abuse: {
+    title: 'A few accounts eating your capacity',
+    why: 'A handful of scripted accounts send hundreds of long requests a minute. They burn your rate limit and your budget, and real users pay for it with errors.',
+    try: 'Add Per-user Limits. Real people send a few messages a minute; a sensible cap stops scripts without anyone else noticing.',
+  },
   handoff_loss: {
     title: 'Lost in hand-offs',
     why: 'Each agent passes a summary to the next, and details fall through the cracks. More agents means more cracks.',
@@ -171,6 +201,7 @@ export function metricValue(m: Metrics, g: GoalMetric): number {
 /** Metrics you can only see with evals in place. */
 export const QUALITY_METRICS: GoalMetric[] = ['accuracy', 'hallucination', 'injection'];
 
+
 export function goalMet(m: Metrics, g: Goal) {
   if (!m.qualityVisible && QUALITY_METRICS.includes(g.metric)) return false;
   const v = metricValue(m, g.metric);
@@ -187,10 +218,14 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
 
   const errorCause = causes.find(([c]) => ['rate_limit', 'context_overflow', 'provider_down', 'gpu_saturated', 'invalid_output'].includes(c));
   const bloated = m.avgHistoryTokens > 4000;
+  if (m.abuseUnchecked && unmet.some((u) => u === 'errorRate' || u === 'costPer1k')) return pick('abuse');
   if (unmet.includes('errorRate') && errorCause) {
     if (errorCause[0] === 'rate_limit' && m.offlineInRealtime) return pick('background_jobs');
     return pick(bloated ? 'history_bloat' : errorCause[0]);
   }
+  if (unmet.length && (m.causes.model_drift ?? 0) > 0) return pick('model_drift');
+  if (unmet.includes('piiLeak')) return pick('pii_leak');
+  if ((m.causes.voice_pipeline ?? 0) > 0) return pick('voice_pipeline');
   if (unmet.includes('injection')) return pick('injection');
   if (m.singleAgentResearch && unmet.some((u) => u === 'p50' || QUALITY.includes(u))) return pick('sequential_agent');
   if (unmet.some((u) => QUALITY.includes(u))) {
@@ -200,7 +235,7 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
       const other = (m.causes.weak_reasoning ?? 0) + (m.causes.handoff_loss ?? 0);
       return pick(loops > other ? 'agent_loop' : 'handoff_loss');
     }
-    const q = causes.find(([c]) => !['rate_limit', 'context_overflow', 'injection', 'provider_down', 'gpu_saturated', 'invalid_output'].includes(c));
+    const q = causes.find(([c]) => !['rate_limit', 'context_overflow', 'injection', 'provider_down', 'gpu_saturated', 'invalid_output', 'voice_pipeline'].includes(c));
     if (q) return pick(q[0]);
   }
   if (unmet.includes('costPer1k')) {
@@ -212,7 +247,7 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
     if ((m.causes.agent_loop ?? 0) > 0) return pick('agent_loop');
     return pick('cost');
   }
-  if (unmet.includes('ttftP50')) return pick('ttft');
+  if (unmet.includes('ttftP50')) return pick(m.voice ? 'slow_voice' : 'ttft');
   if (unmet.includes('p50')) return pick(m.gpuUtil !== null ? 'slow_decode' : 'latency');
   if (unmet.length && causes.length) return pick(causes[0][0]);
 

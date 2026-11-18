@@ -23,6 +23,126 @@ export interface Lesson {
 
 export const LESSONS: Lesson[] = [
   {
+    id: 'how-models-are-made',
+    title: 'How models are made',
+    summary: 'Read the internet, learn to follow instructions, learn what people prefer.',
+    minutes: 5,
+    components: ['llm'],
+    terms: ['pretraining', 'parameters', 'instruction-tuning', 'rlhf', 'distillation', 'training-data'],
+    blocks: [
+      { kind: 'p', text: 'A modern language model is built in stages. You don\'t need to train one to build with them, but knowing the stages explains a lot about how they behave.' },
+      { kind: 'list', items: [
+        'Pretraining. The model reads an enormous amount of text and learns one skill: predict the next token. Along the way it picks up grammar, facts, reasoning patterns and code. The result knows a lot but isn\'t yet a helpful assistant.',
+        'Instruction tuning. It\'s then trained on many examples of instructions paired with good responses, so it learns to answer questions and follow requests rather than just continue text.',
+        'Preference training (RLHF and similar). People (or other models) compare pairs of answers and say which is better. The model is nudged towards the preferred style: helpful, honest, safe.',
+        'Distillation. A big model\'s outputs are used to train a smaller, cheaper one, which is how many fast "small" models get surprisingly good.',
+      ] },
+      { kind: 'analogy', text: 'Pretraining is years of reading everything in the library. Instruction tuning is job training. Preference training is feedback from a manager on which drafts work better.' },
+      { kind: 'p', text: 'This explains several everyday behaviours: models know a lot of public facts but nothing after their training date or inside your company; they\'re eager to give an answer (a habit from training); and their size, measured in parameters, roughly tracks how much they can learn.' },
+      { kind: 'takeaway', text: 'Training gives general skill. Your system supplies the specific knowledge.' },
+    ],
+  },
+  {
+    id: 'fine-tuning-vs-rag',
+    title: 'Prompting, RAG or fine-tuning?',
+    summary: 'Three ways to customise a model, for three different problems.',
+    minutes: 5,
+    scenarioId: 'fine-tune',
+    components: ['vector_db', 'llm'],
+    terms: ['few-shot', 'rag', 'fine-tuning'],
+    blocks: [
+      { kind: 'p', text: 'When a model doesn\'t do what you need, there are three levers. They\'re often confused, and they fix different things.' },
+      { kind: 'list', items: [
+        'Prompting (instructions, plus a few examples, known as few-shot). Fastest to try, no training. Great for getting started; limited by how much you can fit, and by paying for those tokens on every call.',
+        'RAG (retrieval). For knowledge: facts, documents, anything that changes. The model reads the right pages at question time, so updating knowledge just means updating the index.',
+        'Fine-tuning. For behaviour: your labels, format, tone, or a narrow task done thousands of times. Training is a one-off cost, and a fine-tuned small model can beat a much larger general one at that task.',
+      ] },
+      { kind: 'p', text: 'The classic mistake is fine-tuning to "teach the model our docs". It learns the style of your docs and a fuzzy version of their facts, then confidently mixes them up, and it\'s out of date the moment the docs change. Facts go in retrieval; behaviour goes in fine-tuning.' },
+      { kind: 'analogy', text: 'Prompting is giving instructions to a temp. RAG is handing them the right folder. Fine-tuning is training a new hire until your way of working becomes habit.' },
+      { kind: 'takeaway', text: 'Start with prompting, add RAG for knowledge, fine-tune for behaviour.' },
+    ],
+  },
+  {
+    id: 'model-updates',
+    title: 'When the model changes under you',
+    summary: 'Your model is a dependency. Pin it.',
+    minutes: 3,
+    scenarioId: 'model-drift',
+    components: ['llm', 'eval_harness'],
+    terms: ['model-version', 'regression', 'eval'],
+    blocks: [
+      { kind: 'p', text: 'Providers improve their models constantly, and many offer a "latest" alias that always points at the newest version. Convenient, until a new version handles your carefully tuned prompt differently: more verbose, a different refusal style, slightly different JSON.' },
+      { kind: 'list', items: [
+        'Pin a specific, dated model version in production.',
+        'When a new version comes out, run your evals on it first, compare the numbers, then switch on purpose.',
+        'Watch provider deprecation dates: pinned versions eventually retire, so upgrading is a scheduled job, not a surprise.',
+      ] },
+      { kind: 'analogy', text: 'You wouldn\'t let a library auto-update in production without running your tests. A model is a dependency too, just a fuzzier one.' },
+      { kind: 'takeaway', text: 'Pin versions, upgrade deliberately, let evals decide.' },
+    ],
+  },
+  {
+    id: 'privacy',
+    title: 'Privacy and personal data',
+    summary: 'Anything in a prompt leaves with the prompt.',
+    minutes: 4,
+    scenarioId: 'pii',
+    components: ['pii_redactor', 'llm', 'gpu_llm'],
+    terms: ['pii', 'redaction', 'data-retention', 'data-residency'],
+    blocks: [
+      { kind: 'p', text: 'Every prompt you send to an API is data you\'re handing to another company: the user\'s message, the retrieved documents, the chat history. If those contain names, emails, health or financial details, you\'re moving personal data, with all the rules that come with it.' },
+      { kind: 'list', items: [
+        'Redact before sending: detect personal details, swap them for placeholders ("[NAME_1]"), and put the real values back into the answer afterwards. The model rarely needs the actual name to help.',
+        'Minimise: don\'t retrieve or include personal data the task doesn\'t need.',
+        'Check retention and training settings with your provider, and where the data is processed (residency).',
+        'For the most sensitive workloads, self-host so the data never leaves your infrastructure.',
+      ] },
+      { kind: 'analogy', text: 'Blacking out names on a document before you send it to an outside consultant.' },
+      { kind: 'takeaway', text: 'Send the model what it needs, not everything you have.' },
+    ],
+  },
+  {
+    id: 'abuse-controls',
+    title: 'Protecting your capacity from abuse',
+    summary: 'Your provider limits you. You need to limit your users.',
+    minutes: 3,
+    scenarioId: 'abuse',
+    components: ['user_limits', 'llm'],
+    terms: ['per-user-limits', 'quota', 'rate-limit'],
+    blocks: [
+      { kind: 'p', text: 'Every AI request costs you money, unlike most web requests. That makes free tiers and flat-price plans a target: one script can send thousands of long prompts and burn a month\'s budget in a day, and use up the rate limit your real users need.' },
+      { kind: 'list', items: [
+        'Per-user rate limits: requests per minute that no human would hit.',
+        'Quotas: tokens or spend per user per day or month.',
+        'Size limits: cap input length, since huge prompts are the expensive part.',
+        'Watch for outliers: a tiny share of accounts often drives a large share of cost.',
+      ] },
+      { kind: 'analogy', text: 'An all-you-can-eat buffet still has a rule against filling suitcases.' },
+      { kind: 'takeaway', text: 'Generous for people, strict for scripts.' },
+    ],
+  },
+  {
+    id: 'voice-multimodal',
+    title: 'Voice, images and audio',
+    summary: 'Other kinds of input become tokens too, and voice adds a latency budget.',
+    minutes: 4,
+    scenarioId: 'voice',
+    components: ['stt', 'llm', 'tts'],
+    terms: ['multimodal', 'speech-to-text', 'text-to-speech', 'voice-latency'],
+    blocks: [
+      { kind: 'p', text: 'Multimodal models can read images, audio and documents as well as text. Under the hood, an image or an audio clip is turned into tokens the model processes like words. A single image can cost as much as a page of text, so images aren\'t free just because they\'re one file.' },
+      { kind: 'p', text: 'Voice assistants usually chain three parts: speech-to-text (STT) turns audio into text, the language model answers, and text-to-speech (TTS) speaks the reply. Some newer models handle audio directly, end to end.' },
+      { kind: 'list', items: [
+        'Conversation has a latency budget: people expect a reply to start within about a second, or it feels broken.',
+        'If each stage waits for the previous one to finish, delays stack: transcribe everything, then generate everything, then synthesise everything.',
+        'Stream every stage: transcribe while the user speaks, stream tokens, and start speaking the first sentence immediately.',
+        'Smaller, faster models often beat bigger ones in voice, because a quick good answer beats a slow perfect one.',
+      ] },
+      { kind: 'analogy', text: 'A good phone call versus a walkie-talkie. Both carry the same words; only one feels like a conversation.' },
+      { kind: 'takeaway', text: 'In voice, the time to first sound matters more than anything.' },
+    ],
+  },
+  {
     id: 'reasoning',
     title: 'Reasoning models: paying to think',
     summary: 'More thinking buys accuracy on hard problems, at a price.',
@@ -517,7 +637,7 @@ export const MODULES: Module[] = [
     title: 'Foundations',
     level: 'Beginner',
     blurb: 'What a model is, what it sees, and why it makes things up.',
-    lessons: ['pipeline', 'prompts', 'tokens', 'hallucination'],
+    lessons: ['pipeline', 'how-models-are-made', 'prompts', 'tokens', 'hallucination'],
   },
   {
     id: 'knowledge',
@@ -537,15 +657,22 @@ export const MODULES: Module[] = [
     id: 'reliable',
     title: 'Getting reliable answers',
     level: 'Intermediate',
-    blurb: 'Make models think harder when it matters, and return output your code can trust.',
-    lessons: ['reasoning', 'structured'],
+    blurb: 'Make models think harder when it matters, return output your code can trust, and know when to fine-tune.',
+    lessons: ['reasoning', 'structured', 'fine-tuning-vs-rag'],
   },
   {
     id: 'production',
     title: 'Running in production',
     level: 'Intermediate',
     blurb: 'Rate limits, cost and speed once real users arrive.',
-    lessons: ['scale', 'latency'],
+    lessons: ['scale', 'latency', 'abuse-controls'],
+  },
+  {
+    id: 'beyond-text',
+    title: 'Beyond text: voice and images',
+    level: 'Intermediate',
+    blurb: 'Multimodal input, and building voice assistants that feel like a conversation.',
+    lessons: ['voice-multimodal'],
   },
   {
     id: 'inference',
@@ -565,15 +692,15 @@ export const MODULES: Module[] = [
     id: 'safety',
     title: 'Safety',
     level: 'Advanced',
-    blurb: 'Attacks on your prompt, and the layers that stop them.',
-    lessons: ['safety'],
+    blurb: 'Attacks on your prompt, the layers that stop them, and keeping personal data safe.',
+    lessons: ['safety', 'privacy'],
   },
   {
     id: 'engineering',
     title: 'Thinking like an AI engineer',
     level: 'Advanced',
     blurb: 'Measuring quality, and the debugging loop that ties it all together.',
-    lessons: ['evals', 'binding-pressure'],
+    lessons: ['evals', 'model-updates', 'binding-pressure'],
   },
 ];
 
@@ -581,7 +708,7 @@ export const MODULES: Module[] = [
 /* Glossary: complex terms in simple words                             */
 /* ------------------------------------------------------------------ */
 
-export type TermCategory = 'Models' | 'Retrieval' | 'Memory' | 'Inference' | 'Production' | 'Agents' | 'Safety' | 'Quality';
+export type TermCategory = 'Models' | 'Retrieval' | 'Memory' | 'Inference' | 'Production' | 'Agents' | 'Safety' | 'Quality' | 'Voice';
 
 export interface Term {
   id: string;
@@ -604,10 +731,10 @@ export const TERMS: Term[] = [
   { id: 'inference', term: 'Inference', category: 'Inference', simple: 'Running a trained model to get an answer. Every request you make is an inference call.', analogy: 'Training is going to school; inference is doing the job.', related: ['llm', 'latency', 'prefill', 'decode'], lesson: 'how-inference-works' },
   { id: 'context-window', term: 'Context window', category: 'Models', simple: 'The maximum number of tokens a model can read in one request, including the prompt and its answer.', analogy: 'The size of the desk: only so many pages fit on it at once.', why: 'Go over it and the request fails or gets cut off.', related: ['token', 'lost-in-the-middle'], lesson: 'tokens' },
   { id: 'input-output-tokens', term: 'Input vs output tokens', category: 'Models', simple: 'Input tokens are what you send; output tokens are what the model writes. Output is usually several times more expensive.', why: 'Long answers cost more than long prompts, token for token.', related: ['token', 'cost-per-request'], lesson: 'tokens' },
-  { id: 'training-data', term: 'Training data', category: 'Models', simple: 'The text a model learned from before it was released. It doesn\'t include your private documents.', related: ['knowledge-cutoff', 'hallucination'], lesson: 'hallucination' },
+  { id: 'training-data', term: 'Training data', category: 'Models', simple: 'The text a model learned from before it was released. It doesn\'t include your private documents.', related: ['knowledge-cutoff', 'pretraining', 'hallucination'], lesson: 'how-models-are-made' },
   { id: 'knowledge-cutoff', term: 'Knowledge cutoff', category: 'Models', simple: 'The date the model\'s training data stops. It knows nothing that happened after, unless you give it the information.', analogy: 'Someone who\'s been on a remote island since that date.', related: ['training-data', 'rag'] },
   { id: 'temperature', term: 'Temperature', category: 'Models', simple: 'A setting that controls how random the model\'s word choices are. Low is focused and repeatable; high is varied and creative.', analogy: 'Low temperature is a careful accountant; high is a jazz improviser.', related: ['llm'] },
-  { id: 'fine-tuning', term: 'Fine-tuning', category: 'Models', simple: 'Training an existing model further on your own examples so it picks up a style or task. It\'s good for teaching behaviour, not for adding facts that change often.', analogy: 'Sending an employee on a course, versus handing them the manual (RAG).', related: ['rag', 'training-data'] },
+  { id: 'fine-tuning', term: 'Fine-tuning', category: 'Models', simple: 'Training an existing model further on your own examples so it picks up a style or task. It\'s good for teaching behaviour, not for adding facts that change often.', analogy: 'Sending an employee on a course, versus handing them the manual (RAG).', why: 'A fine-tuned small model can beat a large general one on a narrow task, cheaply.', related: ['rag', 'few-shot', 'training-data'], lesson: 'fine-tuning-vs-rag' },
 
   // Retrieval
   { id: 'rag', term: 'RAG', aka: 'Retrieval-augmented generation', category: 'Retrieval', simple: 'Search your documents for relevant pieces first, paste them into the prompt, then ask the model to answer from them.', analogy: 'An open-book exam instead of a closed-book one.', why: 'The standard way to make a model answer correctly about your own data.', related: ['embedding', 'vector-db', 'grounding'], lesson: 'rag' },
@@ -646,6 +773,24 @@ export const TERMS: Term[] = [
   { id: 'cache-hit', term: 'Cache hit', category: 'Inference', simple: 'When the data you need is already in a cache, so it can be reused instead of recomputed.', why: 'Hit rate is what decides how much any cache actually saves.', related: ['prompt-caching', 'semantic-cache'], lesson: 'caching' },
   { id: 'batch-api', term: 'Batch API', category: 'Inference', simple: 'A way to send many requests at once and collect the results later (usually within 24 hours), typically at about half the price.', why: 'Cheap, and it keeps background work from eating your real-time rate limit.', related: ['async-job', 'rate-limit'], lesson: 'batch' },
   { id: 'async-job', term: 'Async job', aka: 'Background job', category: 'Production', simple: 'Work that runs in the background without anyone waiting on a screen for it, like nightly reports or bulk tagging.', analogy: 'Leaving the dishwasher running overnight.', related: ['batch-api'], lesson: 'batch' },
+
+  { id: 'pretraining', term: 'Pretraining', category: 'Models', simple: 'The first and biggest training stage: the model reads a huge amount of text and learns to predict the next token.', why: 'Where general knowledge and skills come from, and why the model knows nothing after its cutoff or inside your company.', related: ['instruction-tuning', 'training-data', 'parameters'], lesson: 'how-models-are-made' },
+  { id: 'parameters', term: 'Parameters', aka: 'Weights', category: 'Models', simple: 'The billions of numbers inside a model that training adjusts. "70B" means about 70 billion of them.', analogy: 'The strength of every connection in a giant web.', why: 'More parameters can hold more knowledge and skill, but need more memory and compute to run.', related: ['pretraining', 'quantization'], lesson: 'how-models-are-made' },
+  { id: 'instruction-tuning', term: 'Instruction tuning', category: 'Models', simple: 'Training a pretrained model on many examples of instructions with good responses, so it learns to follow requests instead of just continuing text.', related: ['pretraining', 'rlhf'], lesson: 'how-models-are-made' },
+  { id: 'rlhf', term: 'RLHF', aka: 'Preference training', category: 'Models', simple: 'Reinforcement learning from human feedback: people compare pairs of answers, and the model is nudged towards the ones they preferred.', analogy: 'A manager reading two drafts and saying "more like this one".', related: ['instruction-tuning'], lesson: 'how-models-are-made' },
+  { id: 'distillation', term: 'Distillation', category: 'Models', simple: 'Training a smaller model to imitate a bigger one\'s outputs, so it\'s cheaper and faster while keeping much of the skill.', analogy: 'An apprentice learning by copying a master\'s work.', related: ['parameters', 'fine-tuning'], lesson: 'how-models-are-made' },
+  { id: 'few-shot', term: 'Few-shot prompting', category: 'Models', simple: 'Including a handful of worked examples in the prompt to show the model what you want.', why: 'Quick and training-free, but the examples are paid for on every request.', related: ['prompt', 'fine-tuning'], lesson: 'fine-tuning-vs-rag' },
+  { id: 'model-version', term: 'Model version', aka: 'Pinning', category: 'Quality', simple: 'The specific, dated release of a model you call. Aliases like "latest" move to new versions automatically; a pinned version doesn\'t.', why: 'New versions can change behaviour; pinning makes upgrades deliberate.', related: ['regression', 'eval'], lesson: 'model-updates' },
+  { id: 'pii', term: 'PII', aka: 'Personal data', category: 'Safety', simple: 'Personally identifiable information: anything that identifies a person, like names, emails, phone numbers, IDs, or health and financial details.', why: 'Sending it to third parties brings legal duties (GDPR, HIPAA and others).', related: ['redaction', 'data-retention'], lesson: 'privacy' },
+  { id: 'redaction', term: 'Redaction', category: 'Safety', simple: 'Finding personal or sensitive details and replacing them with placeholders before the text is sent anywhere.', analogy: 'Blacking out names before sharing a document.', related: ['pii'], lesson: 'privacy' },
+  { id: 'data-retention', term: 'Data retention', category: 'Safety', simple: 'How long a provider keeps your prompts and responses, and whether they may use them for training.', why: 'Often configurable; check it before sending anything sensitive.', related: ['pii', 'data-residency'], lesson: 'privacy' },
+  { id: 'data-residency', term: 'Data residency', category: 'Safety', simple: 'Which country or region your data is stored and processed in.', why: 'Some regulations and customers require data to stay in a specific region, such as the EU.', related: ['data-retention'], lesson: 'privacy' },
+  { id: 'per-user-limits', term: 'Per-user limits', category: 'Production', simple: 'Caps on how much a single account can use: requests per minute, tokens or spend per day.', why: 'Stops one script from burning your budget and your provider rate limit.', related: ['quota', 'rate-limit'], lesson: 'abuse-controls' },
+  { id: 'quota', term: 'Quota', category: 'Production', simple: 'A usage allowance over a period, like 100,000 tokens per user per day.', related: ['per-user-limits'], lesson: 'abuse-controls' },
+  { id: 'multimodal', term: 'Multimodal', category: 'Voice', simple: 'Able to take in (or produce) more than text: images, audio, video, documents.', why: 'Images and audio become tokens too, and can be surprisingly expensive.', related: ['token', 'speech-to-text'], lesson: 'voice-multimodal' },
+  { id: 'speech-to-text', term: 'Speech-to-text', aka: 'STT / transcription', category: 'Voice', simple: 'Turning spoken audio into text. Streaming versions transcribe while the person is still talking.', related: ['text-to-speech', 'voice-latency'], lesson: 'voice-multimodal' },
+  { id: 'text-to-speech', term: 'Text-to-speech', aka: 'TTS', category: 'Voice', simple: 'Turning text into spoken audio. Streaming versions start speaking before the full text exists.', related: ['speech-to-text', 'voice-latency'], lesson: 'voice-multimodal' },
+  { id: 'voice-latency', term: 'Voice latency', aka: 'Time to first audio', category: 'Voice', simple: 'How long after the user stops talking until they hear the reply begin. About a second feels natural; several seconds feels broken.', related: ['streaming', 'ttft'], lesson: 'voice-multimodal' },
 
   // Inference
   { id: 'prefill', term: 'Prefill', category: 'Inference', simple: 'The first phase of a model call: reading the whole prompt at once. GPUs do this in parallel, so it\'s fast.', analogy: 'Skimming a page in one glance.', why: 'Long prompts add surprisingly little latency compared with long answers.', related: ['decode', 'kv-cache'], lesson: 'how-inference-works' },
@@ -736,4 +881,8 @@ export const COMPONENT_TERM: Partial<Record<ComponentType, string>> = {
   agent_team: 'multi-agent',
   validator: 'output-validation',
   batch_queue: 'batch-api',
+  pii_redactor: 'redaction',
+  stt: 'speech-to-text',
+  tts: 'text-to-speech',
+  user_limits: 'per-user-limits',
 };

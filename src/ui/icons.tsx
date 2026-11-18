@@ -5,6 +5,10 @@ import {
   Cpu,
   Braces,
   Database,
+  EyeOff,
+  Gauge,
+  Mic,
+  Volume2,
   Layers,
   Network,
   RefreshCw,
@@ -41,6 +45,10 @@ export const ICONS: Record<ComponentType, LucideIcon> = {
   agent_team: Network,
   validator: Braces,
   batch_queue: Layers,
+  pii_redactor: EyeOff,
+  stt: Mic,
+  tts: Volume2,
+  user_limits: Gauge,
 };
 
 export function KindIcon({ kind, size = 'md' }: { kind: ComponentType; size?: 'sm' | 'md' | 'lg' }) {

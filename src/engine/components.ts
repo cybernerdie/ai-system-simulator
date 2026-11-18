@@ -15,7 +15,7 @@ export interface ComponentSpec {
   type: ComponentType;
   name: string;
   short: string;
-  group: 'Input' | 'Retrieval' | 'Memory' | 'Generation' | 'Inference' | 'Efficiency' | 'Safety' | 'Quality';
+  group: 'Input' | 'Voice' | 'Retrieval' | 'Memory' | 'Generation' | 'Inference' | 'Efficiency' | 'Safety' | 'Quality';
   color: string;
   blurb: string;
   defaults: NodeConfig;
@@ -298,7 +298,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     group: 'Generation',
     color: '#0ea5e9',
     blurb: 'The model that writes the answer. Bigger is smarter and safer, but slower, pricier and more rate-limited.',
-    defaults: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false },
+    defaults: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false, fineTuned: false, version: 'pinned' },
     fields: [
       {
         key: 'provider',
@@ -316,6 +316,22 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
         kind: 'select',
         options: modelOptions,
         help: 'Changes accuracy, latency, cost, context window and tokens-per-minute limit.',
+      },
+      {
+        key: 'fineTuned',
+        label: 'Fine-tuned on your examples',
+        kind: 'toggle',
+        help: 'Trained further on a few thousand of your own examples. Learns your labels, format and tone very well. Does not reliably learn facts. About 1.5× the per-token price, plus training.',
+      },
+      {
+        key: 'version',
+        label: 'Model version',
+        kind: 'select',
+        options: [
+          { value: 'pinned', label: 'Pinned (a specific dated version)' },
+          { value: 'latest', label: 'Latest (auto-updates)' },
+        ],
+        help: '"Latest" silently changes whenever the provider ships an update, and prompts tuned for the old version can regress. Pin versions and upgrade on purpose, after your evals pass.',
       },
       {
         key: 'thinking',
@@ -407,7 +423,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     group: 'Inference',
     color: '#0d9488',
     blurb: 'An open-weights model running on GPUs you rent by the hour. No per-token price and no provider rate limit, but you pay for the GPUs whether they\'re busy or idle, and you own the capacity planning.',
-    defaults: { model: 'open-70b', gpus: 4, batch: 8, quant: 'fp16' },
+    defaults: { model: 'open-70b', gpus: 4, batch: 8, quant: 'fp16', fineTuned: false },
     fields: [
       {
         key: 'model',
@@ -439,6 +455,12 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
           { value: 'int4', label: 'INT4 (~2× faster, noticeable loss)' },
         ],
         help: 'Storing the model\'s numbers with fewer bits makes it smaller and faster, at some cost to accuracy.',
+      },
+      {
+        key: 'fineTuned',
+        label: 'Fine-tuned on your examples',
+        kind: 'toggle',
+        help: 'Open weights can be fine-tuned and served yourself: learns your task and format, not reliable facts.',
       },
     ],
   },
@@ -488,6 +510,70 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     defaults: {},
     fields: [],
   },
+  pii_redactor: {
+    type: 'pii_redactor',
+    name: 'PII Redactor',
+    short: 'PII',
+    group: 'Safety',
+    color: '#be123c',
+    blurb: 'Finds personal data (names, emails, card and health details) and swaps it for placeholders before anything leaves your systems. Puts the real values back in the answer afterwards.',
+    defaults: {},
+    fields: [],
+  },
+  stt: {
+    type: 'stt',
+    name: 'Speech-to-Text',
+    short: 'STT',
+    group: 'Voice',
+    color: '#7c3aed',
+    blurb: 'Turns the user\'s voice into text the model can read.',
+    defaults: { streaming: false },
+    fields: [
+      {
+        key: 'streaming',
+        label: 'Streaming transcription',
+        kind: 'toggle',
+        help: 'Transcribe while the user is still talking, instead of waiting for them to finish and then processing the whole clip.',
+      },
+    ],
+  },
+  tts: {
+    type: 'tts',
+    name: 'Text-to-Speech',
+    short: 'TTS',
+    group: 'Voice',
+    color: '#9333ea',
+    blurb: 'Turns the model\'s answer into audio.',
+    defaults: { streaming: false },
+    fields: [
+      {
+        key: 'streaming',
+        label: 'Streaming audio',
+        kind: 'toggle',
+        help: 'Start speaking the first sentence while the rest is still being generated, instead of synthesising the whole answer first.',
+      },
+    ],
+  },
+  user_limits: {
+    type: 'user_limits',
+    name: 'Per-user Limits',
+    short: 'LIM',
+    group: 'Safety',
+    color: '#b45309',
+    blurb: 'Caps how many requests each account can make per minute. Normal users never notice. Scripts, scrapers and runaway integrations hit the cap instead of your bill.',
+    defaults: { perUserRpm: 60 },
+    fields: [
+      {
+        key: 'perUserRpm',
+        label: 'Requests per user per minute',
+        kind: 'range',
+        min: 5,
+        max: 300,
+        step: 5,
+        help: 'A real person sends a few messages a minute. Abusive accounts send hundreds.',
+      },
+    ],
+  },
   output_guard: {
     type: 'output_guard',
     name: 'Output Judge',
@@ -518,4 +604,8 @@ export const PALETTE_ORDER: ComponentType[] = [
   'validator',
   'eval_harness',
   'batch_queue',
+  'pii_redactor',
+  'user_limits',
+  'stt',
+  'tts',
 ];

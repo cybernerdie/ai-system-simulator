@@ -45,6 +45,11 @@ describe('scenarios', () => {
       'stale-index': 'stale_index',
       'big-prompt': 'uncached_prompt',
       'nightly-job': 'background_jobs',
+      'fine-tune': 'task_unknown',
+      'model-drift': 'blind',
+      pii: 'pii_leak',
+      voice: 'slow_voice',
+      abuse: 'abuse',
     };
     for (const s of SCENARIOS) {
       const m = run(s.nodes, s.edges, s.traffic);

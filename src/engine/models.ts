@@ -46,7 +46,15 @@ export interface ModelProfile {
   invalidRate: number;
   /** Reuses the cached start of the prompt across requests. */
   promptCache: boolean;
+  /** Accuracy on your own custom task (labels, format, house style). */
+  taskAcc: number;
+  fineTuned: boolean;
+  /** Following the auto-updating "latest" alias rather than a pinned version. */
+  floating: boolean;
 }
+
+const TASK_ACC: Record<string, number> = { small: 0.55, medium: 0.7, large: 0.8, 'open-8b': 0.52, 'open-70b': 0.72 };
+const TASK_ACC_TUNED: Record<string, number> = { small: 0.94, medium: 0.95, large: 0.96, 'open-8b': 0.93, 'open-70b': 0.95 };
 
 export const THINKING = {
   off: { label: 'Off', tokens: 0, hardGap: 0, easyGap: 0 },
@@ -91,6 +99,9 @@ export function profileOf(n: SimNode): ModelProfile {
       thinkTokens: 0,
       invalidRate: n.config.jsonMode === true ? 0.004 : INVALID_JSON[str(n, 'model', 'open-70b')] ?? 0.08,
       promptCache: true, // self-hosted servers reuse cached prefixes automatically
+      fineTuned: n.config.fineTuned === true,
+      taskAcc: (n.config.fineTuned === true ? TASK_ACC_TUNED : TASK_ACC)[str(n, 'model', 'open-70b')] ?? 0.7,
+      floating: false, // you control the weights: nothing changes unless you change it
     };
   }
   const size = str<ModelSize>(n, 'size', 'medium');
@@ -100,16 +111,19 @@ export function profileOf(n: SimNode): ModelProfile {
   const accEasy = s.accEasy + (1 - s.accEasy) * th.easyGap;
   return {
     host: str<'A' | 'B'>(n, 'provider', 'A'),
-    label: th.tokens ? `${size} + thinking` : size,
+    label: `${size}${n.config.fineTuned === true ? ' (fine-tuned)' : ''}${th.tokens ? ' + thinking' : ''}`,
     rank: accHard,
     thinkTokens: th.tokens,
     invalidRate: n.config.jsonMode === true ? 0.004 : INVALID_JSON[size] ?? 0.08,
     promptCache: n.config.promptCache === true,
+    fineTuned: n.config.fineTuned === true,
+    taskAcc: (n.config.fineTuned === true ? TASK_ACC_TUNED : TASK_ACC)[size] ?? 0.7,
+    floating: str<string>(n, 'version', 'pinned') === 'latest',
     ttftBase: s.ttftBase,
     prefillMsPerTok: s.prefillMsPerTok,
     msPerOutTok: s.msPerOutTok,
-    inPerM: s.inPerM,
-    outPerM: s.outPerM,
+    inPerM: s.inPerM * (n.config.fineTuned === true ? 1.5 : 1),
+    outPerM: s.outPerM * (n.config.fineTuned === true ? 1.5 : 1),
     context: s.context,
     tpm: s.tpm,
     accEasy,

@@ -625,6 +625,172 @@ export const SCENARIOS: Scenario[] = [
       edges: chain('users', 'bq', 'llm'),
     },
   },
+  {
+    id: 'fine-tune',
+    difficulty: 2,
+    skills: ['Fine-tuning', 'RAG vs fine-tuning', 'Cost'],
+    title: '18 · Fine-tune it?',
+    tagline: 'Your labels, your format, your 40 categories.',
+    brief:
+      'Your support triage system sorts tickets into your company\'s 40 internal categories, in your exact format, and also answers questions from the help centre. Off-the-shelf models keep inventing categories. The large model does a bit better and costs five times as much. Someone says "just fine-tune it". Someone else says "fine-tuning will teach it our docs too".',
+    traffic: { ...base, rps: 8, taskShare: 0.7, kbShare: 0.25, exactTermShare: 0.1, repeatShare: 0 },
+    goals: [
+      { metric: 'accuracy', op: '>=', value: 0.82 },
+      { metric: 'costPer1k', op: '<=', value: 4 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm'),
+    hint: 'Try a fine-tuned model in the LLM settings. Which size? And what happens to the help-centre questions if you remove retrieval?',
+    lesson:
+      'Prompting, RAG and fine-tuning solve different problems. Fine-tuning teaches behaviour: your labels, your format, your tone. A fine-tuned small model often beats a general large one on a narrow task, at a fraction of the price. But it doesn\'t reliably teach facts, and facts change, so knowledge still comes from retrieval. Most real systems use both.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 120 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'small', fineTuned: true } },
+      ],
+      edges: chain('users', 'emb', 'vdb', 'llm'),
+    },
+  },
+  {
+    id: 'model-drift',
+    difficulty: 2,
+    skills: ['Model versions', 'Regressions', 'Evals'],
+    title: '19 · Nothing changed. Everything broke.',
+    tagline: 'No deploy, no code change, and quality fell off a cliff.',
+    brief:
+      'Nobody touched the code for two weeks, yet support complaints doubled and a few JSON responses started breaking. Your app calls the provider\'s "latest" model alias, and there\'s nothing measuring answer quality, so all you have is a feeling.',
+    traffic: { ...base, kbShare: 0.6, exactTermShare: 0.1, structuredShare: 0.3, driftLatest: true, qualityHidden: true },
+    goals: [
+      { metric: 'accuracy', op: '>=', value: 0.75 },
+      { metric: 'errorRate', op: '<=', value: 0.02 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium', version: 'latest', jsonMode: true } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm'),
+    hint: 'First make quality visible. Then look at what changed outside your code: which model version are you actually running?',
+    lesson:
+      'The model is a dependency, and "latest" is an unpinned dependency. Providers update models behind aliases, and prompts tuned for one version can quietly regress on the next. Pin versions, run your evals against a new version before switching, and upgrade on purpose. Evals are what let you notice at all.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 120 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium', version: 'pinned', jsonMode: true } },
+        { id: 'ev', type: 'eval_harness', x: 700, y: 120 },
+      ],
+      edges: chain('users', 'emb', 'vdb', 'llm', 'ev'),
+    },
+  },
+  {
+    id: 'pii',
+    difficulty: 1,
+    skills: ['Privacy', 'PII redaction', 'Compliance'],
+    title: '20 · Compliance is calling',
+    tagline: 'Half your prompts contain someone\'s medical history.',
+    brief:
+      'Your insurance assistant works well, and every claim question that customers paste in (names, policy numbers, diagnoses) goes straight to a third-party model provider. The compliance team has found out. They want personal data to stop leaving your systems without killing the product.',
+    traffic: { ...base, kbShare: 0.6, exactTermShare: 0.1, piiShare: 0.5 },
+    goals: [
+      { metric: 'piiLeak', op: '<=', value: 0.02 },
+      { metric: 'accuracy', op: '>=', value: 0.74 },
+      { metric: 'costPer1k', op: '<=', value: 12 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm'),
+    hint: 'Personal data can be stripped before it leaves, or the model can run somewhere data never leaves. What does each cost you?',
+    lesson:
+      'Anything in a prompt is data you\'re sending to whoever runs the model. Redact personal details before they leave (swap them for placeholders and put them back in the answer), or keep sensitive traffic on models you host yourself. Detection is never perfect, so combine it with provider agreements, retention settings and data minimisation.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'pii', type: 'pii_redactor', x: 130, y: 120 },
+        { id: 'emb', type: 'embedding', x: 260, y: 120 },
+        { id: 'vdb', type: 'vector_db', x: 400, y: 120, config: { topK: 5, chunk: 'medium' } },
+        { id: 'llm', type: 'llm', x: 560, y: 120, config: { size: 'medium' } },
+      ],
+      edges: chain('users', 'pii', 'emb', 'vdb', 'llm'),
+    },
+  },
+  {
+    id: 'voice',
+    difficulty: 2,
+    skills: ['Voice', 'Speech-to-text', 'Streaming'],
+    title: '21 · The walkie-talkie',
+    tagline: 'Talk. Wait seven seconds. Hear a reply.',
+    brief:
+      'Your new voice assistant answers well, but conversations feel like a walkie-talkie: you finish speaking, then silence for seven seconds, then the whole reply at once. People talk over it or hang up. A natural conversation needs the reply to start in about a second.',
+    traffic: { ...base, rps: 3, easyShare: 0.7, repeatShare: 0, voice: true },
+    goals: [
+      { metric: 'ttftP50', op: '<=', value: 1500 },
+      { metric: 'accuracy', op: '>=', value: 0.85 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'stt', type: 'stt', x: 220, y: 120, config: { streaming: false } },
+      { id: 'llm', type: 'llm', x: 440, y: 120, config: { size: 'medium' } },
+      { id: 'tts', type: 'tts', x: 660, y: 120, config: { streaming: false } },
+    ],
+    edges: chain('users', 'stt', 'llm', 'tts'),
+    hint: 'Open the request inspector and look at where the seconds go. Every stage waits for the previous one to finish completely. Which of them can start early?',
+    lesson:
+      'Voice is a pipeline (speech-to-text, the model, text-to-speech) with a latency budget of about a second. If each stage waits for the previous one to finish, the delays stack up. Stream every stage: transcribe while the user speaks, stream tokens from the model, and start speaking the first sentence immediately. Images and audio as input work similarly: they become tokens the model has to read, and they cost time and money too.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'stt', type: 'stt', x: 220, y: 120, config: { streaming: true } },
+        { id: 'llm', type: 'llm', x: 440, y: 120, config: { size: 'medium', streaming: true } },
+        { id: 'tts', type: 'tts', x: 660, y: 120, config: { streaming: true } },
+      ],
+      edges: chain('users', 'stt', 'llm', 'tts'),
+    },
+  },
+  {
+    id: 'abuse',
+    difficulty: 1,
+    skills: ['Abuse', 'Per-user limits', 'Cost control'],
+    title: '22 · One user, half your bill',
+    tagline: 'A few scripted accounts are eating everyone\'s capacity.',
+    brief:
+      'You launched a free tier. Within a week, a handful of accounts started hammering your API from scripts, with huge prompts, hundreds of times a minute. Half your traffic is now them. Real users are getting 429 errors, and your cost per real request has nearly tripled.',
+    traffic: { ...base, rps: 40, abuseShare: 0.5, repeatShare: 0 },
+    goals: [
+      { metric: 'errorRate', op: '<=', value: 0.01 },
+      { metric: 'costPer1k', op: '<=', value: 7 },
+      { metric: 'accuracy', op: '>=', value: 0.85 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'llm'),
+    hint: 'Your provider rate-limits you, but nothing rate-limits your users. How many messages a minute does a real person send?',
+    lesson:
+      'Your provider\'s rate limits protect them, not you. Anything that\'s free, or billed per seat while you pay per token, needs per-user limits on requests, on tokens per day and on spend, so a single script can\'t burn your capacity or your budget. Set them generously for people and tightly for machines.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'lim', type: 'user_limits', x: 260, y: 120, config: { perUserRpm: 60 } },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+      ],
+      edges: chain('users', 'lim', 'llm'),
+    },
+  },
 ];
 
 export const SANDBOX: Scenario = {
