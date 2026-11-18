@@ -14,10 +14,12 @@ import {
 import { BookOpen, Check, Code, Link2, Moon, Pause, Play, RotateCcw, Sun } from 'lucide-react';
 import { COMPONENTS } from './engine/components';
 import { simulate } from './engine/simulate';
+import { PATTERNS, TICK_SECONDS, trafficMultiplier, type Pattern } from './engine/patterns';
 import { bindingPressure, goalMet, type Pressure } from './engine/pressures';
 import { SANDBOX, SCENARIOS, withDefaults, type Scenario } from './engine/scenarios';
-import type { ComponentType, ConfigValue, Metrics, RequestSample, SimGraph } from './engine/types';
+import type { ComponentType, ConfigValue, Metrics, SimGraph, TrafficProfile } from './engine/types';
 import { SimNodeView, type SimFlowNode } from './ui/SimNodeView';
+import type { Shown } from './ui/Requests';
 import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
 import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
 import { LearnHub, firstUnreadLesson, type HubView } from './ui/LearnHub';
@@ -28,7 +30,10 @@ const ALL = [...SCENARIOS, SANDBOX];
 const TICK_MS = 700;
 const HOLD_TICKS = 5;
 const HISTORY = 40;
-const FIT = { padding: { top: '190px', bottom: '150px', left: '48px', right: '48px' }, maxZoom: 1.05 } as const;
+const DESKTOP_FIT = { padding: { top: '190px', bottom: '150px', left: '48px', right: '48px' }, maxZoom: 1.05 } as const;
+const MOBILE_FIT = { padding: 0.12, maxZoom: 1 } as const;
+// On phones the overlays sit outside the canvas, so no space needs reserving
+const fitOptions = () => (window.innerWidth <= 900 ? MOBILE_FIT : DESKTOP_FIT);
 const nodeTypes = { sim: SimNodeView };
 const edgeTypes = { flow: FlowEdge };
 
@@ -94,6 +99,9 @@ export default function App() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdgeType>(initial.edges);
   const [running, setRunning] = useState(false);
   const [rps, setRps] = useState(scenario.traffic.rps);
+  const [pattern, setPattern] = useState<Pattern>('steady');
+  const [simTime, setSimTime] = useState(0);
+  const simTimeRef = useRef(0);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [history, setHistory] = useState<Metrics[]>([]);
   const [pressure, setPressure] = useState<Pressure | null>(null);
@@ -132,7 +140,7 @@ export default function App() {
   }, []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTabRaw] = useState<Tab>('mission');
-  const [picked, setPicked] = useState<RequestSample | null>(null);
+  const [picked, setPicked] = useState<Shown | null>(null);
   const setTab = useCallback((t: Tab) => {
     setTabRaw(t);
     if (t !== 'requests') setPicked(null);
@@ -151,6 +159,13 @@ export default function App() {
   );
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
+  const [mixOverride, setMixOverride] = useState<Partial<TrafficProfile> | null>(null);
+  const traffic: TrafficProfile = useMemo(
+    () => ({ ...scenario.traffic, ...(scenario.id === SANDBOX.id ? mixOverride ?? {} : {}) }),
+    [scenario, mixOverride],
+  );
+  const trafficRef = useRef(traffic);
+  trafficRef.current = traffic;
   const graphRef = useRef(graph);
   graphRef.current = graph;
 
@@ -163,6 +178,8 @@ export default function App() {
       setEdges(f.edges);
       setRps(s.traffic.rps);
       setRunning(false);
+      simTimeRef.current = 0;
+      setSimTime(0);
       setMetrics(null);
       setHistory([]);
       metricsRef.current = null;
@@ -173,7 +190,7 @@ export default function App() {
       setTab('mission');
       setPicked(null);
       if (window.location.hash) window.history.replaceState(null, '', window.location.pathname);
-      requestAnimationFrame(() => flow.fitView({ ...FIT, duration: 250 }));
+      requestAnimationFrame(() => flow.fitView({ ...fitOptions(), duration: 250 }));
     },
     [flow, setEdges, setNodes, setTab],
   );
@@ -228,7 +245,10 @@ export default function App() {
   useEffect(() => {
     if (!running) return;
     const tick = () => {
-      const raw = simulate(graphRef.current, { ...scenario.traffic, rps }, { seed: seed.current++, samples: 1500 });
+      simTimeRef.current += TICK_SECONDS;
+      setSimTime(simTimeRef.current);
+      const effRps = Math.max(0.5, Math.round(rps * trafficMultiplier(pattern, simTimeRef.current) * 10) / 10);
+      const raw = simulate(graphRef.current, { ...trafficRef.current, rps: effRps }, { seed: seed.current++, samples: 1500 });
       const m = smooth(metricsRef.current, raw);
       metricsRef.current = m;
       setMetrics(m);
@@ -248,7 +268,7 @@ export default function App() {
     tick();
     const t = setInterval(tick, TICK_MS);
     return () => clearInterval(t);
-  }, [running, rps, scenario, cleared]);
+  }, [running, rps, scenario, cleared, pattern]);
 
   // Push live stats into nodes, light up active edges
   const active = useMemo(() => new Set(metrics?.activeNodeIds ?? []), [metrics]);
@@ -300,7 +320,7 @@ export default function App() {
           ns.some((n) => Math.abs(n.position.x - p.x) < 210 && Math.abs(n.position.y - p.y) < 110);
         pos = { x: minX + 220, y: maxY + 160 };
         while (taken(pos)) pos = { x: pos.x + 230, y: pos.y };
-        setTimeout(() => flow.fitView({ ...FIT, duration: 300 }), 30);
+        setTimeout(() => flow.fitView({ ...fitOptions(), duration: 300 }), 30);
       }
       setNodes((ns) => [
         ...ns.map((n) => ({ ...n, selected: false })),
@@ -353,11 +373,25 @@ export default function App() {
         </div>
         <span className="topbar-divider" aria-hidden />
         <ScenarioTrigger scenario={scenario} index={SCENARIOS.findIndex((x) => x.id === scenario.id)} onOpen={() => setPicker(true)} />
-        <label className="traffic">
-          <span>Traffic</span>
-          <input type="range" min={1} max={150} value={rps} onChange={(e) => setRps(Number(e.target.value))} />
-          <output>{rps} req/s</output>
-        </label>
+        <div className="traffic">
+          <label className="traffic-rate">
+            <span>Traffic</span>
+            <input type="range" min={1} max={150} value={rps} onChange={(e) => setRps(Number(e.target.value))} aria-label="Base requests per second" />
+            <output>{metrics && pattern !== 'steady' ? `${metrics.offered}` : rps} req/s</output>
+          </label>
+          <span className="traffic-sep" aria-hidden />
+          <label className="traffic-pattern" title={PATTERNS[pattern].help}>
+            <span className="sr-only">Traffic pattern</span>
+            <select value={pattern} onChange={(e) => setPattern(e.target.value as Pattern)}>
+              {(Object.keys(PATTERNS) as Pattern[]).map((p) => (
+                <option key={p} value={p}>
+                  {PATTERNS[p].label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {pattern !== 'steady' && <span className="sim-clock">t={simTime}s</span>}
+        </div>
         <div className="topbar-spacer" />
         <button className="btn btn-ghost btn-icon" onClick={() => loadScenario(scenario.id)} title="Reset scenario">
           <RotateCcw size={15} aria-hidden />
@@ -420,7 +454,7 @@ export default function App() {
           }}
           deleteKeyCode={['Backspace', 'Delete']}
           fitView
-          fitViewOptions={FIT}
+          fitViewOptions={fitOptions()}
           proOptions={{ hideAttribution: true }}
           connectionLineStyle={{ stroke: 'var(--ink)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
         >
@@ -447,6 +481,9 @@ export default function App() {
         picked={picked}
         onPick={setPicked}
         onLearn={(termId) => setHub({ tab: 'glossary', termId })}
+        traffic={traffic}
+        onMix={(patch) => setMixOverride((o) => ({ ...(o ?? {}), ...patch }))}
+        onResetMix={() => setMixOverride(null)}
       />
 
       {intro !== null && (

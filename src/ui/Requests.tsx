@@ -4,7 +4,8 @@ import { CAUSE_TEXT } from '../engine/simulate';
 import type { Outcome, RequestSample } from '../engine/types';
 import { KindIcon } from './icons';
 
-export const OUTCOME_META: Record<Outcome, { label: string; tone: 'ok' | 'bad' | 'warn' }> = {
+export const OUTCOME_META: Record<Outcome | 'unverified', { label: string; tone: 'ok' | 'bad' | 'warn' | 'neutral' }> = {
+  unverified: { label: 'Unverified', tone: 'neutral' },
   correct: { label: 'Correct', tone: 'ok' },
   blocked: { label: 'Blocked attack', tone: 'ok' },
   declined: { label: "Said I don't know", tone: 'warn' },
@@ -23,10 +24,13 @@ const KIND_LABEL: Record<RequestSample['kind'], string> = {
   memory: 'Refers to earlier chat',
 };
 
+export type Shown = RequestSample | (Omit<RequestSample, 'outcome'> & { outcome: 'unverified' });
+
 const fmtMs = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${Math.round(v)}ms`);
 const fmtUsd = (v: number) => (v < 0.01 ? `$${v.toFixed(4)}` : `$${v.toFixed(3)}`);
 
-function verdict(r: RequestSample) {
+function verdict(r: RequestSample | (Omit<RequestSample, 'outcome'> & { outcome: 'unverified' })) {
+  if (r.outcome === 'unverified') return 'Without evals there is no way to tell whether this answer was right.';
   if (r.outcome === 'correct') return 'Answered correctly.';
   if (r.outcome === 'blocked') return 'The attack was stopped before it did damage.';
   if (r.outcome === 'declined' && r.cause && r.cause !== 'guard_false_positive')
@@ -39,16 +43,28 @@ export function RequestsPanel({
   running,
   picked,
   onPick,
+  qualityVisible,
 }: {
+  qualityVisible: boolean;
   samples: RequestSample[];
   running: boolean;
-  picked: RequestSample | null;
-  onPick: (r: RequestSample | null) => void;
+  picked: Shown | null;
+  onPick: (r: Shown | null) => void;
 }) {
   const [filter, setFilter] = useState<'all' | 'failed'>('failed');
+  // Without evals you only see what the infrastructure sees: errors, timings, cost.
+  const visible = useMemo(
+    () =>
+      qualityVisible
+        ? samples
+        : samples.map((r) =>
+            r.outcome === 'rate_limited' || r.outcome === 'overflow' ? r : { ...r, outcome: 'unverified' as const, cause: undefined },
+          ),
+    [samples, qualityVisible],
+  );
   const list = useMemo(
-    () => samples.filter((r) => filter === 'all' || OUTCOME_META[r.outcome].tone !== 'ok'),
-    [samples, filter],
+    () => visible.filter((r) => filter === 'all' || OUTCOME_META[r.outcome].tone === 'bad' || OUTCOME_META[r.outcome].tone === 'warn'),
+    [visible, filter],
   );
 
   if (picked) return <RequestDetail r={picked} onBack={() => onPick(null)} />;
@@ -66,10 +82,15 @@ export function RequestsPanel({
         </div>
         <span className="requests-note">{running ? 'Sampled live' : samples.length ? 'Last sample' : ''}</span>
       </div>
+      {!qualityVisible && samples.length > 0 && (
+        <p className="req-blind">
+          No evals yet, so you can see timings, cost and errors, but not whether any answer was right. Add an Eval Harness to find out.
+        </p>
+      )}
       {!samples.length ? (
         <p className="side-empty">Run the simulation to see individual requests flow through your design.</p>
       ) : !list.length ? (
-        <p className="side-empty">No failures in this sample. Push more traffic to find some.</p>
+        <p className="side-empty">{qualityVisible ? 'No failures in this sample. Push more traffic to find some.' : 'No visible failures. That doesn\'t mean there aren\'t any.'}</p>
       ) : (
         <ul className="req-list">
           {list.map((r) => {
@@ -95,7 +116,7 @@ export function RequestsPanel({
   );
 }
 
-function RequestDetail({ r, onBack }: { r: RequestSample; onBack: () => void }) {
+function RequestDetail({ r, onBack }: { r: Shown; onBack: () => void }) {
   const meta = OUTCOME_META[r.outcome];
   return (
     <div className="req-detail">

@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { BookOpen, Check, ChevronDown, Lightbulb, Trash2, TriangleAlert, X } from 'lucide-react';
 import { COMPONENT_TERM, TERM_BY_ID } from '../content/learn';
 import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../engine/components';
-import { goalMet, type Pressure } from '../engine/pressures';
+import { QUALITY_METRICS, goalMet, type Pressure } from '../engine/pressures';
 import type { Scenario } from '../engine/scenarios';
-import type { ComponentType, ConfigValue, Goal, GoalMetric, Metrics, NodeConfig, RequestSample } from '../engine/types';
+import type { ComponentType, ConfigValue, Goal, GoalMetric, Metrics, NodeConfig, TrafficProfile } from '../engine/types';
 import { KindIcon } from './icons';
-import { RequestsPanel } from './Requests';
+import { RequestsPanel, type Shown } from './Requests';
 
 /* ---------- formatting ---------- */
 
@@ -26,7 +26,7 @@ export const METRIC_META: Record<GoalMetric, { label: string; fmt: (v: number) =
 
 /* ---------- palette ---------- */
 
-const GROUPS = ['Retrieval', 'Memory', 'Generation', 'Efficiency', 'Safety'] as const;
+const GROUPS = ['Retrieval', 'Memory', 'Generation', 'Efficiency', 'Safety', 'Quality'] as const;
 
 export function Palette({ onAdd }: { onAdd: (t: ComponentType) => void }) {
   return (
@@ -99,9 +99,21 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
     { key: 'ttft', label: 'First token', value: ms(m.ttftP50), series: history.map((h) => h.ttftP50), metric: 'ttftP50' },
     { key: 'cost', label: 'Cost / 1k', value: usd(m.costPer1k), series: history.map((h) => h.costPer1k), metric: 'costPer1k' },
   ];
+  const hidden = new Set(m.qualityVisible ? [] : ['acc', 'hal', 'inj', 'rec']);
   return (
     <div className="telemetry" aria-live="polite">
       {cells.map((c) => {
+        if (hidden.has(c.key))
+          return (
+            <div key={c.key} className="tele is-hidden" title="Invisible without evals">
+              <div className="tele-label">{c.label}</div>
+              <div className="tele-row">
+                <span className="tele-value">?</span>
+                <span className="tele-goal">needs evals</span>
+              </div>
+              <Spark values={[]} />
+            </div>
+          );
         const goal = c.metric ? goals.find((g) => g.metric === c.metric) : undefined;
         const state = goal ? (goalMet(m, goal) ? 'met' : 'unmet') : '';
         return (
@@ -179,11 +191,17 @@ export function SidePanel({
   picked,
   onPick,
   onLearn,
+  traffic,
+  onMix,
+  onResetMix,
 }: {
+  traffic: TrafficProfile;
+  onMix: (patch: Partial<TrafficProfile>) => void;
+  onResetMix: () => void;
   onLearn: (termId: string) => void;
   running: boolean;
-  picked: RequestSample | null;
-  onPick: (r: RequestSample | null) => void;
+  picked: Shown | null;
+  onPick: (r: Shown | null) => void;
   scenario: Scenario;
   m: Metrics | null;
   streak: number;
@@ -203,16 +221,16 @@ export function SidePanel({
         </button>
         <button role="tab" aria-selected={tab === 'requests'} onClick={() => setTab('requests')}>
           Requests
-          {m && m.samples.some((r) => r.outcome !== 'correct' && r.outcome !== 'blocked') && <span className="tab-dot" aria-hidden />}
+          {m && m.qualityVisible && m.samples.some((r) => r.outcome !== 'correct' && r.outcome !== 'blocked') && <span className="tab-dot" aria-hidden />}
         </button>
         <button role="tab" aria-selected={tab === 'component'} onClick={() => setTab('component')}>
           Component
         </button>
       </div>
       {tab === 'mission' ? (
-        <Mission scenario={scenario} m={m} streak={streak} needed={needed} warnings={warnings} />
+        <Mission scenario={scenario} m={m} streak={streak} needed={needed} warnings={warnings} traffic={traffic} onMix={onMix} onResetMix={onResetMix} />
       ) : tab === 'requests' ? (
-        <RequestsPanel samples={m?.samples ?? []} running={running} picked={picked} onPick={onPick} />
+        <RequestsPanel samples={m?.samples ?? []} running={running} picked={picked} onPick={onPick} qualityVisible={m?.qualityVisible ?? true} />
       ) : selected ? (
         <Inspector {...selected} onChange={onChange} onDelete={onDelete} onLearn={onLearn} />
       ) : (
@@ -236,7 +254,67 @@ function Group({ title, count, children }: { title: string; count?: string; chil
   );
 }
 
-function Mission({ scenario: s, m, streak, needed, warnings }: { scenario: Scenario; m: Metrics | null; streak: number; needed: number; warnings: string[] }) {
+const MIX_FIELDS: { key: keyof TrafficProfile; label: string; help: string; max?: number; step?: number; unit?: 'pct' | 'turns' }[] = [
+  { key: 'kbShare', label: 'Questions about your docs', help: 'Need your private knowledge base to answer.' },
+  { key: 'exactTermShare', label: 'Exact-term lookups', help: 'Of the docs questions, how many hinge on codes, SKUs or names.' },
+  { key: 'toolShare', label: 'Need an action', help: 'Look up an order, issue a refund: needs tools.' },
+  { key: 'adversarialShare', label: 'Attacks', help: 'Prompt injection and jailbreak attempts.' },
+  { key: 'easyShare', label: 'Easy requests', help: 'A small model handles these fine.' },
+  { key: 'repeatShare', label: 'Repeat questions', help: 'Near-duplicates of something already asked.' },
+  { key: 'chatTurns', label: 'Average chat length', help: 'Earlier turns per conversation. 0 means one-off questions.', max: 60, step: 1, unit: 'turns' },
+  { key: 'recallShare', label: 'Refers back to earlier chat', help: 'Messages that depend on something said before.' },
+];
+
+function TrafficMix({ traffic, onMix, onReset }: { traffic: TrafficProfile; onMix: (p: Partial<TrafficProfile>) => void; onReset: () => void }) {
+  return (
+    <Group title="Traffic mix">
+      {MIX_FIELDS.map((f) => {
+        const v = Number(traffic[f.key] ?? 0);
+        const isTurns = f.unit === 'turns';
+        return (
+          <label key={f.key} className="field field-compact">
+            <span className="field-label">
+              {f.label}
+              <output>{isTurns ? `${v}` : `${Math.round(v * 100)}%`}</output>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={f.max ?? 1}
+              step={f.step ?? 0.05}
+              value={v}
+              onChange={(e) => onMix({ [f.key]: Number(e.target.value) } as Partial<TrafficProfile>)}
+            />
+            <span className="field-help">{f.help}</span>
+          </label>
+        );
+      })}
+      <button className="btn btn-ghost btn-block" onClick={onReset}>
+        Reset to the default mix
+      </button>
+    </Group>
+  );
+}
+
+function Mission({
+  scenario: s,
+  m,
+  streak,
+  needed,
+  warnings,
+  traffic,
+  onMix,
+  onResetMix,
+}: {
+  scenario: Scenario;
+  m: Metrics | null;
+  streak: number;
+  needed: number;
+  warnings: string[];
+  traffic: TrafficProfile;
+  onMix: (p: Partial<TrafficProfile>) => void;
+  onResetMix: () => void;
+}) {
   const [hint, setHint] = useState(false);
   const met = m ? s.goals.filter((g) => goalMet(m, g)).length : 0;
   return (
@@ -250,16 +328,17 @@ function Mission({ scenario: s, m, streak, needed, warnings }: { scenario: Scena
           <ul className="goals">
             {s.goals.map((g) => {
               const meta = METRIC_META[g.metric];
-              const ok = m ? goalMet(m, g) : null;
+              const unknown = !!m && !m.qualityVisible && QUALITY_METRICS.includes(g.metric);
+              const ok = m && !unknown ? goalMet(m, g) : null;
               return (
-                <li key={g.metric} className={ok === null ? '' : ok ? 'met' : 'unmet'}>
+                <li key={g.metric} className={unknown ? 'unknown' : ok === null ? '' : ok ? 'met' : 'unmet'}>
                   <span className="goal-icon" aria-hidden>
-                    {ok === null ? <span className="goal-ring" /> : ok ? <Check size={11} strokeWidth={3} /> : <X size={11} strokeWidth={3} />}
+                    {unknown ? '?' : ok === null ? <span className="goal-ring" /> : ok ? <Check size={11} strokeWidth={3} /> : <X size={11} strokeWidth={3} />}
                   </span>
                   <span className="goal-text">
                     {meta.label} {g.op === '>=' ? 'at least' : 'at most'} {meta.fmt(g.value)}
                   </span>
-                  {m && <span className="goal-now">{meta.fmt(m[g.metric])}</span>}
+                  {m && <span className="goal-now">{unknown ? 'unknown' : meta.fmt(m[g.metric])}</span>}
                 </li>
               );
             })}
@@ -274,6 +353,8 @@ function Mission({ scenario: s, m, streak, needed, warnings }: { scenario: Scena
           )}
         </Group>
       )}
+
+      {s.goals.length === 0 && <TrafficMix traffic={traffic} onMix={onMix} onReset={onResetMix} />}
 
       {warnings.length > 0 && (
         <Group title="Wiring" count={String(warnings.length)}>

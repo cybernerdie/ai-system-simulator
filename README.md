@@ -25,7 +25,8 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 | 6 | The contract reviewer | Context window overflow | Context as a budget, reranking to fit small models |
 | 7 | "It feels slow" | Time to first token | Streaming, and what silently breaks it |
 | 8 | The chat that never ends | History bloat | Stateless models, conversation memory strategies |
-| — | Sandbox | Whatever you hit | Free build with a mixed workload |
+| 9 | Flying blind | No quality visibility | Evals, LLM-as-judge, measuring before optimising |
+| — | Sandbox | Whatever you hit | Free build; set your own traffic mix |
 
 ## Features
 
@@ -33,13 +34,16 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 - **Telemetry dock**: accuracy, hallucination, recall, injection, errors, latency, time to first token and cost, with goal targets and trend lines.
 - **Request inspector**: open the Requests tab, click any sampled request and follow it hop by hop (what each component did, how long it took, and why it failed). Its path lights up on the canvas.
 - **Scenario picker**: cards with difficulty, the concepts each scenario teaches, and your progress (saved in your browser).
-- **Learn**: a learning journey of 7 modules (Beginner → Advanced) and 13 short lessons in plain language, each linked to the scenario that practises it, with your reading progress saved. Plus a searchable glossary of 53 AI terms, each with a simple definition, an everyday analogy and why it matters. Every component's settings panel links to its glossary entry.
+- **Learn**: a learning journey of 7 modules (Beginner → Advanced) and 14 short lessons in plain language, each linked to the scenario that practises it, with your reading progress saved. Plus a searchable glossary of 55 AI terms, each with a simple definition, an everyday analogy and why it matters. Every component's settings panel links to its glossary entry.
+- **Traffic patterns**: steady, spikes (4× bursts), a daily wave, or a ramp, with a simulation clock.
+- **Sandbox traffic mix**: sliders for docs questions, exact-term lookups, tool requests, attacks, easy requests, repeats, chat length and references back to earlier messages.
+- **Mobile friendly**: on phones the layout stacks into pressure, canvas, telemetry and mission; modals become full-height sheets.
 - **Light and dark mode**: follows your system setting until you pick one with the toggle in the top bar.
 - **Share**: copies a link that encodes your whole design, so anyone can open and run it.
 
 ## Components
 
-Users · Input Guardrail · Semantic Cache · Model Router · Conversation Memory (full / sliding window / rolling summary / long-term retrieval) · Embedding Model · Vector DB · Keyword Search (BM25) · Reranker · Agent Loop + Tools · LLM (small / medium / large, streaming) · Output Judge
+Users · Input Guardrail · Semantic Cache · Model Router · Conversation Memory (full / sliding window / rolling summary / long-term retrieval) · Embedding Model · Vector DB · Keyword Search (BM25) · Reranker · Agent Loop + Tools · LLM (small / medium / large, streaming) · Output Judge · Eval Harness
 
 ## How to play
 

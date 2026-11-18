@@ -36,6 +36,7 @@ describe('scenarios', () => {
       'long-docs': 'context_overflow',
       'feels-slow': 'ttft',
       'endless-chat': 'history_bloat',
+      'flying-blind': 'blind',
     };
     for (const s of SCENARIOS) {
       const m = run(s.nodes, s.edges, s.traffic);
@@ -116,6 +117,15 @@ describe('engine behaviour', () => {
     expect(win.causes.forgot_context ?? 0).toBeGreaterThan((ret.causes.forgot_context ?? 0) * 3);
   });
 
+  it('quality goals cannot be met without evals when quality is hidden', () => {
+    const s = SCENARIOS.find((x) => x.id === 'flying-blind')!;
+    const noEval = { nodes: s.solution.nodes.filter((n) => n.type !== 'eval_harness'), edges: s.solution.edges.filter((e) => e.target !== 'ev') };
+    const m = run(noEval.nodes, noEval.edges, s.traffic);
+    expect(m.qualityVisible).toBe(false);
+    expect(s.goals.every((g) => goalMet(m, g))).toBe(false);
+    expect(bindingPressure(m, s.goals).key).toBe('blind');
+  });
+
   it('single-shot traffic sends no history', () => {
     const m = run(SCENARIOS[0].nodes, SCENARIOS[0].edges, SCENARIOS[0].traffic);
     expect(m.avgHistoryTokens).toBe(0);
@@ -124,5 +134,17 @@ describe('engine behaviour', () => {
   it('is deterministic for a given seed', () => {
     const g = toGraph(s.nodes, s.edges);
     expect(simulate(g, s.traffic, { seed: 3 })).toEqual(simulate(g, s.traffic, { seed: 3 }));
+  });
+});
+
+import { trafficMultiplier } from './patterns';
+describe('traffic patterns', () => {
+  it('steady is flat, spikes burst, waves stay positive, ramps climb', () => {
+    expect(trafficMultiplier('steady', 37)).toBe(1);
+    expect(trafficMultiplier('spike', 10)).toBe(1);
+    expect(trafficMultiplier('spike', 38)).toBe(4);
+    for (let t = 0; t < 240; t += 2) expect(trafficMultiplier('wave', t)).toBeGreaterThan(0.2);
+    expect(trafficMultiplier('ramp', 120)).toBeCloseTo(4);
+    expect(trafficMultiplier('ramp', 0)).toBe(1);
   });
 });

@@ -1,6 +1,6 @@
 import type { Cause, Goal, GoalMetric, Metrics } from './types';
 
-export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat';
+export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind';
 
 export interface Pressure {
   key: PressureKey;
@@ -75,6 +75,11 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     why: 'Users refer back to things they said earlier, but your memory strategy dropped those turns, so the model guesses.',
     try: 'Keep the facts that matter, not every word: summarise older turns, or store them as long-term memory and retrieve what each message needs.',
   },
+  blind: {
+    title: 'Flying blind',
+    why: 'You can see speed, cost and errors, but not whether answers are right. Every quality fix is a guess until you measure it.',
+    try: 'Add an Eval Harness after the LLM so a sample of real answers gets scored. Then fix whatever the numbers point at.',
+  },
   history_bloat: {
     title: 'History bloat',
     why: 'Models are stateless, so every message resends the whole conversation. Long chats pay for the same tokens again and again, and eat your rate limit.',
@@ -108,7 +113,11 @@ export function metricValue(m: Metrics, g: GoalMetric): number {
   return m[g];
 }
 
+/** Metrics you can only see with evals in place. */
+export const QUALITY_METRICS: GoalMetric[] = ['accuracy', 'hallucination', 'injection'];
+
 export function goalMet(m: Metrics, g: Goal) {
+  if (!m.qualityVisible && QUALITY_METRICS.includes(g.metric)) return false;
   const v = metricValue(m, g.metric);
   return g.op === '>=' ? v >= g.value : v <= g.value;
 }
@@ -116,6 +125,7 @@ export function goalMet(m: Metrics, g: Goal) {
 /** Name the single limit that hurts most right now. */
 export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
   const unmet = goals.filter((g) => !goalMet(m, g)).map((g) => g.metric);
+  if (!m.qualityVisible && unmet.some((u) => QUALITY_METRICS.includes(u))) return { key: 'blind', ...PRESSURES.blind };
   const causes = Object.entries(m.causes) as [Cause, number][];
   causes.sort((a, b) => b[1] - a[1]);
   const pick = (k: PressureKey): Pressure => ({ key: k, ...PRESSURES[k] });

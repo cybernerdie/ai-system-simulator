@@ -3,6 +3,7 @@ import {
   Binary,
   Bot,
   Database,
+  FlaskConical,
   History,
   ScanEye,
   ShieldCheck,
@@ -29,6 +30,7 @@ export const ICONS: Record<ComponentType, LucideIcon> = {
   llm: Sparkles,
   output_guard: ScanEye,
   memory: History,
+  eval_harness: FlaskConical,
 };
 
 export function KindIcon({ kind, size = 'md' }: { kind: ComponentType; size?: 'sm' | 'md' | 'lg' }) {

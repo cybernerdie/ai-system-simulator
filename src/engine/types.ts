@@ -10,7 +10,8 @@ export type ComponentType =
   | 'agent'
   | 'llm'
   | 'output_guard'
-  | 'memory';
+  | 'memory'
+  | 'eval_harness';
 
 export type ConfigValue = number | string | boolean;
 export type NodeConfig = Record<string, ConfigValue>;
@@ -50,6 +51,8 @@ export interface TrafficProfile {
   chatTurns?: number;
   /** Chat apps: share of messages that depend on something said earlier in the conversation. */
   recallShare?: number;
+  /** Real life: answer quality is invisible unless you run evals. */
+  qualityHidden?: boolean;
 }
 
 export type Outcome =
@@ -131,6 +134,8 @@ export interface Metrics {
   activeNodeIds: string[];
   /** Average conversation-history tokens sent per model call. */
   avgHistoryTokens: number;
+  /** False when quality can't be observed (no evals in a scenario that hides quality). */
+  qualityVisible: boolean;
   /** A handful of individual requests from this tick, failures first. */
   samples: RequestSample[];
 }

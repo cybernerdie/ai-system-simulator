@@ -318,6 +318,44 @@ export const SCENARIOS: Scenario[] = [
       edges: chain('users', 'mem', 'llm'),
     },
   },
+  {
+    id: 'flying-blind',
+    difficulty: 2,
+    skills: ['Evals', 'LLM-as-judge', 'Observability'],
+    title: '9 · Flying blind',
+    tagline: 'Costs are down 95%. Is anything else down?',
+    brief:
+      'A contractor "optimised" your docs assistant: the small model, one huge chunk per question. The dashboard looks fantastic (fast, cheap, zero errors) and they\'ve already invoiced. Support says answers have got worse, but nobody can prove it, because nothing measures whether answers are right.',
+    traffic: { ...base, rps: 5, kbShare: 0.8, exactTermShare: 0.3, easyShare: 0.5, repeatShare: 0.1, qualityHidden: true },
+    goals: [
+      { metric: 'accuracy', op: '>=', value: 0.82 },
+      { metric: 'hallucination', op: '<=', value: 0.15 },
+      { metric: 'costPer1k', op: '<=', value: 15 },
+      { metric: 'p50', op: '<=', value: 6000 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 1, chunk: 'large' } },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'small' } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm'),
+    hint: 'Before you change anything, make quality visible: add an Eval Harness after the LLM. Then let the numbers, and the failed requests, tell you what to fix.',
+    lesson:
+      'You can\'t improve what you can\'t see. Speed, cost and errors are easy to measure, so teams optimise them and quietly wreck quality. An eval harness (a test set with known answers, plus an LLM judge scoring a sample of real traffic) turns "I think it\'s worse" into a number, and tells you whether each change actually helped.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 60 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 60, config: { topK: 12, chunk: 'medium' } },
+        { id: 'kw', type: 'keyword_search', x: 340, y: 200 },
+        { id: 'rr', type: 'reranker', x: 520, y: 120, config: { keep: 4 } },
+        { id: 'llm', type: 'llm', x: 700, y: 120, config: { size: 'medium' } },
+        { id: 'ev', type: 'eval_harness', x: 880, y: 120 },
+      ],
+      edges: [...chain('users', 'emb', 'vdb', 'rr', 'llm', 'ev'), ...chain('users', 'kw', 'rr')],
+    },
+  },
 ];
 
 export const SANDBOX: Scenario = {

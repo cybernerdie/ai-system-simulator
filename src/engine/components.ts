@@ -15,7 +15,7 @@ export interface ComponentSpec {
   type: ComponentType;
   name: string;
   short: string;
-  group: 'Input' | 'Retrieval' | 'Memory' | 'Generation' | 'Efficiency' | 'Safety';
+  group: 'Input' | 'Retrieval' | 'Memory' | 'Generation' | 'Efficiency' | 'Safety' | 'Quality';
   color: string;
   blurb: string;
   defaults: NodeConfig;
@@ -290,6 +290,26 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
       },
     ],
   },
+  eval_harness: {
+    type: 'eval_harness',
+    name: 'Eval Harness',
+    short: 'EV',
+    group: 'Quality',
+    color: '#65a30d',
+    blurb: 'Scores a sample of real answers against known-good answers and the sources (offline test sets plus an LLM judge). It doesn\'t change any answer. It lets you see whether they\'re right.',
+    defaults: { sampleRate: 0.05 },
+    fields: [
+      {
+        key: 'sampleRate',
+        label: 'Share of traffic judged',
+        kind: 'range',
+        min: 0.01,
+        max: 0.2,
+        step: 0.01,
+        help: 'Judging more traffic gives a clearer picture but costs more (each judgement is a large-model call).',
+      },
+    ],
+  },
   output_guard: {
     type: 'output_guard',
     name: 'Output Judge',
@@ -314,4 +334,5 @@ export const PALETTE_ORDER: ComponentType[] = [
   'agent',
   'llm',
   'output_guard',
+  'eval_harness',
 ];

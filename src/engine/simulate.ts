@@ -212,6 +212,9 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   const agent = first('agent');
   const judge = first('output_guard');
   const memory = first('memory');
+  const evals = first('eval_harness');
+  const evalRate = evals ? cfgNum(evals, 'sampleRate', 0.05) : 0;
+  const qualityVisible = !traffic.qualityHidden || !!evals;
   const strategy = memory ? cfgStr<'full' | 'window' | 'summary' | 'retrieval'>(memory, 'strategy', 'full') : 'full';
   const windowTurns = memory ? cfgNum(memory, 'windowTurns', 6) : 6;
   const chatMode = (traffic.chatTurns ?? 0) > 0;
@@ -592,6 +595,12 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       }
       step(judge, note, tone, 380);
     }
+
+    // 7. Evals (observe only)
+    if (evals) {
+      t.touched.push(evals.id);
+      t.cost += evalRate * 0.0009;
+    }
   }
 
   // Rate limits: tokens-per-minute per LLM node
@@ -714,7 +723,12 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     };
   }
 
+  if (evals && nodeStats[evals.id] && active.has(evals.id)) {
+    nodeStats[evals.id] = { ...nodeStats[evals.id], label: `judging ${Math.round(evalRate * 100)}% of traffic`, status: 'ok' };
+  }
+
   return {
+    qualityVisible,
     avgHistoryTokens,
     samples,
     offered: rps,
@@ -745,7 +759,7 @@ function labelOf(n: SimNode) {
   const names: Record<ComponentType, string> = {
     users: 'Users', input_guard: 'Input Guardrail', semantic_cache: 'Semantic Cache', router: 'Model Router',
     embedding: 'Embedding Model', vector_db: 'Vector DB', keyword_search: 'Keyword Search', reranker: 'Reranker',
-    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory',
+    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory', eval_harness: 'Eval Harness',
   };
   return names[n.type];
 }

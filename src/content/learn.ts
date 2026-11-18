@@ -23,6 +23,27 @@ export interface Lesson {
 
 export const LESSONS: Lesson[] = [
   {
+    id: 'evals',
+    title: 'Evals: you can\'t fix what you can\'t see',
+    summary: 'Measure answer quality before and after every change.',
+    minutes: 4,
+    scenarioId: 'flying-blind',
+    components: ['llm', 'eval_harness'],
+    terms: ['eval', 'golden-dataset', 'llm-as-judge', 'regression', 'observability'],
+    blocks: [
+      { kind: 'p', text: 'Your dashboard shows speed, cost and errors for free. It does not show whether answers are right. A change that halves your bill can quietly double your wrong answers, and nothing turns red.' },
+      { kind: 'p', text: 'Evals fix that. There are two kinds, and you want both.' },
+      { kind: 'list', items: [
+        'Offline evals: a fixed test set of real questions with known good answers (a golden dataset). Run it before shipping any change, like unit tests for quality.',
+        'Online evals: a judge model scores a small sample of live answers against their sources, so you notice when real traffic drifts away from your test set.',
+        'Track the same few numbers every time: accuracy, hallucination rate, retrieval recall. Compare against the last version.',
+      ] },
+      { kind: 'analogy', text: 'A restaurant that only tracks how fast plates leave the kitchen. Service has never been quicker. Nobody has tasted the food.' },
+      { kind: 'p', text: 'Evals also make debugging honest. Instead of tweaking prompts until something "feels better", you change one thing, rerun, and see the number move, or not.' },
+      { kind: 'takeaway', text: 'Make quality measurable first. Then optimise.' },
+    ],
+  },
+  {
     id: 'prompts',
     title: 'Prompts: the only thing a model sees',
     summary: 'If it isn\'t in the prompt, the model doesn\'t know it.',
@@ -310,8 +331,8 @@ export const MODULES: Module[] = [
     id: 'engineering',
     title: 'Thinking like an AI engineer',
     level: 'Advanced',
-    blurb: 'The debugging loop that ties it all together.',
-    lessons: ['binding-pressure'],
+    blurb: 'Measuring quality, and the debugging loop that ties it all together.',
+    lessons: ['evals', 'binding-pressure'],
   },
 ];
 
@@ -398,7 +419,9 @@ export const TERMS: Term[] = [
   // Quality
   { id: 'hallucination', term: 'Hallucination', category: 'Quality', simple: 'A confident, fluent answer that is wrong or made up.', analogy: 'Confident directions to a street that doesn\'t exist.', why: 'Usually caused by missing information, not a lack of intelligence.', related: ['grounding', 'rag'], lesson: 'hallucination' },
   { id: 'lost-in-the-middle', term: 'Lost in the middle', category: 'Quality', simple: 'Models pay less attention to information buried in the middle of a long prompt than to what\'s at the start or end.', why: 'Stuffing in more chunks can make answers worse, not better.', related: ['context-window', 'reranker'], lesson: 'tokens' },
-  { id: 'eval', term: 'Eval', aka: 'Evaluation', category: 'Quality', simple: 'A repeatable test set of questions with known good answers, used to score your system every time you change it.', analogy: 'Unit tests, but for answer quality.', why: 'Without evals, every change is a guess.', related: ['observability', 'llm-as-judge'], lesson: 'binding-pressure' },
+  { id: 'eval', term: 'Eval', aka: 'Evaluation', category: 'Quality', simple: 'A repeatable way to score answer quality: run a test set with known good answers, and have a judge score a sample of live traffic.', analogy: 'Unit tests, but for answer quality.', why: 'Without evals, every change is a guess.', related: ['golden-dataset', 'llm-as-judge', 'regression'], lesson: 'evals' },
+  { id: 'golden-dataset', term: 'Golden dataset', aka: 'Test set', category: 'Quality', simple: 'A fixed collection of real questions with answers you\'ve checked are correct, used to score every version of your system.', analogy: 'The answer key for a practice exam you give every new version.', why: 'Lets you compare versions on the same questions, so improvements are real.', related: ['eval', 'regression'], lesson: 'evals' },
+  { id: 'regression', term: 'Regression', category: 'Quality', simple: 'When a change makes something that used to work worse, often without anyone noticing at first.', why: 'Cost and speed optimisations are the classic source of silent quality regressions.', related: ['eval', 'golden-dataset'], lesson: 'evals' },
   { id: 'binding-pressure', term: 'Binding pressure', category: 'Quality', simple: 'The single limit hurting your system the most right now. Fixing anything else barely helps.', analogy: 'The weakest link in a chain.', related: ['eval', 'observability'], lesson: 'binding-pressure' },
 ];
 
@@ -420,4 +443,5 @@ export const COMPONENT_TERM: Partial<Record<ComponentType, string>> = {
   llm: 'llm',
   output_guard: 'llm-as-judge',
   memory: 'conversation-memory',
+  eval_harness: 'eval',
 };
