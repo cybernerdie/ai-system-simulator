@@ -248,3 +248,19 @@ describe('broken designs', () => {
     for (const k of ['accuracy', 'errorRate', 'costPer1k', 'p50'] as const) expect(Number.isFinite(m[k])).toBe(true);
   });
 });
+
+describe('unmeasurable quality', () => {
+  it('reports no answered requests when every request is an attack', () => {
+    const s = SCENARIOS[0];
+    const m = run(
+      [
+        { id: 'u', type: 'users', x: 0, y: 0 },
+        { id: 'l', type: 'llm', x: 200, y: 0 },
+      ],
+      [{ source: 'u', target: 'l' }],
+      { ...s.traffic, adversarialShare: 1 },
+    );
+    expect(m.answered).toBe(0);
+    expect(goalMet(m, { metric: 'hallucination', op: '<=', value: 0.25 })).toBe(false);
+  });
+});

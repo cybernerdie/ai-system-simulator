@@ -84,9 +84,12 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
       </div>
     );
   }
-  const cells: { key: string; label: string; value: string; series: number[]; metric?: GoalMetric }[] = [
-    { key: 'acc', label: 'Accuracy', value: pct(m.accuracy), series: history.map((h) => h.accuracy), metric: 'accuracy' },
-    { key: 'hal', label: 'Hallucination', value: pct(m.hallucination), series: history.map((h) => h.hallucination), metric: 'hallucination' },
+  // With no real user requests answered (all attacks, all abuse, or all errors) there's nothing to score
+  const noAnswers = m.answered === 0;
+  const NO_ANSWERS = 'No real user requests were answered, so there is nothing to score.';
+  const cells: { key: string; label: string; value: string; series: number[]; metric?: GoalMetric; title?: string }[] = [
+    { key: 'acc', label: 'Accuracy', value: noAnswers ? '—' : pct(m.accuracy), series: history.map((h) => h.accuracy), metric: 'accuracy', title: noAnswers ? NO_ANSWERS : undefined },
+    { key: 'hal', label: 'Hallucination', value: noAnswers ? '—' : pct(m.hallucination), series: history.map((h) => h.hallucination), metric: 'hallucination', title: noAnswers ? NO_ANSWERS : undefined },
     m.recall == null && m.avgHistoryTokens > 0
       ? {
           key: 'hist',
@@ -121,7 +124,7 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
         const goal = c.metric ? goals.find((g) => g.metric === c.metric) : undefined;
         const state = goal ? (goalMet(m, goal) ? 'met' : 'unmet') : '';
         return (
-          <div key={c.key} className={`tele ${state}`}>
+          <div key={c.key} className={`tele ${state}`} title={c.title}>
             <div className="tele-label">{c.label}</div>
             <div className="tele-row">
               <span className="tele-value">{c.value}</span>

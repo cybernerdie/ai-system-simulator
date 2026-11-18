@@ -209,6 +209,8 @@ export const QUALITY_METRICS: GoalMetric[] = ['accuracy', 'hallucination', 'inje
 
 export function goalMet(m: Metrics, g: Goal) {
   if (!m.qualityVisible && QUALITY_METRICS.includes(g.metric)) return false;
+  // nothing real was answered, so answer quality can't be judged either way
+  if (m.answered === 0 && (g.metric === 'accuracy' || g.metric === 'hallucination')) return false;
   const v = metricValue(m, g.metric);
   return g.op === '>=' ? v >= g.value : v <= g.value;
 }

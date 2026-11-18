@@ -195,6 +195,8 @@ export interface Metrics {
   abuseUnchecked: boolean;
   /** No path from Users to any model: nothing can be answered. */
   noModel: boolean;
+  /** Real (non-attack, non-abuse) user requests that got an answer. Quality is unmeasurable when this is 0. */
+  answered: number;
   /** A voice app: first-token time is time to first audio. */
   voice: boolean;
   /** A handful of individual requests from this tick, failures first. */
