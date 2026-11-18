@@ -310,11 +310,15 @@ function Glossary({ focusId, onTerm, onLesson }: { focusId?: string; onTerm: (id
             )}
             {(t.related?.length || t.lesson) && (
               <footer>
-                {t.related?.map((r) => (
-                  <button key={r} className="chip chip-sm" onClick={() => onTerm(r)}>
-                    {TERM_BY_ID[r].term}
-                  </button>
-                ))}
+                {t.related?.length ? (
+                  <div className="term-related">
+                    {t.related.map((r) => (
+                      <button key={r} className="chip chip-sm" onClick={() => onTerm(r)}>
+                        {TERM_BY_ID[r].term}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
                 {t.lesson && (
                   <button className="term-lesson" onClick={() => onLesson(t.lesson!)}>
                     <BookOpen size={12} aria-hidden /> {LESSON_BY_ID[t.lesson].title}

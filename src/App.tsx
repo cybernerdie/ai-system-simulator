@@ -139,6 +139,10 @@ export default function App() {
     toastTimer.current = window.setTimeout(() => setToast(null), 2600);
   }, []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedRef.current = selectedId;
+  }, [selectedId]);
   const [tab, setTabRaw] = useState<Tab>('mission');
   const [picked, setPicked] = useState<Shown | null>(null);
   const setTab = useCallback((t: Tab) => {
@@ -393,6 +397,7 @@ export default function App() {
           {pattern !== 'steady' && <span className="sim-clock">t={simTime}s</span>}
         </div>
         <div className="topbar-spacer" />
+        <div className="topbar-tools">
         <button className="btn btn-ghost btn-icon" onClick={() => loadScenario(scenario.id)} title="Reset scenario">
           <RotateCcw size={15} aria-hidden />
           <span>Reset</span>
@@ -413,10 +418,12 @@ export default function App() {
         >
           {theme === 'dark' ? <Sun size={15} aria-hidden /> : <Moon size={15} aria-hidden />}
         </button>
-        <a className="btn btn-ghost btn-icon" href="https://github.com/cybernerdie/ai-system-simulator" target="_blank" rel="noreferrer" title="Source on GitHub">
+        <a className="btn btn-ghost btn-icon" href="https://github.com/cybernerdie/ai-system-simulator" target="_blank" rel="noreferrer" title="Source code on GitHub">
           <Code size={15} aria-hidden />
-          <span className="sr-only">GitHub</span>
+          <span className="sr-only">Source code on GitHub</span>
         </a>
+        </div>
+        <span className="topbar-divider" aria-hidden />
         <button className={`btn btn-primary btn-run${running ? ' is-running' : ''}`} onClick={() => setRunning((r) => !r)}>
           {running ? <Pause size={14} fill="currentColor" aria-hidden /> : <Play size={14} fill="currentColor" aria-hidden />}
           {running ? 'Pause' : 'Run'}
@@ -448,6 +455,9 @@ export default function App() {
           onConnect={onConnect}
           onSelectionChange={({ nodes: sel }) => {
             const id = sel[0]?.id ?? null;
+            // React Flow re-reports the selection whenever node data updates; only react to real changes
+            if (id === selectedRef.current) return;
+            selectedRef.current = id;
             setSelectedId(id);
             if (id) setTab('component');
             else if (tab === 'component') setTab('mission');
