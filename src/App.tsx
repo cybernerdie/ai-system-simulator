@@ -20,7 +20,7 @@ import type { ComponentType, ConfigValue, Metrics, RequestSample, SimGraph } fro
 import { SimNodeView, type SimFlowNode } from './ui/SimNodeView';
 import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
 import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
-import { LearnHub, type HubView } from './ui/LearnHub';
+import { LearnHub, firstUnreadLesson, type HubView } from './ui/LearnHub';
 import { encodeDesign, introSeen, loadCleared, markIntroSeen, readHashDesign, saveCleared } from './ui/persist';
 import { IntroDialog, Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from './ui/Panels';
 
@@ -346,7 +346,7 @@ export default function App() {
           <Link2 size={15} aria-hidden />
           <span>Share</span>
         </button>
-        <button className="btn btn-ghost btn-icon" onClick={() => setHub({ tab: 'lessons', lessonId: 'pipeline' })} title="Lessons and glossary">
+        <button className="btn btn-ghost btn-icon" onClick={() => setHub({ tab: 'lessons', lessonId: firstUnreadLesson() })} title="Lessons and glossary">
           <BookOpen size={15} aria-hidden />
           <span>Learn</span>
         </button>

@@ -26,7 +26,7 @@ export const METRIC_META: Record<GoalMetric, { label: string; fmt: (v: number) =
 
 /* ---------- palette ---------- */
 
-const GROUPS = ['Retrieval', 'Generation', 'Efficiency', 'Safety'] as const;
+const GROUPS = ['Retrieval', 'Memory', 'Generation', 'Efficiency', 'Safety'] as const;
 
 export function Palette({ onAdd }: { onAdd: (t: ComponentType) => void }) {
   return (
@@ -85,7 +85,14 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
   const cells: { key: string; label: string; value: string; series: number[]; metric?: GoalMetric }[] = [
     { key: 'acc', label: 'Accuracy', value: pct(m.accuracy), series: history.map((h) => h.accuracy), metric: 'accuracy' },
     { key: 'hal', label: 'Hallucination', value: pct(m.hallucination), series: history.map((h) => h.hallucination), metric: 'hallucination' },
-    { key: 'rec', label: 'Recall', value: m.recall == null ? '—' : pct(m.recall), series: history.map((h) => h.recall ?? 0) },
+    m.recall == null && m.avgHistoryTokens > 0
+      ? {
+          key: 'hist',
+          label: 'History / message',
+          value: m.avgHistoryTokens >= 1000 ? `${(m.avgHistoryTokens / 1000).toFixed(1)}k` : String(Math.round(m.avgHistoryTokens)),
+          series: history.map((h) => h.avgHistoryTokens),
+        }
+      : { key: 'rec', label: 'Recall', value: m.recall == null ? '—' : pct(m.recall), series: history.map((h) => h.recall ?? 0) },
     { key: 'inj', label: 'Injection', value: pct(m.injection), series: history.map((h) => h.injection), metric: 'injection' },
     { key: 'err', label: 'Errors', value: pct(m.errorRate), series: history.map((h) => h.errorRate), metric: 'errorRate' },
     { key: 'p50', label: 'p50 latency', value: ms(m.p50), series: history.map((h) => h.p50), metric: 'p50' },

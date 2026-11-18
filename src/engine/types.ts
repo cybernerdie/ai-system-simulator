@@ -9,7 +9,8 @@ export type ComponentType =
   | 'reranker'
   | 'agent'
   | 'llm'
-  | 'output_guard';
+  | 'output_guard'
+  | 'memory';
 
 export type ConfigValue = number | string | boolean;
 export type NodeConfig = Record<string, ConfigValue>;
@@ -45,6 +46,10 @@ export interface TrafficProfile {
   easyShare: number;
   /** Near-duplicate questions someone already asked. */
   repeatShare: number;
+  /** Chat apps: average number of earlier turns in the conversation (0/undefined = single-shot). */
+  chatTurns?: number;
+  /** Chat apps: share of messages that depend on something said earlier in the conversation. */
+  recallShare?: number;
 }
 
 export type Outcome =
@@ -68,7 +73,8 @@ export type Cause =
   | 'context_overflow'
   | 'injection'
   | 'cache_false_hit'
-  | 'guard_false_positive';
+  | 'guard_false_positive'
+  | 'forgot_context';
 
 export type StepTone = 'ok' | 'bad' | 'warn' | 'neutral';
 
@@ -83,7 +89,7 @@ export interface TraceStep {
 export interface RequestSample {
   id: number;
   question: string;
-  kind: 'knowledge' | 'exact' | 'tool' | 'attack' | 'general';
+  kind: 'knowledge' | 'exact' | 'tool' | 'attack' | 'general' | 'memory';
   outcome: Outcome;
   cause?: Cause;
   latency: number;
@@ -123,6 +129,8 @@ export interface Metrics {
   nodeStats: Record<string, NodeStat>;
   warnings: string[];
   activeNodeIds: string[];
+  /** Average conversation-history tokens sent per model call. */
+  avgHistoryTokens: number;
   /** A handful of individual requests from this tick, failures first. */
   samples: RequestSample[];
 }

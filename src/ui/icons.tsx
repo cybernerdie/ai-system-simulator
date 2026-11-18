@@ -3,6 +3,7 @@ import {
   Binary,
   Bot,
   Database,
+  History,
   ScanEye,
   ShieldCheck,
   Sparkles,
@@ -27,6 +28,7 @@ export const ICONS: Record<ComponentType, LucideIcon> = {
   agent: Bot,
   llm: Sparkles,
   output_guard: ScanEye,
+  memory: History,
 };
 
 export function KindIcon({ kind, size = 'md' }: { kind: ComponentType; size?: 'sm' | 'md' | 'lg' }) {

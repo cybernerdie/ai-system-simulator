@@ -1,6 +1,6 @@
 import type { Cause, Goal, GoalMetric, Metrics } from './types';
 
-export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable';
+export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat';
 
 export interface Pressure {
   key: PressureKey;
@@ -70,6 +70,16 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     why: 'Your guardrails are rejecting legitimate users.',
     try: 'Lower Input Guardrail strictness a bit — and rely on the Output Judge for defense in depth.',
   },
+  forgot_context: {
+    title: 'Memory loss',
+    why: 'Users refer back to things they said earlier, but your memory strategy dropped those turns, so the model guesses.',
+    try: 'Keep the facts that matter, not every word: summarise older turns, or store them as long-term memory and retrieve what each message needs.',
+  },
+  history_bloat: {
+    title: 'History bloat',
+    why: 'Models are stateless, so every message resends the whole conversation. Long chats pay for the same tokens again and again, and eat your rate limit.',
+    try: 'Add Conversation Memory and stop sending everything: a window, a rolling summary, or long-term memory retrieval.',
+  },
   cost: {
     title: 'Cost per request',
     why: 'Quality is fine, but every request pays for your most expensive model and longest prompt.',
@@ -111,13 +121,15 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
   const pick = (k: PressureKey): Pressure => ({ key: k, ...PRESSURES[k] });
 
   const errorCause = causes.find(([c]) => c === 'rate_limit' || c === 'context_overflow');
-  if (unmet.includes('errorRate') && errorCause) return pick(errorCause[0]);
+  const bloated = m.avgHistoryTokens > 4000;
+  if (unmet.includes('errorRate') && errorCause) return pick(bloated ? 'history_bloat' : errorCause[0]);
   if (unmet.includes('injection')) return pick('injection');
   if (unmet.some((u) => QUALITY.includes(u))) {
     const q = causes.find(([c]) => c !== 'rate_limit' && c !== 'context_overflow' && c !== 'injection');
     if (q) return pick(q[0]);
   }
   if (unmet.includes('costPer1k')) {
+    if (bloated) return pick('history_bloat');
     if ((m.causes.agent_loop ?? 0) > 0) return pick('agent_loop');
     return pick('cost');
   }

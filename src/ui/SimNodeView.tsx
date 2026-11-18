@@ -23,6 +23,10 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
       return [`≤ ${config.maxSteps} steps`];
     case 'semantic_cache':
       return [`≥ ${Number(config.threshold).toFixed(2)} sim`];
+    case 'memory':
+      return [
+        { full: 'full history', window: `last ${config.windowTurns} turns`, summary: 'rolling summary', retrieval: 'long-term memory' }[String(config.strategy)] ?? '',
+      ];
     case 'input_guard':
       return [`strict ${Number(config.strictness).toFixed(2)}`];
     default:

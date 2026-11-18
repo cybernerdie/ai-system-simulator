@@ -15,7 +15,7 @@ export interface ComponentSpec {
   type: ComponentType;
   name: string;
   short: string;
-  group: 'Input' | 'Retrieval' | 'Generation' | 'Efficiency' | 'Safety';
+  group: 'Input' | 'Retrieval' | 'Memory' | 'Generation' | 'Efficiency' | 'Safety';
   color: string;
   blurb: string;
   defaults: NodeConfig;
@@ -258,6 +258,38 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
       },
     ],
   },
+  memory: {
+    type: 'memory',
+    name: 'Conversation Memory',
+    short: 'MEM',
+    group: 'Memory',
+    color: '#14b8a6',
+    blurb: 'Decides how much of the conversation so far gets sent with each message. Models are stateless: without this, apps resend the entire chat every turn.',
+    defaults: { strategy: 'full', windowTurns: 6 },
+    fields: [
+      {
+        key: 'strategy',
+        label: 'Strategy',
+        kind: 'select',
+        options: [
+          { value: 'full', label: 'Full history (resend everything)' },
+          { value: 'window', label: 'Sliding window (last N turns)' },
+          { value: 'summary', label: 'Rolling summary + last 2 turns' },
+          { value: 'retrieval', label: 'Long-term memory (retrieve relevant turns)' },
+        ],
+        help: 'Full is accurate but grows every turn. Window is cheap but forgets. Summary keeps the gist. Retrieval stores every turn and fetches only what this message needs.',
+      },
+      {
+        key: 'windowTurns',
+        label: 'Window size (turns)',
+        kind: 'range',
+        min: 2,
+        max: 30,
+        step: 1,
+        help: 'Sliding window only: how many recent turns to keep word for word.',
+      },
+    ],
+  },
   output_guard: {
     type: 'output_guard',
     name: 'Output Judge',
@@ -274,6 +306,7 @@ export const PALETTE_ORDER: ComponentType[] = [
   'input_guard',
   'semantic_cache',
   'router',
+  'memory',
   'embedding',
   'vector_db',
   'keyword_search',

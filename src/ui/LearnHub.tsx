@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, BookOpen, Clock, Lightbulb, Play, Search, Sparkles, X } from 'lucide-react';
-import { LESSONS, LESSON_BY_ID, TERMS, TERM_BY_ID, type Lesson, type TermCategory } from '../content/learn';
+import { ArrowRight, BookOpen, Check, Clock, Lightbulb, Play, Search, Sparkles, X } from 'lucide-react';
+import { LESSON_BY_ID, LESSON_ORDER, MODULES, MODULE_OF, TERMS, TERM_BY_ID, type Lesson, type TermCategory } from '../content/learn';
+import { loadRead, saveRead } from './persist';
 import { SCENARIOS } from '../engine/scenarios';
 import { KindIcon } from './icons';
 import { COMPONENTS } from '../engine/components';
 
 export type HubView = { tab: 'lessons'; lessonId: string } | { tab: 'glossary'; termId?: string };
 
-const CATEGORIES: TermCategory[] = ['Models', 'Retrieval', 'Production', 'Agents', 'Safety', 'Quality'];
+const CATEGORIES: TermCategory[] = ['Models', 'Retrieval', 'Memory', 'Production', 'Agents', 'Safety', 'Quality'];
+
+/** Where to open the lessons tab: the first lesson not read yet. */
+export function firstUnreadLesson(): string {
+  const read = loadRead();
+  return LESSON_ORDER.find((id) => !read.has(id)) ?? LESSON_ORDER[0];
+}
 
 export function LearnHub({
   view,
@@ -36,7 +43,7 @@ export function LearnHub({
             <BookOpen size={18} aria-hidden /> Learn
           </h2>
           <div className="seg" role="tablist">
-            <button role="tab" aria-pressed={view.tab === 'lessons'} onClick={() => setView({ tab: 'lessons', lessonId: view.tab === 'lessons' ? view.lessonId : LESSONS[0].id })}>
+            <button role="tab" aria-pressed={view.tab === 'lessons'} onClick={() => setView({ tab: 'lessons', lessonId: view.tab === 'lessons' ? view.lessonId : firstUnreadLesson() })}>
               Lessons
             </button>
             <button role="tab" aria-pressed={view.tab === 'glossary'} onClick={() => setView({ tab: 'glossary' })}>
@@ -53,7 +60,7 @@ export function LearnHub({
         </header>
         {view.tab === 'lessons' ? (
           <Lessons
-            lesson={LESSON_BY_ID[view.lessonId] ?? LESSONS[0]}
+            lesson={LESSON_BY_ID[view.lessonId] ?? LESSON_BY_ID[LESSON_ORDER[0]]}
             onPick={(id) => setView({ tab: 'lessons', lessonId: id })}
             onTerm={(id) => setView({ tab: 'glossary', termId: id })}
             onTry={onTryScenario}
@@ -73,34 +80,71 @@ export function LearnHub({
 /* ---------- lessons ---------- */
 
 function Lessons({ lesson, onPick, onTerm, onTry }: { lesson: Lesson; onPick: (id: string) => void; onTerm: (id: string) => void; onTry: (id: string) => void }) {
-  const idx = LESSONS.findIndex((l) => l.id === lesson.id);
-  const next = LESSONS[idx + 1];
+  const idx = LESSON_ORDER.indexOf(lesson.id);
+  const next = LESSON_BY_ID[LESSON_ORDER[idx + 1]];
+  const mod = MODULE_OF[lesson.id];
+  const modIdx = MODULES.indexOf(mod);
   const scenario = lesson.scenarioId ? SCENARIOS.find((s) => s.id === lesson.scenarioId) : undefined;
   const readRef = useRef<HTMLElement>(null);
+  const [read, setRead] = useState<Set<string>>(() => loadRead());
   useEffect(() => {
     readRef.current?.scrollTo({ top: 0 });
+    setRead((r) => {
+      if (r.has(lesson.id)) return r;
+      const n = new Set(r).add(lesson.id);
+      saveRead(n);
+      return n;
+    });
   }, [lesson.id]);
 
   return (
     <div className="hub-body lessons">
       <nav className="lesson-nav" aria-label="Lessons">
-        <ol>
-          {LESSONS.map((l, i) => (
-            <li key={l.id}>
-              <button className={l.id === lesson.id ? 'is-current' : ''} onClick={() => onPick(l.id)} aria-current={l.id === lesson.id}>
-                <span className="lesson-num">{String(i + 1).padStart(2, '0')}</span>
-                <span className="lesson-nav-title">{l.title}</span>
-              </button>
-            </li>
-          ))}
-        </ol>
+        <div className="journey">
+          <span>Your journey</span>
+          <span className="journey-count">
+            {read.size}/{LESSON_ORDER.length}
+          </span>
+          <div className="picker-bar">
+            <div style={{ width: `${(read.size / LESSON_ORDER.length) * 100}%` }} />
+          </div>
+        </div>
+        {MODULES.map((m, mi) => (
+          <section key={m.id} className={`module${m.id === mod.id ? ' is-open' : ''}`}>
+            <header className="module-head">
+              <span className="module-num">Module {mi + 1}</span>
+              <span className={`level level-${m.level.toLowerCase()}`}>{m.level}</span>
+              <h3>{m.title}</h3>
+            </header>
+            <ol>
+              {m.lessons.map((id) => {
+                const l = LESSON_BY_ID[id];
+                const done = read.has(id);
+                return (
+                  <li key={id}>
+                    <button className={id === lesson.id ? 'is-current' : ''} onClick={() => onPick(id)} aria-current={id === lesson.id}>
+                      <span className={`lesson-check${done ? ' done' : ''}`} aria-label={done ? 'Read' : 'Not read'}>
+                        {done && <Check size={10} strokeWidth={3.5} />}
+                      </span>
+                      <span className="lesson-nav-title">{l.title}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        ))}
       </nav>
       <article className="lesson" ref={readRef}>
         <div className="lesson-inner">
           <p className="lesson-meta">
-            <span>Lesson {idx + 1}</span>
+            <span>
+              Module {modIdx + 1}: {mod.title}
+            </span>
             <span className="dot-sep" aria-hidden />
-            <Clock size={12} aria-hidden /> {lesson.minutes} min read
+            <span className={`level level-${mod.level.toLowerCase()}`}>{mod.level}</span>
+            <span className="dot-sep" aria-hidden />
+            <Clock size={12} aria-hidden /> {lesson.minutes} min
           </p>
           <h1>{lesson.title}</h1>
           <p className="lesson-summary">{lesson.summary}</p>
@@ -167,7 +211,7 @@ function Lessons({ lesson, onPick, onTerm, onTry }: { lesson: Lesson; onPick: (i
             )}
             {next && (
               <button className="btn btn-ghost" onClick={() => onPick(next.id)}>
-                Next: {next.title} <ArrowRight size={14} aria-hidden />
+                {MODULE_OF[next.id] !== mod ? `Next module: ${MODULE_OF[next.id].title}` : `Next: ${next.title}`} <ArrowRight size={14} aria-hidden />
               </button>
             )}
           </footer>

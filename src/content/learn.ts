@@ -23,6 +23,68 @@ export interface Lesson {
 
 export const LESSONS: Lesson[] = [
   {
+    id: 'prompts',
+    title: 'Prompts: the only thing a model sees',
+    summary: 'If it isn\'t in the prompt, the model doesn\'t know it.',
+    minutes: 3,
+    components: ['users', 'llm'],
+    terms: ['prompt', 'system-prompt', 'stateless', 'token'],
+    blocks: [
+      { kind: 'p', text: 'A model can\'t see your database, your website or yesterday\'s chat. For each request it sees exactly one thing: the text you send, called the prompt. Its answer comes from that prompt plus what it learned in training.' },
+      { kind: 'list', items: [
+        'System prompt: the role and rules ("You are a support assistant. Only answer from the sources.").',
+        'Context: documents you looked up, results from tools.',
+        'History: earlier messages in the conversation.',
+        'The user\'s message itself.',
+      ] },
+      { kind: 'analogy', text: 'Phoning an expert who forgets everything the moment you hang up. On every call you have to read out who you are, what you discussed before, and the documents they need.' },
+      { kind: 'p', text: 'This one idea explains most of AI engineering. RAG works because you paste the right documents in. Chatbots "forget" when old messages aren\'t resent. Costs grow because everything you paste in is paid for.' },
+      { kind: 'takeaway', text: 'Building an AI app is mostly deciding what goes into the prompt.' },
+    ],
+  },
+  {
+    id: 'stateless',
+    title: 'Why chatbots forget, and why remembering gets expensive',
+    summary: 'Models remember nothing between messages. Apps fake it by resending the chat.',
+    minutes: 4,
+    scenarioId: 'endless-chat',
+    components: ['users', 'memory', 'llm'],
+    terms: ['stateless', 'chat-history', 'context-window', 'lost-in-the-middle'],
+    blocks: [
+      { kind: 'p', text: 'Chatting with an AI app feels like talking to something that remembers you. It doesn\'t. Models are stateless: every message is a brand-new request. The app creates the feeling of memory by resending the conversation so far along with each new message.' },
+      { kind: 'p', text: 'The simplest version, resending everything, works perfectly on day one. Then conversations get long.' },
+      { kind: 'list', items: [
+        'Cost grows every turn. Message 40 pays again for the 39 before it, so a conversation\'s total cost grows much faster than its length.',
+        'Your rate limit fills up with old messages instead of new users.',
+        'Answers get worse. The one detail that matters is buried among hundreds of lines (lost in the middle).',
+        'Eventually the conversation no longer fits in the context window, and requests fail.',
+      ] },
+      { kind: 'analogy', text: 'Reading someone the full transcript of every conversation you\'ve ever had before saying anything new. Very thorough. By month two it takes all day.' },
+      { kind: 'takeaway', text: 'Memory isn\'t free: every remembered word is paid for again on every turn.' },
+    ],
+  },
+  {
+    id: 'memory-strategies',
+    title: 'Memory that scales',
+    summary: 'Remember facts, not transcripts.',
+    minutes: 5,
+    scenarioId: 'endless-chat',
+    components: ['memory', 'embedding', 'llm'],
+    terms: ['conversation-memory', 'sliding-window', 'conversation-summary', 'long-term-memory', 'prompt-caching'],
+    blocks: [
+      { kind: 'p', text: 'The goal isn\'t to remember everything. It\'s to have the right facts in the prompt for this particular message. There are four common strategies, from simplest to smartest.' },
+      { kind: 'list', items: [
+        'Full history. Resend every turn. Most accurate for short chats, but cost, latency and failures grow with every message.',
+        'Sliding window. Keep only the last N turns. Cheap and predictable, but anything older simply vanishes, so "what was my budget again?" fails.',
+        'Rolling summary. Replace older turns with a short running summary and keep the last few word for word. Keeps the gist, but summaries tend to drop specifics like numbers and names.',
+        'Long-term memory. Store every turn (or the facts pulled out of it) as embeddings, and for each new message retrieve only the few that are relevant. It\'s RAG, applied to the conversation itself.',
+      ] },
+      { kind: 'analogy', text: 'A good doctor doesn\'t reread your whole file at every appointment. They glance at the summary, and pull up the one old test result that matters today.' },
+      { kind: 'p', text: 'Production systems usually combine them: a short window so the conversation flows, a summary for the big picture, and retrieval for specific facts. Prompt caching helps too: providers can reuse the unchanging start of a prompt (system prompt, long documents) at a discount.' },
+      { kind: 'takeaway', text: 'Keep prompts small and the important facts in view.' },
+    ],
+  },
+  {
     id: 'pipeline',
     title: 'What an AI app really is',
     summary: 'The model is one box. The product is the pipeline around it.',
@@ -190,10 +252,74 @@ export const LESSONS: Lesson[] = [
 ];
 
 /* ------------------------------------------------------------------ */
+/* Modules: the learning journey, simple → complex                     */
+/* ------------------------------------------------------------------ */
+
+export interface Module {
+  id: string;
+  title: string;
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
+  blurb: string;
+  lessons: string[];
+}
+
+export const MODULES: Module[] = [
+  {
+    id: 'foundations',
+    title: 'Foundations',
+    level: 'Beginner',
+    blurb: 'What a model is, what it sees, and why it makes things up.',
+    lessons: ['pipeline', 'prompts', 'tokens', 'hallucination'],
+  },
+  {
+    id: 'knowledge',
+    title: 'Giving models knowledge',
+    level: 'Beginner',
+    blurb: 'Let the model look things up, and make sure it finds the right page.',
+    lessons: ['rag', 'retrieval'],
+  },
+  {
+    id: 'memory',
+    title: 'Memory and conversations',
+    level: 'Intermediate',
+    blurb: 'Why chatbots forget, and how to remember without going broke.',
+    lessons: ['stateless', 'memory-strategies'],
+  },
+  {
+    id: 'production',
+    title: 'Running in production',
+    level: 'Intermediate',
+    blurb: 'Rate limits, cost and speed once real users arrive.',
+    lessons: ['scale', 'latency'],
+  },
+  {
+    id: 'agents',
+    title: 'Agents',
+    level: 'Advanced',
+    blurb: 'Letting models take actions, and keeping them on a leash.',
+    lessons: ['agents'],
+  },
+  {
+    id: 'safety',
+    title: 'Safety',
+    level: 'Advanced',
+    blurb: 'Attacks on your prompt, and the layers that stop them.',
+    lessons: ['safety'],
+  },
+  {
+    id: 'engineering',
+    title: 'Thinking like an AI engineer',
+    level: 'Advanced',
+    blurb: 'The debugging loop that ties it all together.',
+    lessons: ['binding-pressure'],
+  },
+];
+
+/* ------------------------------------------------------------------ */
 /* Glossary: complex terms in simple words                             */
 /* ------------------------------------------------------------------ */
 
-export type TermCategory = 'Models' | 'Retrieval' | 'Production' | 'Agents' | 'Safety' | 'Quality';
+export type TermCategory = 'Models' | 'Retrieval' | 'Memory' | 'Production' | 'Agents' | 'Safety' | 'Quality';
 
 export interface Term {
   id: string;
@@ -234,6 +360,15 @@ export const TERMS: Term[] = [
   { id: 'recall', term: 'Recall (retrieval)', category: 'Retrieval', simple: 'The share of questions where retrieval actually found the chunk containing the answer.', why: 'If recall is 70%, up to 30% of answers are built on the wrong pages.', related: ['top-k', 'reranker'], lesson: 'retrieval' },
   { id: 'grounding', term: 'Grounding', category: 'Retrieval', simple: 'Making the model base its answer on specific sources you provided, rather than on memory.', related: ['rag', 'hallucination'], lesson: 'rag' },
 
+  // Memory
+  { id: 'stateless', term: 'Stateless', category: 'Memory', simple: 'A model keeps nothing between requests. Every call starts from a blank slate; anything it should "remember" has to be in the prompt again.', analogy: 'An expert who forgets every phone call the moment it ends.', why: 'It\'s why chat apps resend history, and why long chats get expensive.', related: ['chat-history', 'conversation-memory', 'prompt'], lesson: 'stateless' },
+  { id: 'chat-history', term: 'Chat history', category: 'Memory', simple: 'The earlier messages of a conversation, resent with each new message so the model knows what was said.', why: 'It grows every turn, and you pay for all of it every turn.', related: ['stateless', 'sliding-window'], lesson: 'stateless' },
+  { id: 'conversation-memory', term: 'Conversation memory', category: 'Memory', simple: 'The strategy that decides which parts of a conversation go back into the prompt: everything, the latest turns, a summary, or retrieved facts.', analogy: 'Deciding which notes to bring to a meeting.', related: ['sliding-window', 'conversation-summary', 'long-term-memory'], lesson: 'memory-strategies' },
+  { id: 'sliding-window', term: 'Sliding window', category: 'Memory', simple: 'Keeping only the last N turns of a conversation in the prompt and dropping everything older.', analogy: 'A whiteboard you keep erasing from the top to make room.', why: 'Cheap and predictable, but forgets anything older than the window.', related: ['conversation-summary', 'chat-history'], lesson: 'memory-strategies' },
+  { id: 'conversation-summary', term: 'Rolling summary', category: 'Memory', simple: 'Regularly compressing older turns into a short summary that travels with the conversation, while the latest turns stay word for word.', analogy: 'Meeting minutes instead of the full recording.', why: 'Keeps the gist in few tokens, but specific details like numbers and names can get lost.', related: ['sliding-window', 'long-term-memory'], lesson: 'memory-strategies' },
+  { id: 'long-term-memory', term: 'Long-term memory', aka: 'Memory retrieval', category: 'Memory', simple: 'Storing past turns, or facts pulled out of them, in a searchable store, and fetching only the ones relevant to the current message.', analogy: 'An assistant\'s notebook: they don\'t read it all out, they flip to the page they need.', why: 'Keeps prompts small while still remembering details from long ago.', related: ['rag', 'embedding', 'conversation-memory'], lesson: 'memory-strategies' },
+  { id: 'prompt-caching', term: 'Prompt caching', category: 'Memory', simple: 'Providers can store the unchanging beginning of a prompt (system prompt, long documents) and reuse it across requests for less money and time.', analogy: 'Keeping the reference book open on your desk instead of fetching it from the shelf every time.', why: 'Cuts cost for apps that resend the same big prefix. Different from a semantic cache, which skips the model entirely.', related: ['token', 'semantic-cache'], lesson: 'memory-strategies' },
+
   // Production
   { id: 'latency', term: 'Latency', category: 'Production', simple: 'How long a request takes from the user asking to the user getting an answer.', related: ['ttft', 'p50-p99'], lesson: 'latency' },
   { id: 'ttft', term: 'Time to first token', aka: 'TTFT', category: 'Production', simple: 'How long until the first word of the answer appears on screen.', why: 'This is what users actually feel as "speed".', related: ['streaming', 'latency'], lesson: 'latency' },
@@ -268,6 +403,8 @@ export const TERMS: Term[] = [
 ];
 
 export const TERM_BY_ID = Object.fromEntries(TERMS.map((t) => [t.id, t])) as Record<string, Term>;
+export const LESSON_ORDER: string[] = MODULES.flatMap((m) => m.lessons);
+export const MODULE_OF: Record<string, Module> = Object.fromEntries(MODULES.flatMap((m) => m.lessons.map((l) => [l, m])));
 export const LESSON_BY_ID = Object.fromEntries(LESSONS.map((l) => [l.id, l])) as Record<string, Lesson>;
 
 /** The glossary entry that best explains each component, used for "Learn more" links. */
@@ -282,4 +419,5 @@ export const COMPONENT_TERM: Partial<Record<ComponentType, string>> = {
   agent: 'agent',
   llm: 'llm',
   output_guard: 'llm-as-judge',
+  memory: 'conversation-memory',
 };

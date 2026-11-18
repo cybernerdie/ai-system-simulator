@@ -35,6 +35,7 @@ describe('scenarios', () => {
       jailbreak: 'injection',
       'long-docs': 'context_overflow',
       'feels-slow': 'ttft',
+      'endless-chat': 'history_bloat',
     };
     for (const s of SCENARIOS) {
       const m = run(s.nodes, s.edges, s.traffic);
@@ -90,6 +91,34 @@ describe('engine behaviour', () => {
       ],
     });
     expect([...active].sort()).toEqual(['c', 'j', 'l', 'u']);
+  });
+
+  it('memory strategies trade cost against forgetting', () => {
+    const chat = SCENARIOS.find((x) => x.id === 'endless-chat')!;
+    const withMem = (strategy: string) =>
+      run(
+        [
+          { id: 'u', type: 'users', x: 0, y: 0 },
+          { id: 'm', type: 'memory', x: 0, y: 0, config: { strategy, windowTurns: 6 } },
+          { id: 'l', type: 'llm', x: 0, y: 0, config: { size: 'medium' } },
+        ],
+        [
+          { source: 'u', target: 'm' },
+          { source: 'm', target: 'l' },
+        ],
+        chat.traffic,
+      );
+    const full = withMem('full');
+    const win = withMem('window');
+    const ret = withMem('retrieval');
+    expect(full.avgHistoryTokens).toBeGreaterThan(win.avgHistoryTokens * 3);
+    expect(full.costPer1k).toBeGreaterThan(ret.costPer1k * 2);
+    expect(win.causes.forgot_context ?? 0).toBeGreaterThan((ret.causes.forgot_context ?? 0) * 3);
+  });
+
+  it('single-shot traffic sends no history', () => {
+    const m = run(SCENARIOS[0].nodes, SCENARIOS[0].edges, SCENARIOS[0].traffic);
+    expect(m.avgHistoryTokens).toBe(0);
   });
 
   it('is deterministic for a given seed', () => {

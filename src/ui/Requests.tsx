@@ -20,6 +20,7 @@ const KIND_LABEL: Record<RequestSample['kind'], string> = {
   tool: 'Needs an action',
   attack: 'Attack',
   general: 'General',
+  memory: 'Refers to earlier chat',
 };
 
 const fmtMs = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${Math.round(v)}ms`);

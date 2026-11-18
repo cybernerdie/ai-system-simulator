@@ -287,6 +287,37 @@ export const SCENARIOS: Scenario[] = [
       edges: [...chain('users', 'emb', 'vdb', 'rr', 'llm'), ...chain('users', 'kw', 'rr')],
     },
   },
+  {
+    id: 'endless-chat',
+    difficulty: 3,
+    skills: ['Conversation memory', 'Stateless models', 'Cost'],
+    title: '8 · The chat that never ends',
+    tagline: 'It either forgets what you said, or costs a fortune.',
+    brief:
+      'Your AI coaching app is a hit: conversations run 20, 40, 80 messages. Users constantly refer back ("like I said earlier, my budget is…"). The prototype resends the entire conversation with every message. The bill grows every week, answers get worse as chats get longer, and the longest chats have started failing.',
+    traffic: { ...base, rps: 6, easyShare: 0.6, repeatShare: 0.05, chatTurns: 22, recallShare: 0.35 },
+    goals: [
+      { metric: 'costPer1k', op: '<=', value: 12 },
+      { metric: 'accuracy', op: '>=', value: 0.85 },
+      { metric: 'errorRate', op: '<=', value: 0.01 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'llm'),
+    hint: 'Open a few requests and look at what each one sends. Does the model need every word from 40 turns ago, or only the few facts this message depends on? Try each memory strategy and watch which goal breaks.',
+    lesson:
+      'Models are stateless: they remember nothing between calls, so "memory" is whatever you choose to resend. Resending everything is accurate at first, then gets expensive, slow and noisy, and eventually overflows. A sliding window is cheap but forgets. A summary keeps the gist but loses specifics. Storing the conversation as long-term memory and retrieving only what each message needs keeps prompts small and the important facts in view.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'mem', type: 'memory', x: 260, y: 120, config: { strategy: 'retrieval' } },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+      ],
+      edges: chain('users', 'mem', 'llm'),
+    },
+  },
 ];
 
 export const SANDBOX: Scenario = {

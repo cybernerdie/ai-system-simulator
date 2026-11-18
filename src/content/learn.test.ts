@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { COMPONENT_TERM, LESSONS, LESSON_BY_ID, TERMS, TERM_BY_ID } from './learn';
+import { COMPONENT_TERM, LESSONS, LESSON_BY_ID, LESSON_ORDER, MODULES, TERMS, TERM_BY_ID } from './learn';
 import { SCENARIOS } from '../engine/scenarios';
 
 describe('learn content', () => {
   it('has unique ids', () => {
     expect(new Set(TERMS.map((t) => t.id)).size).toBe(TERMS.length);
     expect(new Set(LESSONS.map((l) => l.id)).size).toBe(LESSONS.length);
+  });
+  it('every lesson sits in exactly one module', () => {
+    expect([...LESSON_ORDER].sort()).toEqual(LESSONS.map((l) => l.id).sort());
+    expect(new Set(LESSON_ORDER).size).toBe(LESSON_ORDER.length);
+    expect(MODULES.every((m) => m.lessons.length > 0)).toBe(true);
   });
   it('every cross-reference resolves', () => {
     const broken: string[] = [];

@@ -99,3 +99,21 @@ export function markIntroSeen() {
     /* ignore */
   }
 }
+
+const KEY_READ = 'aisim.lessonsRead.v1';
+
+export function loadRead(): Set<string> {
+  try {
+    const v = JSON.parse(localStorage.getItem(KEY_READ) ?? '[]');
+    return new Set(Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+export function saveRead(s: Set<string>) {
+  try {
+    localStorage.setItem(KEY_READ, JSON.stringify([...s]));
+  } catch {
+    /* ignore */
+  }
+}
