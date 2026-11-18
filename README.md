@@ -1,5 +1,7 @@
 # AISim: AI System Design Simulator
 
+**Live demo: [ai-system-simulator.vercel.app](https://ai-system-simulator.vercel.app/)**
+
 Build an AI system from parts, push real-shaped traffic through it, and watch which part breaks first. Then fix it and push harder.
 
 The point isn't memorising components. It's learning to name the **binding pressure**: the one limit hurting your system right now.
@@ -58,7 +60,7 @@ npm run tune    # prints metrics for each scenario's start vs. solution (handy w
 npm run build   # static build in dist/
 ```
 
-The build is a static site, so it deploys as-is to Cloudflare Pages, Netlify, Vercel or GitHub Pages (build command `npm run build`, output `dist`).
+The build is a static site. It's deployed on Vercel (every push to `main` redeploys), and it works as-is on Cloudflare Pages, Netlify or GitHub Pages too (build command `npm run build`, output `dist`).
 
 ### Adding a scenario
 
