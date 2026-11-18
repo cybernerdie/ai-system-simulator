@@ -3,8 +3,9 @@ import { Check, ChevronDown, Lightbulb, Trash2, TriangleAlert, X } from 'lucide-
 import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../engine/components';
 import { goalMet, type Pressure } from '../engine/pressures';
 import type { Scenario } from '../engine/scenarios';
-import type { ComponentType, ConfigValue, Goal, GoalMetric, Metrics, NodeConfig } from '../engine/types';
+import type { ComponentType, ConfigValue, Goal, GoalMetric, Metrics, NodeConfig, RequestSample } from '../engine/types';
 import { KindIcon } from './icons';
+import { RequestsPanel } from './Requests';
 
 /* ---------- formatting ---------- */
 
@@ -153,7 +154,7 @@ export function PressureWindow({ p, running, hasRun }: { p: Pressure | null; run
 
 /* ---------- side panel ---------- */
 
-type Tab = 'mission' | 'component';
+export type Tab = 'mission' | 'requests' | 'component';
 
 export function SidePanel({
   scenario,
@@ -166,7 +167,13 @@ export function SidePanel({
   onDelete,
   tab,
   setTab,
+  running,
+  picked,
+  onPick,
 }: {
+  running: boolean;
+  picked: RequestSample | null;
+  onPick: (r: RequestSample | null) => void;
   scenario: Scenario;
   m: Metrics | null;
   streak: number;
@@ -184,12 +191,18 @@ export function SidePanel({
         <button role="tab" aria-selected={tab === 'mission'} onClick={() => setTab('mission')}>
           Mission
         </button>
+        <button role="tab" aria-selected={tab === 'requests'} onClick={() => setTab('requests')}>
+          Requests
+          {m && m.samples.some((r) => r.outcome !== 'correct' && r.outcome !== 'blocked') && <span className="tab-dot" aria-hidden />}
+        </button>
         <button role="tab" aria-selected={tab === 'component'} onClick={() => setTab('component')}>
           Component
         </button>
       </div>
       {tab === 'mission' ? (
         <Mission scenario={scenario} m={m} streak={streak} needed={needed} warnings={warnings} />
+      ) : tab === 'requests' ? (
+        <RequestsPanel samples={m?.samples ?? []} running={running} picked={picked} onPick={onPick} />
       ) : selected ? (
         <Inspector {...selected} onChange={onChange} onDelete={onDelete} />
       ) : (

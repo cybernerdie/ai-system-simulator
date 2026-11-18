@@ -70,6 +70,27 @@ export type Cause =
   | 'cache_false_hit'
   | 'guard_false_positive';
 
+export type StepTone = 'ok' | 'bad' | 'warn' | 'neutral';
+
+export interface TraceStep {
+  nodeId?: string;
+  kind: ComponentType;
+  text: string;
+  ms?: number;
+  tone?: StepTone;
+}
+
+export interface RequestSample {
+  id: number;
+  question: string;
+  kind: 'knowledge' | 'exact' | 'tool' | 'attack' | 'general';
+  outcome: Outcome;
+  cause?: Cause;
+  latency: number;
+  cost: number;
+  steps: TraceStep[];
+}
+
 export type NodeStatus = 'idle' | 'ok' | 'warn' | 'hot';
 
 export interface NodeStat {
@@ -102,6 +123,8 @@ export interface Metrics {
   nodeStats: Record<string, NodeStat>;
   warnings: string[];
   activeNodeIds: string[];
+  /** A handful of individual requests from this tick, failures first. */
+  samples: RequestSample[];
 }
 
 export type GoalMetric =

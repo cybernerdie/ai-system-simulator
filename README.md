@@ -22,7 +22,17 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 | 3 | Launch day | Tokens-per-minute limit | Semantic caching, model routing, cost per request |
 | 4 | The support agent | No way to act | Agents, step budgets, runaway-loop cost |
 | 5 | Someone pasted a jailbreak | Prompt injection | Layered guardrails and their false positives |
+| 6 | The contract reviewer | Context window overflow | Context as a budget, reranking to fit small models |
+| 7 | "It feels slow" | Time to first token | Streaming, and what silently breaks it |
 | — | Sandbox | Whatever you hit | Free build with a mixed workload |
+
+## Features
+
+- **Binding pressure**: a live diagnosis of the one limit hurting your design most, with what to try next.
+- **Telemetry dock**: accuracy, hallucination, recall, injection, errors, latency, time to first token and cost, with goal targets and trend lines.
+- **Request inspector**: open the Requests tab, click any sampled request and follow it hop by hop (what each component did, how long it took, and why it failed). Its path lights up on the canvas.
+- **Scenario picker**: cards with difficulty, the concepts each scenario teaches, and your progress (saved in your browser).
+- **Share**: copies a link that encodes your whole design, so anyone can open and run it.
 
 ## Components
 

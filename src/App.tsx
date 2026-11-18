@@ -11,15 +11,17 @@ import {
   useReactFlow,
   type Connection,
 } from '@xyflow/react';
-import { CircleQuestionMark, Code, Pause, Play, RotateCcw } from 'lucide-react';
+import { Check, CircleQuestionMark, Code, Link2, Pause, Play, RotateCcw } from 'lucide-react';
 import { COMPONENTS } from './engine/components';
 import { simulate } from './engine/simulate';
 import { bindingPressure, goalMet, type Pressure } from './engine/pressures';
 import { SANDBOX, SCENARIOS, withDefaults, type Scenario } from './engine/scenarios';
-import type { ComponentType, ConfigValue, Metrics, SimGraph } from './engine/types';
+import type { ComponentType, ConfigValue, Metrics, RequestSample, SimGraph } from './engine/types';
 import { SimNodeView, type SimFlowNode } from './ui/SimNodeView';
 import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
-import { IntroDialog, Palette, PressureWindow, SidePanel, Telemetry, WinDialog } from './ui/Panels';
+import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
+import { encodeDesign, introSeen, loadCleared, markIntroSeen, readHashDesign, saveCleared } from './ui/persist';
+import { IntroDialog, Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from './ui/Panels';
 
 const ALL = [...SCENARIOS, SANDBOX];
 const TICK_MS = 700;
@@ -40,11 +42,13 @@ function edgeOf(source: string, target: string): FlowEdgeType {
 }
 
 function buildFlow(s: Scenario): { nodes: SimFlowNode[]; edges: FlowEdgeType[] } {
+  // scenarios are authored on a loose grid; snap columns so cards never overlap
+  const cols = [...new Set(s.nodes.map((n) => n.x))].sort((a, b) => a - b);
   return {
     nodes: s.nodes.map(withDefaults).map((n) => ({
       id: n.id,
       type: 'sim',
-      position: { x: n.x * 1.15, y: n.y },
+      position: { x: cols.indexOf(n.x) * 270, y: n.y * 1.1 },
       deletable: n.type !== 'users',
       data: { kind: n.type, config: n.config! },
     })),
@@ -94,10 +98,23 @@ export default function App() {
   const [pressure, setPressure] = useState<Pressure | null>(null);
   const [streak, setStreak] = useState(0);
   const [won, setWon] = useState(false);
-  const [cleared, setCleared] = useState<Set<string>>(() => new Set());
-  const [intro, setIntro] = useState<number | null>(0);
+  const [cleared, setCleared] = useState<Set<string>>(() => loadCleared());
+  const [intro, setIntro] = useState<number | null>(() => (introSeen() || readHashDesign() ? null : 0));
+  const [toast, setToast] = useState<string | null>(null);
+  const [picker, setPicker] = useState(false);
+  const toastTimer = useRef<number | undefined>(undefined);
+  const showToast = useCallback((text: string) => {
+    setToast(text);
+    window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
+  }, []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'mission' | 'component'>('mission');
+  const [tab, setTabRaw] = useState<Tab>('mission');
+  const [picked, setPicked] = useState<RequestSample | null>(null);
+  const setTab = useCallback((t: Tab) => {
+    setTabRaw(t);
+    if (t !== 'requests') setPicked(null);
+  }, []);
   const seed = useRef(1);
   const metricsRef = useRef<Metrics | null>(null);
   const streakRef = useRef(0);
@@ -132,10 +149,49 @@ export default function App() {
       setWon(false);
       setSelectedId(null);
       setTab('mission');
+      setPicked(null);
+      if (window.location.hash) window.history.replaceState(null, '', window.location.pathname);
       requestAnimationFrame(() => flow.fitView({ ...FIT, duration: 250 }));
     },
-    [flow, setEdges, setNodes],
+    [flow, setEdges, setNodes, setTab],
   );
+
+  useEffect(() => saveCleared(cleared), [cleared]);
+
+  // Open a shared design from the URL, once
+  useEffect(() => {
+    const d = readHashDesign();
+    if (!d) return;
+    loadScenario(ALL.some((x) => x.id === d.scenarioId) ? d.scenarioId : SANDBOX.id);
+    setNodes(
+      d.nodes.map((n) => ({
+        id: n.id,
+        type: 'sim',
+        position: { x: n.x, y: n.y },
+        deletable: n.type !== 'users',
+        data: { kind: n.type, config: n.config },
+      })),
+    );
+    setEdges(d.edges.map((e) => edgeOf(e.source, e.target)));
+    showToast('Loaded a shared design. Press Space to run it.');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const share = useCallback(async () => {
+    const code = encodeDesign({
+      scenarioId: scenario.id,
+      nodes: nodes.map((n) => ({ id: n.id, type: n.data.kind, x: n.position.x, y: n.position.y, config: n.data.config })),
+      edges: edges.map((e) => ({ source: e.source, target: e.target })),
+    });
+    const url = `${window.location.origin}${window.location.pathname}#d=${code}`;
+    window.history.replaceState(null, '', url);
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('Link copied. Anyone with it can open this design.');
+    } catch {
+      showToast('Link is ready in the address bar.');
+    }
+  }, [scenario.id, nodes, edges, showToast]);
 
   // Simulation loop
   const graphKey = JSON.stringify(graph);
@@ -172,20 +228,30 @@ export default function App() {
 
   // Push live stats into nodes, light up active edges
   const active = useMemo(() => new Set(metrics?.activeNodeIds ?? []), [metrics]);
+  const traced = useMemo(() => (picked ? picked.steps.map((s) => s.nodeId).filter(Boolean) as string[] : null), [picked]);
   const viewNodes = useMemo(
-    () => nodes.map((n) => ({ ...n, data: { ...n.data, running, stat: metrics?.nodeStats[n.id] } })),
-    [nodes, metrics, running],
+    () =>
+      nodes.map((n) => ({
+        ...n,
+        className: traced ? (traced.includes(n.id) ? 'is-traced' : 'is-dimmed') : undefined,
+        data: { ...n.data, running, stat: metrics?.nodeStats[n.id] },
+      })),
+    [nodes, metrics, running, traced],
   );
   const viewEdges = useMemo(
     () =>
-      edges.map((e) => ({
-        ...e,
-        data: {
-          live: running && active.has(e.source) && active.has(e.target),
-          rate: metrics?.nodeStats[e.target]?.rps ?? 0,
-        },
-      })),
-    [edges, running, active, metrics],
+      edges.map((e) => {
+        const onTrace = traced ? traced.some((id, i) => id === e.source && traced.slice(i + 1).includes(e.target)) : false;
+        return {
+          ...e,
+          className: traced ? (onTrace ? 'is-traced' : 'is-dimmed') : undefined,
+          data: {
+            live: (running && active.has(e.source) && active.has(e.target) && !traced) || onTrace,
+            rate: metrics?.nodeStats[e.target]?.rps ?? 0,
+          },
+        };
+      }),
+    [edges, running, active, metrics, traced],
   );
 
   const onConnect = useCallback(
@@ -218,7 +284,7 @@ export default function App() {
       setSelectedId(id);
       setTab('component');
     },
-    [flow, setNodes],
+    [flow, setNodes, setTab],
   );
 
   const updateConfig = useCallback(
@@ -233,21 +299,21 @@ export default function App() {
       setSelectedId(null);
       setTab('mission');
     },
-    [setEdges, setNodes],
+    [setEdges, setNodes, setTab],
   );
 
   // Space toggles run
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
-      if (e.code === 'Space' && !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag) && intro === null && !won) {
+      if (e.code === 'Space' && !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag) && intro === null && !won && !picker) {
         e.preventDefault();
         setRunning((r) => !r);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [intro, won]);
+  }, [intro, won, picker]);
 
   const selected = nodes.find((n) => n.id === selectedId);
   const idx = SCENARIOS.findIndex((s) => s.id === scenario.id);
@@ -261,17 +327,7 @@ export default function App() {
           <span>AISim</span>
         </div>
         <span className="topbar-divider" aria-hidden />
-        <label className="select-pill">
-          <span className="sr-only">Scenario</span>
-          <select value={scenario.id} onChange={(e) => loadScenario(e.target.value)}>
-            {ALL.map((s) => (
-              <option key={s.id} value={s.id}>
-                {cleared.has(s.id) ? '✓ ' : ''}
-                {s.title}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ScenarioTrigger scenario={scenario} index={SCENARIOS.findIndex((x) => x.id === scenario.id)} onOpen={() => setPicker(true)} />
         <label className="traffic">
           <span>Traffic</span>
           <input type="range" min={1} max={150} value={rps} onChange={(e) => setRps(Number(e.target.value))} />
@@ -281,6 +337,10 @@ export default function App() {
         <button className="btn btn-ghost btn-icon" onClick={() => loadScenario(scenario.id)} title="Reset scenario">
           <RotateCcw size={15} aria-hidden />
           <span>Reset</span>
+        </button>
+        <button className="btn btn-ghost btn-icon" onClick={share} title="Copy a link to this design">
+          <Link2 size={15} aria-hidden />
+          <span>Share</span>
         </button>
         <button className="btn btn-ghost btn-icon" onClick={() => setIntro(0)} title="How it works">
           <CircleQuestionMark size={15} aria-hidden />
@@ -322,7 +382,8 @@ export default function App() {
           onSelectionChange={({ nodes: sel }) => {
             const id = sel[0]?.id ?? null;
             setSelectedId(id);
-            setTab(id ? 'component' : 'mission');
+            if (id) setTab('component');
+            else if (tab === 'component') setTab('mission');
           }}
           deleteKeyCode={['Backspace', 'Delete']}
           fitView
@@ -349,9 +410,40 @@ export default function App() {
         onDelete={deleteNode}
         tab={tab}
         setTab={setTab}
+        running={running}
+        picked={picked}
+        onPick={setPicked}
       />
 
-      {intro !== null && <IntroDialog step={intro} setStep={setIntro} onClose={() => setIntro(null)} />}
+      {intro !== null && (
+        <IntroDialog
+          step={intro}
+          setStep={setIntro}
+          onClose={() => {
+            setIntro(null);
+            markIntroSeen();
+          }}
+        />
+      )}
+      {picker && (
+        <ScenarioPicker
+          scenarios={SCENARIOS}
+          sandbox={SANDBOX}
+          currentId={scenario.id}
+          cleared={cleared}
+          onClose={() => setPicker(false)}
+          onPick={(id) => {
+            setPicker(false);
+            loadScenario(id);
+          }}
+        />
+      )}
+      {toast && (
+        <div className="toast" role="status">
+          <Check size={14} strokeWidth={2.5} aria-hidden />
+          {toast}
+        </div>
+      )}
       {won && <WinDialog s={scenario} next={next} onStay={() => setWon(false)} onNext={() => loadScenario(next ? next.id : SANDBOX.id)} />}
     </div>
   );

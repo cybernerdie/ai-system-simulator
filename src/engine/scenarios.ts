@@ -13,6 +13,10 @@ export interface Scenario {
   id: string;
   title: string;
   tagline: string;
+  /** 1 = intro, 2 = core, 3 = advanced (0 for the sandbox) */
+  difficulty: 0 | 1 | 2 | 3;
+  /** Concepts the scenario teaches, shown on its card. */
+  skills: string[];
   brief: string;
   traffic: TrafficProfile;
   goals: Goal[];
@@ -39,6 +43,8 @@ const chain = (...ids: string[]): SimEdge[] => ids.slice(1).map((id, i) => ({ so
 export const SCENARIOS: Scenario[] = [
   {
     id: 'docs-bot',
+    difficulty: 1,
+    skills: ['RAG', 'Grounding'],
     title: '1 · The docs chatbot',
     tagline: 'It sounds confident. It\'s making things up.',
     brief:
@@ -68,6 +74,8 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'wrong-chunks',
+    difficulty: 2,
+    skills: ['Hybrid search', 'Chunking', 'Reranking'],
     title: '2 · Confidently wrong RAG',
     tagline: 'Retrieval is on. Answers are still wrong.',
     brief:
@@ -101,6 +109,8 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'launch-day',
+    difficulty: 2,
+    skills: ['Semantic cache', 'Model routing', 'Rate limits'],
     title: '3 · Launch day',
     tagline: 'It works. Now 40× more people want it.',
     brief:
@@ -136,6 +146,8 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'support-agent',
+    difficulty: 2,
+    skills: ['Agents', 'Step budgets', 'Cost'],
     title: '4 · The support agent',
     tagline: 'Users want things done, not explained.',
     brief:
@@ -168,6 +180,8 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'jailbreak',
+    difficulty: 2,
+    skills: ['Prompt injection', 'Guardrails'],
     title: '5 · Someone pasted a jailbreak',
     tagline: '"Ignore previous instructions and…"',
     brief:
@@ -200,10 +214,85 @@ export const SCENARIOS: Scenario[] = [
       edges: [...chain('users', 'ig', 'emb', 'vdb', 'llm'), { source: 'llm', target: 'oj' }],
     },
   },
+  {
+    id: 'long-docs',
+    difficulty: 3,
+    skills: ['Context windows', 'Reranking', 'Cost'],
+    title: '6 · The contract reviewer',
+    tagline: 'Every answer is buried in a 90-page PDF.',
+    brief:
+      'Legal wants a bot that answers questions about long contracts. To "not miss anything", someone set retrieval to grab 12 huge chunks per question and pinned the cheap small model to save money. Half the requests now fail outright.',
+    traffic: { ...base, rps: 4, kbShare: 0.9, exactTermShare: 0.25, easyShare: 0.4, repeatShare: 0.1 },
+    goals: [
+      { metric: 'errorRate', op: '<=', value: 0.01 },
+      { metric: 'accuracy', op: '>=', value: 0.72 },
+      { metric: 'costPer1k', op: '<=', value: 6 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 12, chunk: 'large' } },
+      { id: 'llm', type: 'llm', x: 560, y: 120, config: { size: 'small' } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm'),
+    hint: 'Count the tokens: 12 chunks × 1,000 tokens won\'t fit in a small model\'s window. You can buy a bigger window, or send fewer, better chunks. Which one keeps the bill down?',
+    lesson:
+      'Context windows are a budget, not a bucket. Stuffing more into the prompt costs money, adds latency and drowns the answer ("lost in the middle"). Retrieving wide and reranking down to a few precise chunks fits a small, cheap model, and is usually more accurate than a huge prompt on a big one.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 60 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 60, config: { topK: 12, chunk: 'medium' } },
+        { id: 'kw', type: 'keyword_search', x: 340, y: 200 },
+        { id: 'rr', type: 'reranker', x: 520, y: 120, config: { keep: 4 } },
+        { id: 'llm', type: 'llm', x: 700, y: 120, config: { size: 'small' } },
+      ],
+      edges: [...chain('users', 'emb', 'vdb', 'rr', 'llm'), ...chain('users', 'kw', 'rr')],
+    },
+  },
+  {
+    id: 'feels-slow',
+    difficulty: 3,
+    skills: ['Streaming', 'Time to first token'],
+    title: '7 · "It feels slow"',
+    tagline: 'Users stare at a spinner for eight seconds.',
+    brief:
+      'Answers are good, but users bounce before they arrive. You run the large model on everything and an Output Judge checks every answer before it ships. Product wants the first words on screen in under a second, without letting hallucinations climb.',
+    traffic: { ...base, rps: 3, kbShare: 0.6, exactTermShare: 0.2, easyShare: 0.65 },
+    goals: [
+      { metric: 'ttftP50', op: '<=', value: 1200 },
+      { metric: 'accuracy', op: '>=', value: 0.75 },
+      { metric: 'hallucination', op: '<=', value: 0.1 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'large' } },
+      { id: 'oj', type: 'output_guard', x: 700, y: 120 },
+    ],
+    edges: [...chain('users', 'emb', 'vdb', 'llm'), { source: 'llm', target: 'oj' }],
+    hint: 'Turn on streaming and watch first-token time. Why doesn\'t it move? Something downstream has to read the whole answer first. What can replace it on the quality side?',
+    lesson:
+      'Perceived speed is time to first token, and streaming is the biggest lever. But anything that must read the full answer first, like an output judge, silently cancels streaming. Here better retrieval protects quality up front, so the model can stream straight to the user.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 60 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 60, config: { topK: 10, chunk: 'medium' } },
+        { id: 'kw', type: 'keyword_search', x: 340, y: 200 },
+        { id: 'rr', type: 'reranker', x: 520, y: 120, config: { keep: 4 } },
+        { id: 'llm', type: 'llm', x: 700, y: 120, config: { size: 'large', streaming: true } },
+      ],
+      edges: [...chain('users', 'emb', 'vdb', 'rr', 'llm'), ...chain('users', 'kw', 'rr')],
+    },
+  },
 ];
 
 export const SANDBOX: Scenario = {
   id: 'sandbox',
+  difficulty: 0,
+  skills: ['Free build', 'Mixed traffic'],
   title: 'Sandbox',
   tagline: 'No goals. Build anything.',
   brief: 'A mixed workload: docs questions, exact-code lookups, tool requests, a few attackers. Build whatever you like and find each wall.',

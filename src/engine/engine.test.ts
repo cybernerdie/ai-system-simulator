@@ -33,6 +33,8 @@ describe('scenarios', () => {
       'launch-day': 'rate_limit',
       'support-agent': 'no_tools',
       jailbreak: 'injection',
+      'long-docs': 'context_overflow',
+      'feels-slow': 'ttft',
     };
     for (const s of SCENARIOS) {
       const m = run(s.nodes, s.edges, s.traffic);
