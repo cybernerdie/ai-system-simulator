@@ -791,6 +791,73 @@ export const SCENARIOS: Scenario[] = [
       edges: chain('users', 'lim', 'llm'),
     },
   },
+  {
+    id: 'temperature',
+    difficulty: 1,
+    skills: ['Temperature', 'Sampling', 'Determinism'],
+    title: '23 · Same question, different answers',
+    tagline: 'Upload the same invoice twice, get two different totals.',
+    brief:
+      'Your accounting tool reads invoices and returns the total, VAT and due date as JSON. Customers have noticed that uploading the same invoice twice can give two different totals. It also writes the odd product description. Someone suggests a bigger model.',
+    traffic: { ...base, rps: 5, extractShare: 0.75, creativeShare: 0.1, easyShare: 0.7, repeatShare: 0 },
+    goals: [
+      { metric: 'accuracy', op: '>=', value: 0.88 },
+      { metric: 'errorRate', op: '<=', value: 0.02 },
+      { metric: 'costPer1k', op: '<=', value: 6 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium', jsonMode: true, temperature: 0.9 } },
+    ],
+    edges: chain('users', 'llm'),
+    hint: 'Open the LLM settings. One of them decides how adventurously the model picks each word. What should it be for a task with exactly one right answer?',
+    lesson:
+      'Temperature controls randomness, not intelligence. For extraction, classification and anything with one right answer, run near 0 so the same input gives the same output. Keep some temperature for writing where variety helps. A bigger model doesn\'t fix sampling; it just costs more.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium', jsonMode: true, temperature: 0.1 } },
+      ],
+      edges: chain('users', 'llm'),
+    },
+  },
+  {
+    id: 'eval-trust',
+    difficulty: 3,
+    skills: ['Evals', 'LLM-as-judge', 'Test sets'],
+    title: '24 · The evals say it\'s fine',
+    tagline: 'The dashboard says 98%. Support says otherwise.',
+    brief:
+      'Your docs assistant\'s eval dashboard has been green since launch: nearly every answer passes. Meanwhile support tickets keep arriving about wrong part numbers and made-up steps. Your goals are measured on real outcomes (tickets, refunds, follow-up questions), not on the dashboard.',
+    traffic: { ...base, rps: 6, kbShare: 0.7, exactTermShare: 0.35, easyShare: 0.4, repeatShare: 0 },
+    goals: [
+      { metric: 'evalGap', op: '<=', value: 0.05 },
+      { metric: 'accuracy', op: '>=', value: 0.8 },
+      { metric: 'costPer1k', op: '<=', value: 12 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+      { id: 'ev', type: 'eval_harness', x: 700, y: 120, config: { testSet: 'easy', judge: 'llm' } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm', 'ev'),
+    hint: 'Before fixing the system, fix the measurement. What is your Eval Harness testing, and who is judging? Once the numbers are honest, the binding pressure will tell you what\'s really wrong.',
+    lesson:
+      'Evals are only as good as their test set and their judge. Test on samples of real traffic, refreshed regularly, not the 50 examples you wrote at launch. If an LLM judges, check it against human ratings so you know how often it\'s fooled. Exact match is cheap but punishes correct answers worded differently. Honest evals first, then fix what they show.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 120 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+        { id: 'kw', type: 'keyword_search', x: 340, y: 260 },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+        { id: 'ev', type: 'eval_harness', x: 700, y: 120, config: { testSet: 'representative', judge: 'calibrated' } },
+      ],
+      edges: [...chain('users', 'emb', 'vdb', 'llm', 'ev'), { source: 'users', target: 'kw' }, { source: 'kw', target: 'llm' }],
+    },
+  },
 ];
 
 export const SANDBOX: Scenario = {

@@ -1,5 +1,5 @@
 import { CHUNK_SPECS, type ChunkSize } from './components';
-import { hostLabel, isModelNode, profileOf, type ModelProfile } from './models';
+import { hostLabel, isModelNode, profileOf, repetition, samplingNoise, tempJsonFactor, type ModelProfile } from './models';
 import type {
   Cause,
   ComponentType,
@@ -44,6 +44,10 @@ interface Req {
   subtasks: number;
   structured: boolean;
   task: boolean;
+  /** pull exact values out of a document */
+  extract: boolean;
+  /** open-ended writing */
+  creative: boolean;
   pii: boolean;
   abuser: boolean;
   stale: boolean;
@@ -84,6 +88,17 @@ interface Trace {
 }
 
 const QUESTIONS: Record<RequestSample['kind'], string[]> = {
+  extract: [
+    'Invoice INV-20931.pdf: return total, VAT and due date as JSON',
+    'Receipt scan: extract merchant, amount and currency',
+    'Contract p.4: pull the renewal date and notice period',
+    'Purchase order PO-7713: list line items with quantities',
+  ],
+  creative: [
+    'Write a product description for the walnut desk organiser',
+    'Suggest five subject lines for the spring sale email',
+    'Draft a friendly welcome message for new customers',
+  ],
   exact: [
     'What does error E1043 mean on the X-200?',
     'Is SKU-4471 compatible with the v3 dock?',
@@ -148,6 +163,8 @@ export const CAUSE_TEXT: Record<Cause, string> = {
   gpu_saturated: 'Your GPUs were already at full capacity, so the request queued until it timed out.',
   task_unknown: 'An off-the-shelf model doesn\'t know your labels, format or house style, so it guessed.',
   model_drift: 'The provider updated the model behind "latest", and your prompt no longer works the way it did.',
+  sampling_noise: 'Temperature is high, so the model sampled a less likely token and returned a different value than last time.',
+  too_repetitive: 'Temperature is so low that every piece of writing comes out with the same phrasing.',
   voice_pipeline: 'A voice request needs speech-to-text in and text-to-speech out; part of that chain is missing.',
   forgot_context: 'The user referred back to something said earlier, but that part of the conversation was no longer in the prompt.',
 };
@@ -258,6 +275,10 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   const ingestCost = (vdb && embedding) || kw ? INGEST_PER_REQ[refresh] + (parser === 'layout' ? 0.00025 : 0) : 0;
   const evals = first('eval_harness');
   const evalRate = evals ? cfgNum(evals, 'sampleRate', 0.05) : 0;
+  const evalTestSet = evals && evals.config.testSet === 'easy' ? 'easy' : 'representative';
+  const evalJudge: 'calibrated' | 'llm' | 'exact' = evals ? ((['llm', 'exact'] as const).find((j) => j === evals.config.judge) ?? 'calibrated') : 'calibrated';
+  // judging cost per judged request: humans reviewing a slice to calibrate the judge cost extra; string matching is nearly free
+  const JUDGE_COST = { calibrated: 0.0015, llm: 0.0009, exact: 0.00005 };
   const qualityVisible = !traffic.qualityHidden || !!evals;
   const strategy = memory ? cfgStr<'full' | 'window' | 'summary' | 'retrieval'>(memory, 'strategy', 'full') : 'full';
   const windowTurns = memory ? cfgNum(memory, 'windowTurns', 6) : 6;
@@ -337,6 +358,8 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       subtasks: 0,
       structured: false,
       task: false,
+      extract: false,
+      creative: false,
       pii: false,
       abuser: false,
       stale: false,
@@ -363,6 +386,20 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     }
     if ((traffic.structuredShare ?? 0) > 0 && !req.adversarial) req.structured = rng() < traffic.structuredShare!;
     if ((traffic.taskShare ?? 0) > 0 && !req.adversarial && !req.kb && rng() < traffic.taskShare!) req.task = true;
+    if (((traffic.extractShare ?? 0) > 0 || (traffic.creativeShare ?? 0) > 0) && !req.adversarial && !req.task && req.subtasks === 0) {
+      const u = rng();
+      if (u < (traffic.extractShare ?? 0)) {
+        // reading a value off a document isn't hard, but there's exactly one right answer, returned as JSON
+        req.extract = true;
+        req.structured = true;
+        req.easy = true;
+        req.kb = req.exact = req.tool = false;
+      } else if (u < (traffic.extractShare ?? 0) + (traffic.creativeShare ?? 0)) {
+        req.creative = true;
+        req.easy = true;
+        req.kb = req.exact = req.tool = false;
+      }
+    }
     if ((traffic.piiShare ?? 0) > 0 && !req.adversarial) req.pii = rng() < traffic.piiShare!;
     if ((traffic.abuseShare ?? 0) > 0 && !req.adversarial && rng() < traffic.abuseShare!) {
       req.abuser = true;
@@ -387,6 +424,10 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       ? 'attack'
       : req.subtasks
         ? 'research'
+        : req.extract
+          ? 'extract'
+        : req.creative
+          ? 'creative'
         : req.tool
           ? 'tool'
         : req.refAge
@@ -902,9 +943,22 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     }
     if (t.parseMiss && t.cause === 'retrieval_miss') t.cause = 'parse_miss';
 
+    // Temperature: sampling picks a less likely token now and then
+    if (t.outcome === 'correct' && req.extract && rng() < samplingNoise(m.temperature, llm.config.size as string | undefined)) {
+      t.outcome = 'hallucinated';
+      t.cause = 'sampling_noise';
+      t.steps.push({ nodeId: llm.id, kind: 'llm', text: `Sampled a different value than last time (temperature ${m.temperature.toFixed(1)})`, tone: 'bad' });
+    }
+    if (t.outcome === 'correct' && req.creative && rng() < repetition(m.temperature)) {
+      t.outcome = 'unhelpful';
+      t.cause = 'too_repetitive';
+      t.steps.push({ nodeId: llm.id, kind: 'llm', text: `Flat, near-identical copy to the last ten requests (temperature ${m.temperature.toFixed(1)})`, tone: 'warn' });
+    }
+
     // Structured output: your code needs valid JSON
     if (req.structured && (t.outcome === 'correct' || t.outcome === 'hallucinated')) {
-      const invalidRate = traffic.driftLatest && m.floating ? Math.min(0.5, m.invalidRate * 4 + 0.03) : m.invalidRate;
+      const baseInvalid = traffic.driftLatest && m.floating ? Math.min(0.5, m.invalidRate * 4 + 0.03) : m.invalidRate;
+      const invalidRate = Math.min(0.6, baseInvalid * tempJsonFactor(m.temperature));
       let broken = rng() < invalidRate;
       if (broken && validator) {
         const extra = (m.ttftBase + inputTokens * m.prefillMsPerTok + 200 * m.msPerOutTok) * jitter(rng);
@@ -948,7 +1002,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     // 7. Evals (observe only)
     if (evals) {
       t.touched.push(evals.id);
-      t.cost += evalRate * 0.0009;
+      t.cost += evalRate * JUDGE_COST[evalJudge];
     }
   }
 
@@ -1015,7 +1069,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
 
   // Aggregate
   const outcomes: Record<Outcome, number> = {
-    correct: 0, hallucinated: 0, declined: 0, blocked: 0, injected: 0, rate_limited: 0, overflow: 0, failed: 0,
+    correct: 0, hallucinated: 0, declined: 0, blocked: 0, injected: 0, rate_limited: 0, overflow: 0, failed: 0, unhelpful: 0,
   };
   const causes: Partial<Record<Cause, number>> = {};
   for (const t of traces) {
@@ -1026,6 +1080,31 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   const legit = traces.filter((t) => !t.req.adversarial && !t.req.abuser && !isError(t));
   const adv = traces.filter((t) => t.req.adversarial && !isError(t));
   const kbT = traces.filter((t) => t.req.kb && t.recallHit !== undefined);
+  // What the Eval Harness reports. It only sees its test set, and its judge has blind spots.
+  const trueAcc = legit.length ? legit.filter((t) => t.outcome === 'correct').length / legit.length : 0;
+  const trueHal = legit.length ? legit.filter((t) => t.outcome === 'hallucinated').length / legit.length : 0;
+  let measuredAccuracy = trueAcc;
+  let measuredHallucination = trueHal;
+  if (evals) {
+    // a hand-picked launch test set: easy questions only, nothing like today's traffic
+    const pool = evalTestSet === 'easy' ? legit.filter((t) => t.req.easy && !t.req.kb) : legit;
+    const set = pool.length ? pool : legit;
+    const c = set.length ? set.filter((t) => t.outcome === 'correct').length / set.length : 0;
+    const h = set.length ? set.filter((t) => t.outcome === 'hallucinated').length / set.length : 0;
+    if (evalJudge === 'llm') {
+      // an uncalibrated LLM judge is fooled by fluent, confident wrong answers about half the time
+      measuredAccuracy = c + h * 0.5;
+      measuredHallucination = h * 0.5;
+    } else if (evalJudge === 'exact') {
+      // exact string match marks correct answers worded differently as wrong
+      measuredAccuracy = c * 0.7;
+      measuredHallucination = h + c * 0.3;
+    } else {
+      measuredAccuracy = c;
+      measuredHallucination = h;
+    }
+  }
+  const evalGap = evals ? Math.abs(measuredAccuracy - trueAcc) : 0;
   // background jobs have nobody waiting on them, so they don't count towards latency
   const waited = traces.filter((t) => t.outcome !== 'rate_limited' && t.cause !== 'provider_down' && !t.req.offline && !t.req.abuser);
   const lat = waited.map((t) => t.latency).sort((a, b) => a - b);
@@ -1142,6 +1221,10 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     abuseUnchecked: (traffic.abuseShare ?? 0) > 0 && !limits,
     noModel: !users || !llms.length,
     answered: legit.length,
+    measuredAccuracy,
+    measuredHallucination,
+    evalGap,
+    evalSetup: evals ? { testSet: evalTestSet, judge: evalJudge } : null,
     voice: !!traffic.voice,
     bigUncachedPrompt: basePrompt > 3000 && llms.some((l) => !P(l).promptCache),
     qualityVisible,

@@ -86,6 +86,10 @@ export interface TrafficProfile {
   voice?: boolean;
   /** Share of traffic coming from a handful of abusive / scripted accounts. */
   abuseShare?: number;
+  /** Share of requests that pull exact values out of a document (invoice totals, dates, IDs). Needs one right answer, every time. */
+  extractShare?: number;
+  /** Share of requests that are open-ended writing (descriptions, ideas), where variety matters. */
+  creativeShare?: number;
 }
 
 export type Outcome =
@@ -96,7 +100,8 @@ export type Outcome =
   | 'injected'
   | 'rate_limited'
   | 'overflow'
-  | 'failed';
+  | 'failed'
+  | 'unhelpful';
 
 export type Cause =
   | 'no_knowledge'
@@ -120,7 +125,9 @@ export type Cause =
   | 'parse_miss'
   | 'task_unknown'
   | 'model_drift'
-  | 'voice_pipeline';
+  | 'voice_pipeline'
+  | 'sampling_noise'
+  | 'too_repetitive';
 
 export type StepTone = 'ok' | 'bad' | 'warn' | 'neutral';
 
@@ -135,7 +142,7 @@ export interface TraceStep {
 export interface RequestSample {
   id: number;
   question: string;
-  kind: 'knowledge' | 'exact' | 'tool' | 'attack' | 'general' | 'memory' | 'research';
+  kind: 'knowledge' | 'exact' | 'tool' | 'attack' | 'general' | 'memory' | 'research' | 'extract' | 'creative';
   outcome: Outcome;
   cause?: Cause;
   latency: number;
@@ -191,6 +198,13 @@ export interface Metrics {
   bigUncachedPrompt: boolean;
   /** Share of requests with personal data that reached a third-party model unredacted. */
   piiLeak: number;
+  /** What your Eval Harness reports (equals the real value when the evals are trustworthy). */
+  measuredAccuracy: number;
+  measuredHallucination: number;
+  /** How far the evals' accuracy is from reality, in absolute terms (0 without an Eval Harness). */
+  evalGap: number;
+  /** Present when an Eval Harness is in the design. */
+  evalSetup: { testSet: 'representative' | 'easy'; judge: 'calibrated' | 'llm' | 'exact' } | null;
   /** Abusive accounts are running unchecked. */
   abuseUnchecked: boolean;
   /** No path from Users to any model: nothing can be answered. */
@@ -205,6 +219,7 @@ export interface Metrics {
 
 export type GoalMetric =
   | 'piiLeak'
+  | 'evalGap'
   | 'accuracy'
   | 'hallucination'
   | 'injection'

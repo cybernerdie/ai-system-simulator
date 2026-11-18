@@ -298,7 +298,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     group: 'Generation',
     color: '#0ea5e9',
     blurb: 'The model that writes the answer. Bigger is smarter and safer, but slower, pricier and more rate-limited.',
-    defaults: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false, fineTuned: false, version: 'pinned' },
+    defaults: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false, fineTuned: false, version: 'pinned', temperature: 0.7 },
     fields: [
       {
         key: 'provider',
@@ -332,6 +332,15 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
           { value: 'latest', label: 'Latest (auto-updates)' },
         ],
         help: '"Latest" silently changes whenever the provider ships an update, and prompts tuned for the old version can regress. Pin versions and upgrade on purpose, after your evals pass.',
+      },
+      {
+        key: 'temperature',
+        label: 'Temperature',
+        kind: 'range',
+        min: 0,
+        max: 1,
+        step: 0.1,
+        help: 'How adventurously the model picks each next word. Low (0–0.2) gives the same answer every time: right for extraction, classification and JSON. Higher (0.5–1) gives variety for writing and brainstorming, but more inconsistent and malformed output.',
       },
       {
         key: 'thinking',
@@ -402,9 +411,30 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'EV',
     group: 'Quality',
     color: '#65a30d',
-    blurb: 'Scores a sample of real answers against known-good answers and the sources (offline test sets plus an LLM judge). It doesn\'t change any answer. It lets you see whether they\'re right.',
-    defaults: { sampleRate: 0.05 },
+    blurb: 'Scores answers against known-good answers and the sources, so you can see whether they\'re right. It doesn\'t change any answer. Its numbers are only as good as its test set and its judge.',
+    defaults: { sampleRate: 0.05, testSet: 'representative', judge: 'calibrated' },
     fields: [
+      {
+        key: 'testSet',
+        label: 'Test set',
+        kind: 'select',
+        options: [
+          { value: 'representative', label: 'Sampled from real traffic (500+)' },
+          { value: 'easy', label: '50 hand-picked launch examples' },
+        ],
+        help: 'What gets scored. A small set written at launch is usually easy and stale: it misses the hard, new and weird questions real users ask.',
+      },
+      {
+        key: 'judge',
+        label: 'Judge',
+        kind: 'select',
+        options: [
+          { value: 'calibrated', label: 'LLM judge, checked against human reviews' },
+          { value: 'llm', label: 'LLM judge only' },
+          { value: 'exact', label: 'Exact match' },
+        ],
+        help: 'Who decides an answer is right. Exact match is cheap but fails correct answers worded differently. An LLM judge scales but is fooled by confident wrong answers unless you regularly compare it with human ratings. Calibrating costs a little more.',
+      },
       {
         key: 'sampleRate',
         label: 'Share of traffic judged',
@@ -423,7 +453,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     group: 'Inference',
     color: '#0d9488',
     blurb: 'An open-weights model running on GPUs you rent by the hour. No per-token price and no provider rate limit, but you pay for the GPUs whether they\'re busy or idle, and you own the capacity planning.',
-    defaults: { model: 'open-70b', gpus: 4, batch: 8, quant: 'fp16', fineTuned: false },
+    defaults: { model: 'open-70b', gpus: 4, batch: 8, quant: 'fp16', fineTuned: false, temperature: 0.7 },
     fields: [
       {
         key: 'model',
@@ -461,6 +491,15 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
         label: 'Fine-tuned on your examples',
         kind: 'toggle',
         help: 'Open weights can be fine-tuned and served yourself: learns your task and format, not reliable facts.',
+      },
+      {
+        key: 'temperature',
+        label: 'Temperature',
+        kind: 'range',
+        min: 0,
+        max: 1,
+        step: 0.1,
+        help: 'How adventurously the model picks each next word. Low (0–0.2) gives the same answer every time: right for extraction, classification and JSON. Higher (0.5–1) gives variety for writing and brainstorming, but more inconsistent and malformed output.',
       },
     ],
   },

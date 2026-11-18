@@ -16,6 +16,7 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
     case 'llm':
       return [
         String(config.size),
+        `temp ${Number(config.temperature ?? 0.7).toFixed(1)}`,
         ...(config.thinking && config.thinking !== 'off' ? [`thinking: ${config.thinking}`] : []),
         ...(config.provider === 'B' ? ['provider B'] : []),
         ...(config.streaming ? ['streaming'] : []),
@@ -46,6 +47,11 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
     case 'memory':
       return [
         { full: 'full history', window: `last ${config.windowTurns} turns`, summary: 'rolling summary', retrieval: 'long-term memory' }[String(config.strategy)] ?? '',
+      ];
+    case 'eval_harness':
+      return [
+        config.testSet === 'easy' ? '50 launch examples' : 'real traffic',
+        { calibrated: 'judge checked by humans', llm: 'LLM judge only', exact: 'exact match' }[String(config.judge ?? 'calibrated')] ?? '',
       ];
     case 'stt':
     case 'tts':

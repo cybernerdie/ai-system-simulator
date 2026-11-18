@@ -23,6 +23,8 @@ export const GPU_HOURLY = 2.4;
 const PREFILL_TPS = 6000;
 
 export interface ModelProfile {
+  /** Sampling temperature: 0 = always the most likely token, 1 = lots of variety. */
+  temperature: number;
   host: Host;
   label: string;
   /** For ordering models by capability (router picks cheapest vs strongest). */
@@ -102,6 +104,7 @@ export function profileOf(n: SimNode): ModelProfile {
       fineTuned: n.config.fineTuned === true,
       taskAcc: (n.config.fineTuned === true ? TASK_ACC_TUNED : TASK_ACC)[str(n, 'model', 'open-70b')] ?? 0.7,
       floating: false, // you control the weights: nothing changes unless you change it
+      temperature: num(n, 'temperature', 0.7),
     };
   }
   const size = str<ModelSize>(n, 'size', 'medium');
@@ -119,6 +122,7 @@ export function profileOf(n: SimNode): ModelProfile {
     fineTuned: n.config.fineTuned === true,
     taskAcc: (n.config.fineTuned === true ? TASK_ACC_TUNED : TASK_ACC)[size] ?? 0.7,
     floating: str<string>(n, 'version', 'pinned') === 'latest',
+    temperature: num(n, 'temperature', 0.7),
     ttftBase: s.ttftBase,
     prefillMsPerTok: s.prefillMsPerTok,
     msPerOutTok: s.msPerOutTok,
@@ -134,3 +138,10 @@ export function profileOf(n: SimNode): ModelProfile {
 }
 
 export const hostLabel = (h: Host) => (h === 'self' ? 'your GPUs' : `provider ${h}`);
+
+/** Higher temperature makes malformed JSON more likely; 1.0 at the 0.7 default. */
+export const tempJsonFactor = (t: number) => 0.4 + (t * 6) / 7;
+/** Chance an exact-value extraction comes out different (wrong) because of sampling. */
+export const samplingNoise = (t: number, size?: string) => Math.pow(Math.max(0, t), 1.5) * 0.35 * (size === 'large' ? 0.85 : 1);
+/** Chance open-ended writing comes out flat and repetitive because the temperature is too low. */
+export const repetition = (t: number) => Math.max(0, 0.3 - t) * 1.5;

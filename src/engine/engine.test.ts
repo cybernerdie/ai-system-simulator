@@ -50,6 +50,8 @@ describe('scenarios', () => {
       pii: 'pii_leak',
       voice: 'slow_voice',
       abuse: 'abuse',
+      temperature: 'sampling_noise',
+      'eval-trust': 'eval_blindspot',
     };
     for (const s of SCENARIOS) {
       const m = run(s.nodes, s.edges, s.traffic);

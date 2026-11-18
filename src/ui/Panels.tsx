@@ -17,6 +17,7 @@ export const usd = (v: number) => `$${v < 10 ? v.toFixed(2) : v.toFixed(0)}`;
 
 export const METRIC_META: Record<GoalMetric, { label: string; fmt: (v: number) => string }> = {
   piiLeak: { label: 'Personal data leaked', fmt: pct },
+  evalGap: { label: 'Evals off from reality by', fmt: (v) => `${Math.round(v * 100)} pts` },
   accuracy: { label: 'Accuracy', fmt: pct },
   hallucination: { label: 'Hallucination', fmt: pct },
   injection: { label: 'Injection success', fmt: pct },
@@ -88,8 +89,23 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
   const noAnswers = m.answered === 0;
   const NO_ANSWERS = 'No real user requests were answered, so there is nothing to score.';
   const cells: { key: string; label: string; value: string; series: number[]; metric?: GoalMetric; title?: string }[] = [
-    { key: 'acc', label: 'Accuracy', value: noAnswers ? '—' : pct(m.accuracy), series: history.map((h) => h.accuracy), metric: 'accuracy', title: noAnswers ? NO_ANSWERS : undefined },
-    { key: 'hal', label: 'Hallucination', value: noAnswers ? '—' : pct(m.hallucination), series: history.map((h) => h.hallucination), metric: 'hallucination', title: noAnswers ? NO_ANSWERS : undefined },
+    // With an Eval Harness, the dashboard shows what your evals report, which is only as honest as they are
+    {
+      key: 'acc',
+      label: m.evalSetup ? 'Accuracy (evals)' : 'Accuracy',
+      value: noAnswers ? '—' : pct(m.evalSetup ? m.measuredAccuracy : m.accuracy),
+      series: history.map((h) => (h.evalSetup ? h.measuredAccuracy : h.accuracy)),
+      metric: 'accuracy',
+      title: noAnswers ? NO_ANSWERS : m.evalSetup ? 'As reported by your Eval Harness. Goals are judged on real outcomes.' : undefined,
+    },
+    {
+      key: 'hal',
+      label: m.evalSetup ? 'Halluc. (evals)' : 'Hallucination',
+      value: noAnswers ? '—' : pct(m.evalSetup ? m.measuredHallucination : m.hallucination),
+      series: history.map((h) => (h.evalSetup ? h.measuredHallucination : h.hallucination)),
+      metric: 'hallucination',
+      title: noAnswers ? NO_ANSWERS : m.evalSetup ? 'As reported by your Eval Harness. Goals are judged on real outcomes.' : undefined,
+    },
     m.recall == null && m.avgHistoryTokens > 0
       ? {
           key: 'hist',
@@ -122,7 +138,9 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
             </div>
           );
         const goal = c.metric ? goals.find((g) => g.metric === c.metric) : undefined;
-        const state = goal ? (goalMet(m, goal) ? 'met' : 'unmet') : '';
+        // the dashboard colours by what it can see: your evals' numbers, not the truth
+        const seen = m.evalSetup ? { ...m, accuracy: m.measuredAccuracy, hallucination: m.measuredHallucination } : m;
+        const state = goal ? (goalMet(seen, goal) ? 'met' : 'unmet') : '';
         return (
           <div key={c.key} className={`tele ${state}`} title={c.title}>
             <div className="tele-label">{c.label}</div>

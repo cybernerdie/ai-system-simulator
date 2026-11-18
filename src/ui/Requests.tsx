@@ -14,6 +14,7 @@ export const OUTCOME_META: Record<Outcome | 'unverified', { label: string; tone:
   rate_limited: { label: '429 rate limited', tone: 'bad' },
   overflow: { label: 'Context overflow', tone: 'bad' },
   failed: { label: 'Failed (5xx / timeout)', tone: 'bad' },
+  unhelpful: { label: 'Flat, repetitive', tone: 'warn' },
 };
 
 const KIND_LABEL: Record<RequestSample['kind'], string> = {
@@ -24,6 +25,8 @@ const KIND_LABEL: Record<RequestSample['kind'], string> = {
   general: 'General',
   memory: 'Refers to earlier chat',
   research: 'Multi-part research',
+  extract: 'Extract values',
+  creative: 'Open-ended writing',
 };
 
 export type Shown = RequestSample | (Omit<RequestSample, 'outcome'> & { outcome: 'unverified' });

@@ -1,6 +1,6 @@
 import type { Cause, Goal, GoalMetric, Metrics } from './types';
 
-export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent' | 'background_jobs' | 'uncached_prompt' | 'pii_leak' | 'abuse' | 'slow_voice' | 'no_model';
+export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent' | 'background_jobs' | 'uncached_prompt' | 'pii_leak' | 'abuse' | 'slow_voice' | 'no_model' | 'eval_blindspot';
 
 export interface Pressure {
   key: PressureKey;
@@ -185,6 +185,21 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     why: 'Users stare at a blank screen until the whole answer is generated.',
     try: 'Turn on streaming. Note: anything that must read the full answer first (an Output Judge) blocks streaming.',
   },
+  sampling_noise: {
+    title: 'Same question, different answers',
+    why: 'Temperature controls how adventurously the model picks each next word. Yours is high, so on tasks with exactly one right answer (a total, a date, an ID) it sometimes picks a less likely token and returns a different value than last time.',
+    try: 'Turn temperature down to 0–0.2 for extraction and classification. A bigger model won\'t fix sampling; JSON mode or a validator stops malformed output.',
+  },
+  too_repetitive: {
+    title: 'Every answer sounds the same',
+    why: 'At very low temperature the model always picks the single most likely word, so open-ended writing (descriptions, ideas, subject lines) comes out flat and near-identical.',
+    try: 'Keep a little temperature (around 0.3–0.7) for creative work. If one model serves both, accept a small trade-off or split the two kinds of task.',
+  },
+  eval_blindspot: {
+    title: 'Your evals are lying to you',
+    why: 'The dashboard and real outcomes disagree. A small test set of easy, hand-picked questions doesn\'t look like today\'s traffic, and an LLM judge that isn\'t checked against humans gets fooled by confident, fluent wrong answers.',
+    try: 'In the Eval Harness, test on a sample of real traffic and calibrate the judge against human-reviewed answers. Then fix whatever the honest numbers show.',
+  },
   no_model: {
     title: 'Nothing reaches a model',
     why: 'Requests leave Users but never arrive at an LLM, so every one of them fails. Components only do anything when they sit on a path from Users to a model.',
@@ -220,6 +235,7 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
   if (m.noModel) return { key: 'no_model', ...PRESSURES.no_model };
   const unmet = goals.filter((g) => !goalMet(m, g)).map((g) => g.metric);
   if (!m.qualityVisible && unmet.some((u) => QUALITY_METRICS.includes(u))) return { key: 'blind', ...PRESSURES.blind };
+  if (m.evalSetup && m.evalGap > 0.05 && unmet.some((u) => u === 'evalGap' || QUALITY_METRICS.includes(u))) return { key: 'eval_blindspot', ...PRESSURES.eval_blindspot };
   const causes = Object.entries(m.causes) as [Cause, number][];
   causes.sort((a, b) => b[1] - a[1]);
   const pick = (k: PressureKey): Pressure => ({ key: k, ...PRESSURES[k] });

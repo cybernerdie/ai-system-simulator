@@ -41,6 +41,8 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 | 20 | Compliance is calling | Personal data leaving | PII redaction, data retention and residency |
 | 21 | The walkie-talkie | Seven seconds of silence | Voice pipelines, STT/TTS, streaming every stage |
 | 22 | One user, half your bill | Scripted abuse | Per-user limits, quotas, cost control |
+| 23 | Same question, different answers | Sampling noise | Temperature, top-p, determinism, JSON mode |
+| 24 | The evals say it's fine | Evals that lie, then retrieval misses | Representative test sets, LLM-as-judge bias, calibrating against humans |
 | — | Sandbox | Whatever you hit | Free build; set your own traffic mix |
 
 ## Features
@@ -50,7 +52,7 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 - **Request inspector**: open the Requests tab, click any sampled request and follow it hop by hop (what each component did, how long it took, and why it failed). Its path lights up on the canvas.
 - **Guided tour**: an 11-step walkthrough that spotlights each part of the screen (scenarios, mission, canvas, components, run, traffic, binding pressure, live numbers, request inspector, Learn, share). It's offered after the welcome screens, and the ? button in the top bar replays it.
 - **Scenario picker**: search and difficulty filters, cards with difficulty, the concepts each scenario teaches, and your progress (saved in your browser).
-- **Learn**: a learning journey of 10 modules (Beginner → Advanced) and 31 short lessons, from how models are made to fine-tuning, privacy, voice and abuse controls, searchable, including a full Inference module (prefill vs decode, GPUs and batching, self-hosting vs API, reliability) and multi-agent systems in plain language, each linked to the scenario that practises it, with your reading progress saved. Plus a searchable glossary of 114 AI terms, each with a simple definition, an everyday analogy and why it matters. Every component's settings panel links to its glossary entry.
+- **Learn**: a learning journey of 10 modules (Beginner → Advanced) and 33 short lessons, from how models are made to fine-tuning, privacy, voice and abuse controls, searchable, including a full Inference module (prefill vs decode, GPUs and batching, self-hosting vs API, reliability) and multi-agent systems in plain language, each linked to the scenario that practises it, with your reading progress saved. Plus a searchable glossary of 120 AI terms, each with a simple definition, an everyday analogy and why it matters. Every component's settings panel links to its glossary entry.
 - **Traffic patterns**: steady, spikes (4× bursts), a daily wave, or a ramp, with a simulation clock.
 - **Sandbox traffic mix**: sliders for docs questions, exact-term lookups, tool requests, attacks, easy requests, repeats, chat length and references back to earlier messages.
 - **Mobile friendly**: on phones the layout stacks into pressure, canvas, telemetry and mission; modals become full-height sheets.

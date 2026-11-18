@@ -23,6 +23,49 @@ export interface Lesson {
 
 export const LESSONS: Lesson[] = [
   {
+    id: 'temperature',
+    title: 'Temperature and sampling',
+    summary: 'Why the same question can get a different answer, and when you want that.',
+    minutes: 4,
+    scenarioId: 'temperature',
+    components: ['llm'],
+    terms: ['temperature', 'top-p', 'sampling', 'determinism'],
+    blocks: [
+      { kind: 'p', text: 'A model doesn\'t pick "the" next word. For every token it produces a list of possible next tokens with probabilities, for example "Paris" 92%, "the" 3%, "a" 1%, and then picks one. How it picks is called sampling.' },
+      { kind: 'list', items: [
+        'Temperature 0: always take the most likely token. The same input gives (almost) the same output.',
+        'Temperature around 0.7: usually the likely token, sometimes a less likely one. Natural, varied writing.',
+        'Temperature 1 and above: rare tokens get picked more often. More creative, more surprising, more mistakes.',
+        'Top-p does a similar job a different way: only pick from the smallest set of tokens that together cover, say, 90% of the probability.',
+      ] },
+      { kind: 'p', text: 'The rule of thumb: match the temperature to the task. Extraction, classification, routing, JSON and anything with one right answer want 0–0.2. Writing, brainstorming and naming want 0.5–0.9. Too low on creative work makes everything sound the same; too high on precise work gives different totals for the same invoice.' },
+      { kind: 'p', text: 'Even at 0, outputs aren\'t perfectly repeatable on most hosted APIs (tiny numerical differences and batching can flip a near-tie). If you need the exact same result, cache it or store it.' },
+      { kind: 'analogy', text: 'Low temperature is an accountant reading the number off the page. High temperature is a jazz musician improvising. Both are skills. Don\'t hire the jazz musician to do your books.' },
+      { kind: 'takeaway', text: 'Temperature trades consistency for variety. Pick per task, not per app.' },
+    ],
+  },
+  {
+    id: 'trustworthy-evals',
+    title: 'Building evals you can trust',
+    summary: 'A green dashboard is only as honest as its test set and its judge.',
+    minutes: 5,
+    scenarioId: 'eval-trust',
+    components: ['eval_harness'],
+    terms: ['golden-dataset', 'llm-as-judge', 'judge-bias', 'offline-online-evals', 'regression-suite'],
+    blocks: [
+      { kind: 'p', text: 'Having evals isn\'t the same as having good evals. The two places they go wrong are what you test and who decides an answer is right.' },
+      { kind: 'list', items: [
+        'The test set. The 50 examples written at launch are usually easy, clean and stale. Real users ask harder, messier and newer things. Sample real traffic into your test set and refresh it regularly. Include the failures that support tickets reveal.',
+        'Exact match. Cheap and objective for things like IDs and labels, but it marks a correct answer wrong just because it\'s worded differently.',
+        'LLM-as-judge. Scales to thousands of answers, but has biases: it tends to prefer longer and more confident answers, and can miss fluent, plausible mistakes. Check it against human ratings on a sample, so you know how often it\'s wrong.',
+        'Human review. The most accurate and the most expensive. Use it to calibrate the automatic judges, not to grade everything.',
+      ] },
+      { kind: 'p', text: 'Run evals in two places. Offline, before shipping: every prompt, model or retrieval change runs the regression suite, like unit tests. Online, after shipping: a judge scores a sample of live traffic so you notice drift. When the two disagree, or when evals disagree with user complaints, trust the complaints and fix the evals.' },
+      { kind: 'analogy', text: 'A student who only ever sits the same practice exam will ace it. That tells you about the practice exam, not about the student.' },
+      { kind: 'takeaway', text: 'Test on real traffic, check your judge against humans, then believe the numbers.' },
+    ],
+  },
+  {
     id: 'how-models-are-made',
     title: 'How models are made',
     summary: 'Read the internet, learn to follow instructions, learn what people prefer.',
@@ -637,7 +680,7 @@ export const MODULES: Module[] = [
     title: 'Foundations',
     level: 'Beginner',
     blurb: 'What a model is, what it sees, and why it makes things up.',
-    lessons: ['pipeline', 'how-models-are-made', 'prompts', 'tokens', 'hallucination'],
+    lessons: ['pipeline', 'how-models-are-made', 'prompts', 'tokens', 'temperature', 'hallucination'],
   },
   {
     id: 'knowledge',
@@ -700,7 +743,7 @@ export const MODULES: Module[] = [
     title: 'Thinking like an AI engineer',
     level: 'Advanced',
     blurb: 'Measuring quality, and the debugging loop that ties it all together.',
-    lessons: ['evals', 'model-updates', 'binding-pressure'],
+    lessons: ['evals', 'trustworthy-evals', 'model-updates', 'binding-pressure'],
   },
 ];
 
@@ -733,7 +776,7 @@ export const TERMS: Term[] = [
   { id: 'input-output-tokens', term: 'Input vs output tokens', category: 'Models', simple: 'Input tokens are what you send; output tokens are what the model writes. Output is usually several times more expensive.', why: 'Long answers cost more than long prompts, token for token.', related: ['token', 'cost-per-request'], lesson: 'tokens' },
   { id: 'training-data', term: 'Training data', category: 'Models', simple: 'The text a model learned from before it was released. It doesn\'t include your private documents.', related: ['knowledge-cutoff', 'pretraining', 'hallucination'], lesson: 'how-models-are-made' },
   { id: 'knowledge-cutoff', term: 'Knowledge cutoff', category: 'Models', simple: 'The date the model\'s training data stops. It knows nothing that happened after, unless you give it the information.', analogy: 'Someone who\'s been on a remote island since that date.', related: ['training-data', 'rag'] },
-  { id: 'temperature', term: 'Temperature', category: 'Models', simple: 'A setting that controls how random the model\'s word choices are. Low is focused and repeatable; high is varied and creative.', analogy: 'Low temperature is a careful accountant; high is a jazz improviser.', related: ['llm'] },
+  { id: 'temperature', term: 'Temperature', category: 'Models', simple: 'A setting that controls how random the model\'s word choices are. Low (0–0.2) is focused and repeatable; high (0.7–1) is varied and creative.', analogy: 'Low temperature is a careful accountant; high is a jazz improviser.', why: 'Too high on extraction gives different answers to the same question; too low on writing makes everything sound the same.', related: ['top-p', 'sampling', 'determinism'], lesson: 'temperature' },
   { id: 'fine-tuning', term: 'Fine-tuning', category: 'Models', simple: 'Training an existing model further on your own examples so it picks up a style or task. It\'s good for teaching behaviour, not for adding facts that change often.', analogy: 'Sending an employee on a course, versus handing them the manual (RAG).', why: 'A fine-tuned small model can beat a large general one on a narrow task, cheaply.', related: ['rag', 'few-shot', 'training-data'], lesson: 'fine-tuning-vs-rag' },
 
   // Retrieval
@@ -791,6 +834,13 @@ export const TERMS: Term[] = [
   { id: 'speech-to-text', term: 'Speech-to-text', aka: 'STT / transcription', category: 'Voice', simple: 'Turning spoken audio into text. Streaming versions transcribe while the person is still talking.', related: ['text-to-speech', 'voice-latency'], lesson: 'voice-multimodal' },
   { id: 'text-to-speech', term: 'Text-to-speech', aka: 'TTS', category: 'Voice', simple: 'Turning text into spoken audio. Streaming versions start speaking before the full text exists.', related: ['speech-to-text', 'voice-latency'], lesson: 'voice-multimodal' },
   { id: 'voice-latency', term: 'Voice latency', aka: 'Time to first audio', category: 'Voice', simple: 'How long after the user stops talking until they hear the reply begin. About a second feels natural; several seconds feels broken.', related: ['streaming', 'ttft'], lesson: 'voice-multimodal' },
+
+  { id: 'sampling', term: 'Sampling', category: 'Models', simple: 'How the model picks each next token from its list of probable options. Temperature and top-p are the sampling settings.', related: ['temperature', 'top-p'], lesson: 'temperature' },
+  { id: 'top-p', term: 'Top-p', aka: 'Nucleus sampling', category: 'Models', simple: 'Only pick the next token from the smallest group of likely options that together add up to p (say 90%) of the probability. Cuts off the weird long tail.', why: 'An alternative or companion to temperature; usually tune one, not both.', related: ['temperature', 'sampling'], lesson: 'temperature' },
+  { id: 'determinism', term: 'Determinism', category: 'Models', simple: 'Getting exactly the same output for the same input. Temperature 0 gets close, but hosted models aren\'t perfectly deterministic.', why: 'If you need the identical answer again, store or cache it rather than regenerating.', related: ['temperature'], lesson: 'temperature' },
+  { id: 'judge-bias', term: 'Judge bias', category: 'Quality', simple: 'The systematic mistakes an LLM judge makes: favouring longer, more confident or more familiar-sounding answers, and missing fluent errors.', why: 'An uncalibrated judge can make a bad system look great.', related: ['llm-as-judge', 'eval'], lesson: 'trustworthy-evals' },
+  { id: 'offline-online-evals', term: 'Offline vs online evals', category: 'Quality', simple: 'Offline evals run a fixed test set before you ship. Online evals score a sample of live traffic after you ship.', why: 'Offline catches regressions; online catches drift away from what you tested.', related: ['eval', 'regression-suite'], lesson: 'trustworthy-evals' },
+  { id: 'regression-suite', term: 'Regression suite', category: 'Quality', simple: 'The set of evals that runs automatically on every prompt, model or retrieval change, and blocks the change if quality drops.', analogy: 'Continuous integration tests, for answer quality.', related: ['regression', 'golden-dataset'], lesson: 'trustworthy-evals' },
 
   // Inference
   { id: 'prefill', term: 'Prefill', category: 'Inference', simple: 'The first phase of a model call: reading the whole prompt at once. GPUs do this in parallel, so it\'s fast.', analogy: 'Skimming a page in one glance.', why: 'Long prompts add surprisingly little latency compared with long answers.', related: ['decode', 'kv-cache'], lesson: 'how-inference-works' },
