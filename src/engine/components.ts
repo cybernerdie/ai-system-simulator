@@ -160,8 +160,30 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     group: 'Retrieval',
     color: '#6366f1',
     blurb: 'Finds the chunks of your documents closest in meaning to the question. Great at paraphrases, weak at exact codes and names.',
-    defaults: { topK: 5, chunk: 'medium' },
+    defaults: { topK: 5, chunk: 'medium', refresh: 'weekly', parser: 'plain' },
     fields: [
+      {
+        key: 'refresh',
+        label: 'Re-indexing',
+        kind: 'select',
+        options: [
+          { value: 'manual', label: 'Manual (whenever someone remembers)' },
+          { value: 'weekly', label: 'Weekly batch' },
+          { value: 'daily', label: 'Nightly batch' },
+          { value: 'live', label: 'Live (re-index on every change)' },
+        ],
+        help: 'How quickly document changes reach the index. Stale chunks give confidently outdated answers. Fresher costs more to run.',
+      },
+      {
+        key: 'parser',
+        label: 'Document parsing',
+        kind: 'select',
+        options: [
+          { value: 'plain', label: 'Plain text extraction' },
+          { value: 'layout', label: 'Layout-aware (tables, PDFs)' },
+        ],
+        help: 'Plain extraction scrambles tables and multi-column PDFs, so answers inside them can\'t be found. Layout-aware parsing keeps structure, at extra ingestion cost.',
+      },
       {
         key: 'topK',
         label: 'Top-K chunks',
@@ -276,7 +298,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     group: 'Generation',
     color: '#0ea5e9',
     blurb: 'The model that writes the answer. Bigger is smarter and safer, but slower, pricier and more rate-limited.',
-    defaults: { size: 'medium', streaming: false, provider: 'A' },
+    defaults: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false },
     fields: [
       {
         key: 'provider',
@@ -296,10 +318,33 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
         help: 'Changes accuracy, latency, cost, context window and tokens-per-minute limit.',
       },
       {
+        key: 'thinking',
+        label: 'Thinking (reasoning)',
+        kind: 'select',
+        options: [
+          { value: 'off', label: 'Off' },
+          { value: 'low', label: 'Low budget (~500 tokens)' },
+          { value: 'high', label: 'High budget (~2,000 tokens)' },
+        ],
+        help: 'Lets the model reason step by step before answering. Much better on hard problems, but those hidden tokens are paid for and must be written before the first visible word.',
+      },
+      {
         key: 'streaming',
         label: 'Stream tokens',
         kind: 'toggle',
         help: 'Users see the first token immediately instead of waiting for the full answer.',
+      },
+      {
+        key: 'jsonMode',
+        label: 'Structured output (JSON mode)',
+        kind: 'toggle',
+        help: 'Forces answers to match a JSON schema, so your code can parse them. Without it, models sometimes return broken JSON.',
+      },
+      {
+        key: 'promptCache',
+        label: 'Prompt caching',
+        kind: 'toggle',
+        help: 'Reuse the unchanging start of the prompt (system prompt, earlier chat) across requests: cached tokens cost about 10% and are read almost instantly.',
       },
     ],
   },
@@ -423,6 +468,26 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
       },
     ],
   },
+  validator: {
+    type: 'validator',
+    name: 'Output Validator',
+    short: 'VAL',
+    group: 'Quality',
+    color: '#4f46e5',
+    blurb: 'Checks every structured answer against your schema before your code uses it. If it\'s broken, asks the model once more with the error message.',
+    defaults: {},
+    fields: [],
+  },
+  batch_queue: {
+    type: 'batch_queue',
+    name: 'Batch Queue',
+    short: 'BQ',
+    group: 'Inference',
+    color: '#0891b2',
+    blurb: 'Sends background jobs nobody is waiting on to the provider\'s batch API: about half price, results within hours, and it doesn\'t eat the rate limit your live users need.',
+    defaults: {},
+    fields: [],
+  },
   output_guard: {
     type: 'output_guard',
     name: 'Output Judge',
@@ -450,5 +515,7 @@ export const PALETTE_ORDER: ComponentType[] = [
   'gpu_llm',
   'fallback',
   'output_guard',
+  'validator',
   'eval_harness',
+  'batch_queue',
 ];

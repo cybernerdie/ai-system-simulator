@@ -87,6 +87,22 @@ function Lessons({ lesson, onPick, onTerm, onTry }: { lesson: Lesson; onPick: (i
   const scenario = lesson.scenarioId ? SCENARIOS.find((s) => s.id === lesson.scenarioId) : undefined;
   const readRef = useRef<HTMLElement>(null);
   const [read, setRead] = useState<Set<string>>(() => loadRead());
+  const [q, setQ] = useState('');
+  const needle = q.trim().toLowerCase();
+  const hit = (id: string) => {
+    if (!needle) return true;
+    const l = LESSON_BY_ID[id];
+    const text = [
+      l.title,
+      l.summary,
+      ...l.terms.map((t) => `${TERM_BY_ID[t].term} ${TERM_BY_ID[t].aka ?? ''}`),
+      ...l.blocks.map((b) => ('text' in b ? b.text : b.items.join(' '))),
+    ]
+      .join(' ')
+      .toLowerCase();
+    return text.includes(needle);
+  };
+  const hits = LESSON_ORDER.filter(hit).length;
   useEffect(() => {
     readRef.current?.scrollTo({ top: 0 });
     setRead((r) => {
@@ -109,15 +125,21 @@ function Lessons({ lesson, onPick, onTerm, onTry }: { lesson: Lesson; onPick: (i
             <div style={{ width: `${(read.size / LESSON_ORDER.length) * 100}%` }} />
           </div>
         </div>
-        {MODULES.map((m, mi) => (
+        <label className="search lesson-search">
+          <Search size={14} aria-hidden />
+          <span className="sr-only">Search lessons</span>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search lessons…" />
+        </label>
+        {needle && !hits && <p className="lesson-nohits">No lessons mention "{q}". Try the Glossary tab.</p>}
+        {MODULES.filter((m) => m.lessons.some(hit)).map((m) => (
           <section key={m.id} className={`module${m.id === mod.id ? ' is-open' : ''}`}>
             <header className="module-head">
-              <span className="module-num">Module {mi + 1}</span>
+              <span className="module-num">Module {MODULES.indexOf(m) + 1}</span>
               <span className={`level level-${m.level.toLowerCase()}`}>{m.level}</span>
               <h3>{m.title}</h3>
             </header>
             <ol>
-              {m.lessons.map((id) => {
+              {m.lessons.filter(hit).map((id) => {
                 const l = LESSON_BY_ID[id];
                 const done = read.has(id);
                 return (

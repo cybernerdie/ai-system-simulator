@@ -40,6 +40,11 @@ describe('scenarios', () => {
       'self-host': 'gpu_saturated',
       'provider-down': 'provider_down',
       'research-team': 'sequential_agent',
+      'think-harder': 'weak_reasoning',
+      'broke-parser': 'invalid_output',
+      'stale-index': 'stale_index',
+      'big-prompt': 'uncached_prompt',
+      'nightly-job': 'background_jobs',
     };
     for (const s of SCENARIOS) {
       const m = run(s.nodes, s.edges, s.traffic);

@@ -42,6 +42,10 @@ const SUMMARY_TOKENS = 450;
 interface Req {
   /** multi-part research task with this many sub-questions (0 = not one) */
   subtasks: number;
+  structured: boolean;
+  stale: boolean;
+  table: boolean;
+  offline: boolean;
   /** earlier turns in this conversation */
   turn: number;
   /** how many turns back the referenced fact was said (0 = no reference) */
@@ -66,8 +70,11 @@ interface Trace {
   touched: string[];
   recallHit?: boolean;
   cacheHit?: boolean;
+  parseMiss?: boolean;
+  staleHit?: boolean;
   question: string;
   historyTokens?: number;
+  batchTokens?: number;
   qkind: RequestSample['kind'];
   steps: TraceStep[];
 }
@@ -129,6 +136,9 @@ export const CAUSE_TEXT: Record<Cause, string> = {
   injection: 'The model followed the attacker\'s instructions.',
   cache_false_hit: 'The cache matched a different question and returned its answer.',
   guard_false_positive: 'A guardrail rejected a legitimate request.',
+  invalid_output: 'The model returned malformed JSON, so the code that needed it crashed.',
+  stale_index: 'Retrieval found the answer, but from an outdated version of the document that was never re-indexed.',
+  parse_miss: 'The answer sits in a table that plain-text parsing scrambled, so retrieval could never find it.',
   handoff_loss: 'Details got lost as the work passed between agents, so the combined answer missed something.',
   provider_down: 'The model provider was failing requests, and nothing retried or failed over to another model.',
   gpu_saturated: 'Your GPUs were already at full capacity, so the request queued until it timed out.',
@@ -224,6 +234,14 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   const agent = first('agent');
   const judge = first('output_guard');
   const memory = first('memory');
+  const validator = first('validator');
+  const batchQ = first('batch_queue');
+  const basePrompt = traffic.systemPromptTokens ?? BASE_PROMPT_TOKENS;
+  const refresh = vdb ? cfgStr<'manual' | 'weekly' | 'daily' | 'live'>(vdb, 'refresh', 'weekly') : 'weekly';
+  const parser = vdb ? cfgStr<'plain' | 'layout'>(vdb, 'parser', 'plain') : 'plain';
+  const FRESH = { manual: 0.05, weekly: 0.45, daily: 0.88, live: 0.98 } as const;
+  const INGEST_PER_REQ = { manual: 0, weekly: 0.00002, daily: 0.00015, live: 0.0008 } as const;
+  const ingestCost = (vdb && embedding) || kw ? INGEST_PER_REQ[refresh] + (parser === 'layout' ? 0.00025 : 0) : 0;
   const evals = first('eval_harness');
   const evalRate = evals ? cfgNum(evals, 'sampleRate', 0.05) : 0;
   const qualityVisible = !traffic.qualityHidden || !!evals;
@@ -303,6 +321,10 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   for (let i = 0; i < N; i++) {
     const req: Req = {
       subtasks: 0,
+      structured: false,
+      stale: false,
+      table: false,
+      offline: false,
       turn: 0,
       refAge: 0,
       adversarial: rng() < traffic.adversarialShare,
@@ -321,6 +343,13 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       req.exact = false;
       req.easy = false;
       req.repeat = false;
+    }
+    if ((traffic.structuredShare ?? 0) > 0 && !req.adversarial) req.structured = rng() < traffic.structuredShare!;
+    if (req.kb && (traffic.staleShare ?? 0) > 0) req.stale = rng() < traffic.staleShare!;
+    if (req.kb && (traffic.tableShare ?? 0) > 0) req.table = rng() < traffic.tableShare!;
+    if ((traffic.batchShare ?? 0) > 0 && !req.adversarial) {
+      req.offline = rng() < traffic.batchShare!;
+      if (req.offline) req.repeat = false;
     }
     if (chatMode) {
       req.turn = Math.min(120, Math.floor(-Math.log(1 - rng() * 0.999) * traffic.chatTurns!));
@@ -424,16 +453,29 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       }
       if (kw) touch(kw, 15, 0.000005);
       if (reranker) touch(reranker, 50 + topK * 6, 0.00002 * topK);
+      t.cost += ingestCost;
       if (req.kb) {
         grounded = rng() < recallFor(req.exact);
+        // plain text extraction scrambles tables, so their answers can't be found
+        if (grounded && req.table && parser === 'plain' && rng() < 0.55) {
+          grounded = false;
+          t.parseMiss = true;
+        }
         t.recallHit = grounded;
+        if (grounded && req.stale && rng() >= FRESH[refresh]) t.staleHit = true;
       }
-      const found = grounded ? 'found the chunk with the answer' : 'missed the chunk with the answer';
+      const found = t.staleHit
+        ? 'found the answer, but from an outdated version of the doc'
+        : t.parseMiss
+          ? 'the answer is in a table that plain-text parsing scrambled'
+          : grounded
+            ? 'found the chunk with the answer'
+            : 'missed the chunk with the answer';
       if (vectorOn)
         step(
           vdb!,
           `Retrieved top-${topK} ${chunk} chunks` + (req.kb && !kw ? `, ${found}` : '') + (req.kb && req.exact && !kw && !grounded ? ' (exact code blurred by embeddings)' : ''),
-          req.kb && !kw ? (grounded ? 'ok' : 'bad') : 'neutral',
+          req.kb && !kw ? (grounded && !t.staleHit ? 'ok' : 'bad') : 'neutral',
           30,
         );
       if (kw) step(kw, req.exact ? 'Matched the exact term' : 'Keyword match' + (req.kb ? `, ${found}` : ''), req.kb ? (grounded ? 'ok' : 'bad') : 'neutral', 15);
@@ -504,7 +546,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
         0,
         { nodeId: router.id, kind: 'router', text: sizes.size >= 2 ? `${req.easy ? 'Easy' : 'Hard'} request, sent to the ${size} model` : 'Only one model size, nothing to route', tone: 'neutral', ms: 12 },
       );
-    const inputTokens = BASE_PROMPT_TOKENS + chunksToLLM * cs.tokens + historyTokens;
+    const inputTokens = basePrompt + chunksToLLM * cs.tokens + historyTokens;
 
     // Provider reliability: retries on the same host, then optional failover
     const pErr = errOf(llm);
@@ -605,6 +647,8 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     let llmMs = 0;
     let firstTokenMs = 0;
     let calls = 0;
+    const costBeforeLLM = t.cost;
+    const llmCostOf = (tr: Trace) => tr.cost - costBeforeLLM;
     const call = (inTok: number, outTok: number) => {
       const j = jitter(rng);
       const ms = (m.ttftBase + inTok * m.prefillMsPerTok + outTok * m.msPerOutTok) * j;
@@ -629,7 +673,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
         for (let w = 0; w < workers; w++) {
           let wm = 0;
           for (let st = 0; st < workerSteps; st++) {
-            const ctx = BASE_PROMPT_TOKENS + 300 + st * RESEARCH_STEP_TOKENS;
+            const ctx = basePrompt + 300 + st * RESEARCH_STEP_TOKENS;
             peakContext = Math.max(peakContext, ctx);
             wm += call(ctx, st === workerSteps - 1 ? 140 : 60) + (st < workerSteps - 1 ? TOOL_MS : 0);
           }
@@ -643,7 +687,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       } else {
         const synthIn = inputTokens + workers * 300;
         firstTokenMs = ms;
-        ms += call(synthIn, OUTPUT_TOKENS);
+        ms += call(synthIn, OUTPUT_TOKENS + m.thinkTokens);
         toolOk = true;
         teamPenalty = Math.max(0.7, 1 - 0.022 * workers);
         step(team, `Split into ${workers} worker${workers > 1 ? 's' : ''} running in parallel (${workerSteps} steps each), then combined: ${calls} calls`, 'ok', ms);
@@ -654,18 +698,22 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       if (team) llmMs += call(inputTokens, 80); // orchestrator overhead even for simple requests
       for (let s = 0; s < steps; s++) {
         const stepIn = inputTokens + s * stepTokens;
-        const out = s === steps - 1 ? OUTPUT_TOKENS : 60;
+        const last = s === steps - 1;
+        const think = last ? m.thinkTokens : 0;
+        const out = (last ? OUTPUT_TOKENS : 60) + think;
+        // prompt caching: the unchanging start of the prompt is read from cache
+        const cached = m.promptCache ? Math.min(stepIn, (basePrompt + historyTokens * 0.9) * 0.9) : 0;
         peakContext = Math.max(peakContext, stepIn);
         if (stepIn > m.context) {
           t.outcome = 'overflow';
           t.cause = 'context_overflow';
           break;
         }
-        const ttftMs = m.ttftBase + stepIn * m.prefillMsPerTok;
+        const ttftMs = m.ttftBase + (stepIn - cached * 0.9) * m.prefillMsPerTok + think * m.msPerOutTok;
         const j = jitter(rng);
         if (s === steps - 1) firstTokenMs = llmMs + ttftMs * j;
-        llmMs += (ttftMs + out * m.msPerOutTok) * j + (s < steps - 1 && (k || req.tool) ? TOOL_MS : 0);
-        t.cost += (stepIn * m.inPerM + out * m.outPerM) / 1_000_000;
+        llmMs += (ttftMs + (out - think) * m.msPerOutTok) * j + (s < steps - 1 && (k || req.tool) ? TOOL_MS : 0);
+        t.cost += ((stepIn - cached * 0.9) * m.inPerM + out * m.outPerM) / 1_000_000;
         t.llmTokens[llm.id] = (t.llmTokens[llm.id] ?? 0) + stepIn + out;
         totalIn += stepIn;
       }
@@ -680,6 +728,15 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       t.latency += llmMs + m.ttftBase;
       t.ttft = t.latency;
       continue;
+    }
+    if (req.offline && batchQ) {
+      t.cost -= (llmCostOf(t) * 0.5);
+      t.batchTokens = t.llmTokens[llm.id] ?? 0;
+      delete t.llmTokens[llm.id];
+      t.touched.push(batchQ.id);
+      step(batchQ, 'Background job: sent to the batch API (half price, back within hours, no rate-limit impact)', 'ok');
+    } else if (req.offline) {
+      step(llm, 'Background job running on the real-time API, competing with live users', 'warn');
     }
     // Research done by one agent drowns in its own growing context
     const researchPenalty = k ? Math.max(0.55, 1 - 0.035 * Math.max(0, (peakContext - 6000) / 1000)) : 1;
@@ -741,13 +798,37 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       }
     }
 
+    // Stale index: retrieved an outdated version and answered from it, confidently
+    if (t.staleHit && (t.outcome === 'correct' || t.outcome === 'hallucinated') && !req.adversarial) {
+      t.outcome = 'hallucinated';
+      t.cause = 'stale_index';
+    }
+    if (t.parseMiss && t.cause === 'retrieval_miss') t.cause = 'parse_miss';
+
+    // Structured output: your code needs valid JSON
+    if (req.structured && (t.outcome === 'correct' || t.outcome === 'hallucinated')) {
+      let broken = rng() < m.invalidRate;
+      if (broken && validator) {
+        const extra = (m.ttftBase + inputTokens * m.prefillMsPerTok + 200 * m.msPerOutTok) * jitter(rng);
+        t.latency += extra;
+        t.cost += (inputTokens * m.inPerM + 200 * m.outPerM) / 1_000_000;
+        broken = rng() < m.invalidRate;
+        step(validator, broken ? 'Invalid JSON twice, gave up' : 'Invalid JSON, asked the model again with the error: fixed', broken ? 'bad' : 'warn', extra);
+      } else if (validator) step(validator, 'Valid against the schema', 'ok', 2);
+      if (broken) {
+        if (!validator) t.steps.push({ nodeId: llm.id, kind: 'llm', text: 'Returned malformed JSON: your parser threw an exception', tone: 'bad' });
+        t.outcome = 'failed';
+        t.cause = 'invalid_output';
+      }
+    }
+
     // 6. Output judge
     if (judge) {
       touch(judge, 380, 0.0004);
       t.ttft = t.latency; // has to see the whole answer before releasing it
       let note = 'Checked the answer against sources, passed';
       let tone: StepTone = 'ok';
-      if (t.outcome === 'hallucinated' && rng() < 0.72) {
+      if (t.outcome === 'hallucinated' && t.cause !== 'stale_index' && rng() < 0.72) {
         t.outcome = 'declined';
         note = 'Caught an unsupported answer, replied "I don\'t know" instead';
       } else if (t.outcome === 'injected' && rng() < 0.6) {
@@ -847,8 +928,10 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   const legit = traces.filter((t) => !t.req.adversarial && !isError(t));
   const adv = traces.filter((t) => t.req.adversarial && !isError(t));
   const kbT = traces.filter((t) => t.req.kb && t.recallHit !== undefined);
-  const lat = traces.filter((t) => t.outcome !== 'rate_limited' && t.cause !== 'provider_down').map((t) => t.latency).sort((a, b) => a - b);
-  const ttfts = traces.filter((t) => t.outcome !== 'rate_limited' && t.cause !== 'provider_down').map((t) => t.ttft).sort((a, b) => a - b);
+  // background jobs have nobody waiting on them, so they don't count towards latency
+  const waited = traces.filter((t) => t.outcome !== 'rate_limited' && t.cause !== 'provider_down' && !t.req.offline);
+  const lat = waited.map((t) => t.latency).sort((a, b) => a - b);
+  const ttfts = waited.map((t) => t.ttft).sort((a, b) => a - b);
 
   const costByNode: Record<string, number> = {};
   // attribute LLM cost to LLM nodes, the rest proportionally is small; keep it simple: LLM tokens
@@ -953,6 +1036,8 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     gpuUtil: utils.length ? Math.max(...utils) : null,
     singleAgentResearch: (traffic.complexShare ?? 0) > 0 && !!agent && !team,
     teamResearch: (traffic.complexShare ?? 0) > 0 && !!team,
+    offlineInRealtime: (traffic.batchShare ?? 0) > 0 && !batchQ,
+    bigUncachedPrompt: basePrompt > 3000 && llms.some((l) => !P(l).promptCache),
     qualityVisible,
     avgHistoryTokens,
     samples,
@@ -984,7 +1069,7 @@ function labelOf(n: SimNode) {
   const names: Record<ComponentType, string> = {
     users: 'Users', input_guard: 'Input Guardrail', semantic_cache: 'Semantic Cache', router: 'Model Router',
     embedding: 'Embedding Model', vector_db: 'Vector DB', keyword_search: 'Keyword Search', reranker: 'Reranker',
-    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory', eval_harness: 'Eval Harness', gpu_llm: 'Self-hosted Model', fallback: 'Retry & Fallback', agent_team: 'Agent Team',
+    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory', eval_harness: 'Eval Harness', gpu_llm: 'Self-hosted Model', fallback: 'Retry & Fallback', agent_team: 'Agent Team', validator: 'Output Validator', batch_queue: 'Batch Queue',
   };
   return names[n.type];
 }

@@ -3,7 +3,9 @@ import {
   Binary,
   Bot,
   Cpu,
+  Braces,
   Database,
+  Layers,
   Network,
   RefreshCw,
   FlaskConical,
@@ -37,6 +39,8 @@ export const ICONS: Record<ComponentType, LucideIcon> = {
   gpu_llm: Cpu,
   fallback: RefreshCw,
   agent_team: Network,
+  validator: Braces,
+  batch_queue: Layers,
 };
 
 export function KindIcon({ kind, size = 'md' }: { kind: ComponentType; size?: 'sm' | 'md' | 'lg' }) {

@@ -40,7 +40,21 @@ export interface ModelProfile {
   hallucinateWhenUnsure: number;
   injectable: number;
   gpu?: { gpus: number; batch: number; perStreamTps: number; capacityTps: number; hourly: number };
+  /** Hidden reasoning tokens written before the visible answer. */
+  thinkTokens: number;
+  /** Chance an answer that must be JSON comes back malformed. */
+  invalidRate: number;
+  /** Reuses the cached start of the prompt across requests. */
+  promptCache: boolean;
 }
+
+export const THINKING = {
+  off: { label: 'Off', tokens: 0, hardGap: 0, easyGap: 0 },
+  low: { label: 'Low budget (~500 tokens)', tokens: 500, hardGap: 0.5, easyGap: 0.3 },
+  high: { label: 'High budget (~2,000 tokens)', tokens: 2000, hardGap: 0.7, easyGap: 0.5 },
+} as const;
+export type Thinking = keyof typeof THINKING;
+const INVALID_JSON: Record<string, number> = { small: 0.14, medium: 0.07, large: 0.035, 'open-8b': 0.15, 'open-70b': 0.06 };
 
 const num = (n: SimNode, k: string, d: number) => (typeof n.config[k] === 'number' ? (n.config[k] as number) : d);
 const str = <T extends string>(n: SimNode, k: string, d: T) => (typeof n.config[k] === 'string' ? (n.config[k] as T) : d);
@@ -74,14 +88,23 @@ export function profileOf(n: SimNode): ModelProfile {
       hallucinateWhenUnsure: model.hallucinateWhenUnsure,
       injectable: model.injectable,
       gpu: { gpus, batch, perStreamTps, capacityTps, hourly: GPU_HOURLY * gpus },
+      thinkTokens: 0,
+      invalidRate: n.config.jsonMode === true ? 0.004 : INVALID_JSON[str(n, 'model', 'open-70b')] ?? 0.08,
+      promptCache: true, // self-hosted servers reuse cached prefixes automatically
     };
   }
   const size = str<ModelSize>(n, 'size', 'medium');
   const s = MODEL_SPECS[size] ?? MODEL_SPECS.medium;
+  const th = THINKING[str<Thinking>(n, 'thinking', 'off')] ?? THINKING.off;
+  const accHard = s.accHard + (1 - s.accHard) * th.hardGap;
+  const accEasy = s.accEasy + (1 - s.accEasy) * th.easyGap;
   return {
     host: str<'A' | 'B'>(n, 'provider', 'A'),
-    label: size,
-    rank: s.accHard,
+    label: th.tokens ? `${size} + thinking` : size,
+    rank: accHard,
+    thinkTokens: th.tokens,
+    invalidRate: n.config.jsonMode === true ? 0.004 : INVALID_JSON[size] ?? 0.08,
+    promptCache: n.config.promptCache === true,
     ttftBase: s.ttftBase,
     prefillMsPerTok: s.prefillMsPerTok,
     msPerOutTok: s.msPerOutTok,
@@ -89,10 +112,10 @@ export function profileOf(n: SimNode): ModelProfile {
     outPerM: s.outPerM,
     context: s.context,
     tpm: s.tpm,
-    accEasy: s.accEasy,
-    accHard: s.accHard,
+    accEasy,
+    accHard,
     hallucinateWhenUnsure: s.hallucinateWhenUnsure,
-    injectable: s.injectable,
+    injectable: s.injectable * (th.tokens ? 0.8 : 1),
   };
 }
 

@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Check, Shapes, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Check, Search, Shapes, X } from 'lucide-react';
 import type { Scenario } from '../engine/scenarios';
 
 const LEVEL: Record<Scenario['difficulty'], string> = { 0: 'Open', 1: 'Intro', 2: 'Core', 3: 'Advanced' };
@@ -37,6 +37,16 @@ export function ScenarioPicker({
   }, [onClose]);
 
   const done = scenarios.filter((s) => cleared.has(s.id)).length;
+  const [q, setQ] = useState('');
+  const [level, setLevel] = useState<'all' | 1 | 2 | 3 | 'todo'>('all');
+  const matches = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return (s: Scenario) =>
+      (level === 'all' || (level === 'todo' ? !cleared.has(s.id) : s.difficulty === level)) &&
+      (!needle || `${s.title} ${s.tagline} ${s.brief} ${s.skills.join(' ')}`.toLowerCase().includes(needle));
+  }, [q, level, cleared]);
+  const shown = scenarios.map((s, i) => ({ s, i })).filter(({ s }) => matches(s));
+  const showSandbox = level === 'all' && matches(sandbox);
 
   const card = (s: Scenario, i?: number) => {
     const isDone = cleared.has(s.id);
@@ -45,7 +55,6 @@ export function ScenarioPicker({
         key={s.id}
         className={`scard${s.id === currentId ? ' is-current' : ''}${isDone ? ' is-done' : ''}`}
         onClick={() => onPick(s.id)}
-        autoFocus={s.id === currentId}
       >
         <div className="scard-top">
           <span className="scard-num">{i === undefined ? '∞' : String(i + 1).padStart(2, '0')}</span>
@@ -92,9 +101,32 @@ export function ScenarioPicker({
             <X size={16} />
           </button>
         </header>
+        <div className="picker-tools">
+          <label className="search">
+            <Search size={15} aria-hidden />
+            <span className="sr-only">Search scenarios</span>
+            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by topic: memory, GPUs, agents, JSON…" />
+          </label>
+          <div className="chips" role="group" aria-label="Filter scenarios">
+            {(
+              [
+                ['all', 'All'],
+                [1, 'Intro'],
+                [2, 'Core'],
+                [3, 'Advanced'],
+                ['todo', 'Not cleared'],
+              ] as const
+            ).map(([v, label]) => (
+              <button key={String(v)} className="chip" aria-pressed={level === v} onClick={() => setLevel(v)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="picker-grid">
-          {scenarios.map((s, i) => card(s, i))}
-          {card(sandbox)}
+          {shown.map(({ s, i }) => card(s, i))}
+          {showSandbox && card(sandbox)}
+          {!shown.length && !showSandbox && <p className="side-empty picker-empty">No scenarios match "{q}". Try a broader word, like "cost" or "retrieval".</p>}
         </div>
       </div>
     </div>

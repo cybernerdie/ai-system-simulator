@@ -986,3 +986,16 @@ body, .topbar, .palette, .side, .canvas, .simnode, .telemetry, .pressure-window 
   .app > * { min-width: 0; }
   .side { overflow: visible; }
 }
+
+/* ---------- search in picker and lessons ---------- */
+.picker-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--line); }
+.picker-tools .search { max-width: 380px; }
+.picker-empty { grid-column: 1 / -1; }
+.lesson-search { min-width: 0; max-width: none; height: 32px; margin: 0 4px 14px; background: var(--surface); }
+.lesson-nohits { margin: 4px 8px 12px; font-size: 12.5px; color: var(--ink-3); }
+@media (max-width: 900px) {
+  .picker-tools { padding: 12px 14px; }
+  .picker-tools .chips { flex-wrap: nowrap; overflow-x: auto; width: 100%; }
+  .picker-tools .chip { flex: none; }
+  .picker-tools .search { max-width: none; flex: 1 1 100%; }
+}

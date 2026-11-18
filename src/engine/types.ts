@@ -14,7 +14,9 @@ export type ComponentType =
   | 'eval_harness'
   | 'gpu_llm'
   | 'fallback'
-  | 'agent_team';
+  | 'agent_team'
+  | 'validator'
+  | 'batch_queue';
 
 export type ConfigValue = number | string | boolean;
 export type NodeConfig = Record<string, ConfigValue>;
@@ -60,6 +62,16 @@ export interface TrafficProfile {
   providerErrors?: Partial<Record<'A' | 'B', number>>;
   /** Multi-part research tasks that need several lookups (3–6 sub-questions each). */
   complexShare?: number;
+  /** Requests whose answer must be valid JSON for your code to use it. */
+  structuredShare?: number;
+  /** Docs questions about content that changed recently. */
+  staleShare?: number;
+  /** Docs questions whose answer sits in a table or complex PDF layout. */
+  tableShare?: number;
+  /** Size of the fixed system prompt sent with every request (default 450). */
+  systemPromptTokens?: number;
+  /** Background jobs (summarise, tag, extract) that nobody is waiting on. */
+  batchShare?: number;
 }
 
 export type Outcome =
@@ -88,7 +100,10 @@ export type Cause =
   | 'forgot_context'
   | 'provider_down'
   | 'gpu_saturated'
-  | 'handoff_loss';
+  | 'handoff_loss'
+  | 'invalid_output'
+  | 'stale_index'
+  | 'parse_miss';
 
 export type StepTone = 'ok' | 'bad' | 'warn' | 'neutral';
 
@@ -153,6 +168,10 @@ export interface Metrics {
   singleAgentResearch: boolean;
   /** True when multi-part research runs through an Agent Team. */
   teamResearch: boolean;
+  /** Background jobs are running through the real-time API. */
+  offlineInRealtime: boolean;
+  /** A big fixed system prompt is being paid for in full on every call. */
+  bigUncachedPrompt: boolean;
   /** A handful of individual requests from this tick, failures first. */
   samples: RequestSample[];
 }

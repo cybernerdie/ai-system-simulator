@@ -463,6 +463,168 @@ export const SCENARIOS: Scenario[] = [
       edges: chain('users', 'team', 'llm'),
     },
   },
+  {
+    id: 'think-harder',
+    difficulty: 2,
+    skills: ['Reasoning models', 'Thinking budgets', 'Model routing'],
+    title: '13 · Think harder?',
+    tagline: 'The hard questions keep coming back wrong.',
+    brief:
+      'Your tutoring assistant handles a lot of genuinely hard questions: multi-step maths, tricky logic, "explain why this proof is wrong". The medium model gets too many of them wrong. One engineer wants the large model for everything, another wants the new reasoning mode turned all the way up.',
+    traffic: { ...base, rps: 3, easyShare: 0.3, repeatShare: 0 },
+    goals: [
+      { metric: 'accuracy', op: '>=', value: 0.91 },
+      { metric: 'costPer1k', op: '<=', value: 15 },
+      { metric: 'p50', op: '<=', value: 20000 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'llm'),
+    hint: 'Try the large model, then try the thinking budget at low and high. Which one is accurate enough without blowing the cost or the wait? Do the easy questions need any of it?',
+    lesson:
+      'Reasoning ("thinking") lets a model work through a problem before answering, which buys real accuracy on hard questions. But the hidden thinking tokens are paid for, and they\'re written before the first visible word, so more thinking is slower too. A modest budget usually captures most of the gain. Spend it only where questions are hard, for example by routing easy ones to a small model.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'rt', type: 'router', x: 260, y: 120 },
+        { id: 'small', type: 'llm', x: 520, y: 40, config: { size: 'small' } },
+        { id: 'llm', type: 'llm', x: 520, y: 200, config: { size: 'medium', thinking: 'low' } },
+      ],
+      edges: [...chain('users', 'rt', 'llm'), { source: 'rt', target: 'small' }],
+    },
+  },
+  {
+    id: 'broke-parser',
+    difficulty: 1,
+    skills: ['Structured outputs', 'JSON mode', 'Validation'],
+    title: '14 · It broke the parser',
+    tagline: 'One in nine responses crashes your code.',
+    brief:
+      'Your invoice-extraction API asks the model to return JSON (vendor, date, line items), and your code parses it. It works in the demo. In production, every so often the model adds a friendly sentence, forgets a bracket or invents a field, and your parser throws. The customer sees a 500 error.',
+    traffic: { ...base, rps: 10, easyShare: 0.7, repeatShare: 0, structuredShare: 0.8 },
+    goals: [
+      { metric: 'errorRate', op: '<=', value: 0.01 },
+      { metric: 'accuracy', op: '>=', value: 0.8 },
+      { metric: 'costPer1k', op: '<=', value: 3 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'small' } },
+    ],
+    edges: chain('users', 'llm'),
+    hint: 'Look at what failed in the request inspector. Is the model wrong, or just badly formatted? There\'s a model setting built for exactly this. A validator helps too, but is it enough on its own?',
+    lesson:
+      'Asking nicely for JSON isn\'t a contract. Models occasionally break format, and at scale "occasionally" means constant crashes. Structured output (JSON mode or schema-constrained decoding) makes the model produce valid output by construction. A validator that checks and retries is the safety net, not the fix.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'small', jsonMode: true } },
+      ],
+      edges: chain('users', 'llm'),
+    },
+  },
+  {
+    id: 'stale-index',
+    difficulty: 2,
+    skills: ['Data ingestion', 'Index freshness', 'Document parsing'],
+    title: '15 · Yesterday\'s answers',
+    tagline: 'The price changed on Monday. The bot still quotes the old one.',
+    brief:
+      'Your retrieval setup is solid (hybrid search, reranking), but the docs it searches change daily: prices, policies, release notes. The index was built once, by hand, from text scraped out of PDFs. Customers get confident answers that were true last month, and anything inside a table seems invisible.',
+    traffic: { ...base, kbShare: 0.85, exactTermShare: 0.2, staleShare: 0.3, tableShare: 0.25 },
+    goals: [
+      { metric: 'hallucination', op: '<=', value: 0.15 },
+      { metric: 'accuracy', op: '>=', value: 0.83 },
+      { metric: 'costPer1k', op: '<=', value: 12 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 60 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 60, config: { topK: 12, chunk: 'medium', refresh: 'manual', parser: 'plain' } },
+      { id: 'kw', type: 'keyword_search', x: 340, y: 200 },
+      { id: 'rr', type: 'reranker', x: 520, y: 120, config: { keep: 4 } },
+      { id: 'llm', type: 'llm', x: 700, y: 120, config: { size: 'medium' } },
+    ],
+    edges: [...chain('users', 'emb', 'vdb', 'rr', 'llm'), ...chain('users', 'kw', 'rr')],
+    hint: 'Open the Vector DB settings. Retrieval is only as good as what went into the index: how often is it rebuilt, and how are documents turned into text? (An Output Judge won\'t save you here. Why not?)',
+    lesson:
+      'Most RAG problems start before retrieval: in ingestion. Content that changes needs a pipeline that re-indexes on a schedule or on every change, or the model will confidently quote old facts that your judge can\'t catch, because the sources agree. And how you parse documents matters: plain text extraction turns tables and multi-column PDFs into word soup.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 60 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 60, config: { topK: 12, chunk: 'medium', refresh: 'live', parser: 'layout' } },
+        { id: 'kw', type: 'keyword_search', x: 340, y: 200 },
+        { id: 'rr', type: 'reranker', x: 520, y: 120, config: { keep: 4 } },
+        { id: 'llm', type: 'llm', x: 700, y: 120, config: { size: 'medium' } },
+      ],
+      edges: [...chain('users', 'emb', 'vdb', 'rr', 'llm'), ...chain('users', 'kw', 'rr')],
+    },
+  },
+  {
+    id: 'big-prompt',
+    difficulty: 1,
+    skills: ['Prompt caching', 'Cost', 'Latency'],
+    title: '16 · The 20-page system prompt',
+    tagline: 'Every request re-reads the whole manual.',
+    brief:
+      'Your compliance assistant sends a 12,000-token system prompt with every request: the full policy manual, tone guide and twenty worked examples. Quality is excellent. The bill is not: almost all of it pays for reading the same text over and over. The small model can\'t even fit it.',
+    traffic: { ...base, rps: 6, systemPromptTokens: 12000, repeatShare: 0 },
+    goals: [
+      { metric: 'costPer1k', op: '<=', value: 15 },
+      { metric: 'accuracy', op: '>=', value: 0.85 },
+      { metric: 'p50', op: '<=', value: 5000 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'llm'),
+    hint: 'The manual is the same in every request. Is there a way to stop paying full price to process the same tokens every time?',
+    lesson:
+      'When every request starts with the same long prefix (system prompt, documents, examples), prompt caching lets the provider reuse its work: cached tokens cost roughly a tenth and are read almost instantly. Put the stable content first and the changing content last, so as much as possible can be cached.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium', promptCache: true } },
+      ],
+      edges: chain('users', 'llm'),
+    },
+  },
+  {
+    id: 'nightly-job',
+    difficulty: 2,
+    skills: ['Batch APIs', 'Async workloads', 'Rate limits'],
+    title: '17 · The nightly job ate the day',
+    tagline: 'A million tickets to summarise, and live users get 429s.',
+    brief:
+      'Someone kicked off a job to summarise and tag every support ticket from the last year. It runs through the same real-time API as your live chat. Now 60% of your traffic is a background job nobody is waiting on, it\'s eating your rate limit, and live customers are getting errors.',
+    traffic: { ...base, rps: 40, easyShare: 0.5, repeatShare: 0, batchShare: 0.6, systemPromptTokens: 2500 },
+    goals: [
+      { metric: 'errorRate', op: '<=', value: 0.01 },
+      { metric: 'costPer1k', op: '<=', value: 9 },
+      { metric: 'accuracy', op: '>=', value: 0.85 },
+      { metric: 'p50', op: '<=', value: 6000 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'llm'),
+    hint: 'Not every request needs an answer in seconds. Where could work that can wait a few hours go instead?',
+    lesson:
+      'Separate work that someone is waiting on from work that can wait. Providers offer batch APIs at roughly half price with results within hours, and batch jobs don\'t compete with your live traffic for rate limits. Real-time capacity is precious: keep it for real-time users.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'bq', type: 'batch_queue', x: 260, y: 120 },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+      ],
+      edges: chain('users', 'bq', 'llm'),
+    },
+  },
 ];
 
 export const SANDBOX: Scenario = {

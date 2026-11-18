@@ -1,6 +1,6 @@
 import type { Cause, Goal, GoalMetric, Metrics } from './types';
 
-export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent';
+export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent' | 'background_jobs' | 'uncached_prompt';
 
 export interface Pressure {
   key: PressureKey;
@@ -28,7 +28,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   weak_reasoning: {
     title: 'Model capability',
     why: 'The context is right but the model isn\'t strong enough for the hard requests.',
-    try: 'Use a larger model for hard requests — a Router lets you do that without paying large-model prices for easy ones.',
+    try: 'Give hard requests more brainpower: a thinking budget or a larger model. A Router lets you do that without paying for it on easy requests too.',
   },
   no_tools: {
     title: 'No way to act',
@@ -74,6 +74,31 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     title: 'Memory loss',
     why: 'Users refer back to things they said earlier, but your memory strategy dropped those turns, so the model guesses.',
     try: 'Keep the facts that matter, not every word: summarise older turns, or store them as long-term memory and retrieve what each message needs.',
+  },
+  invalid_output: {
+    title: 'Broken structured output',
+    why: 'Your code expects JSON, but some answers come back malformed, and the parser crashes.',
+    try: 'Turn on structured output (JSON mode) on the model so answers must match your schema, and add an Output Validator as a safety net.',
+  },
+  stale_index: {
+    title: 'Stale index',
+    why: 'Your docs changed but the index didn\'t. Retrieval finds the old version and the model repeats it confidently. Even an output judge can\'t tell, because the sources agree with the answer.',
+    try: 'Re-index more often (nightly or live) so changes reach the index before users ask about them.',
+  },
+  parse_miss: {
+    title: 'Scrambled documents',
+    why: 'Answers inside tables and complex PDFs were flattened into word soup when the docs were ingested, so retrieval can\'t find them.',
+    try: 'Switch the Vector DB to layout-aware parsing so tables and page structure survive ingestion.',
+  },
+  background_jobs: {
+    title: 'Background jobs in the fast lane',
+    why: 'Bulk jobs nobody is waiting on run through the real-time API. They pay full price and eat the rate limit your live users need.',
+    try: 'Add a Batch Queue so background work goes to the batch API: about half price, and off your real-time rate limit.',
+  },
+  uncached_prompt: {
+    title: 'Paying for the same prompt again',
+    why: 'Every request resends a huge, unchanging system prompt and pays full price to process it, plus the time to read it.',
+    try: 'Turn on prompt caching on the model, so the fixed start of every prompt is read from cache for a fraction of the price.',
   },
   handoff_loss: {
     title: 'Lost in hand-offs',
@@ -160,9 +185,12 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
   causes.sort((a, b) => b[1] - a[1]);
   const pick = (k: PressureKey): Pressure => ({ key: k, ...PRESSURES[k] });
 
-  const errorCause = causes.find(([c]) => c === 'rate_limit' || c === 'context_overflow' || c === 'provider_down' || c === 'gpu_saturated');
+  const errorCause = causes.find(([c]) => ['rate_limit', 'context_overflow', 'provider_down', 'gpu_saturated', 'invalid_output'].includes(c));
   const bloated = m.avgHistoryTokens > 4000;
-  if (unmet.includes('errorRate') && errorCause) return pick(bloated ? 'history_bloat' : errorCause[0]);
+  if (unmet.includes('errorRate') && errorCause) {
+    if (errorCause[0] === 'rate_limit' && m.offlineInRealtime) return pick('background_jobs');
+    return pick(bloated ? 'history_bloat' : errorCause[0]);
+  }
   if (unmet.includes('injection')) return pick('injection');
   if (m.singleAgentResearch && unmet.some((u) => u === 'p50' || QUALITY.includes(u))) return pick('sequential_agent');
   if (unmet.some((u) => QUALITY.includes(u))) {
@@ -172,10 +200,12 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
       const other = (m.causes.weak_reasoning ?? 0) + (m.causes.handoff_loss ?? 0);
       return pick(loops > other ? 'agent_loop' : 'handoff_loss');
     }
-    const q = causes.find(([c]) => !['rate_limit', 'context_overflow', 'injection', 'provider_down', 'gpu_saturated'].includes(c));
+    const q = causes.find(([c]) => !['rate_limit', 'context_overflow', 'injection', 'provider_down', 'gpu_saturated', 'invalid_output'].includes(c));
     if (q) return pick(q[0]);
   }
   if (unmet.includes('costPer1k')) {
+    if (m.offlineInRealtime) return pick('background_jobs');
+    if (m.bigUncachedPrompt) return pick('uncached_prompt');
     if (m.gpuUtil !== null && m.gpuUtil < 0.45) return pick('idle_gpus');
     if (m.teamResearch) return pick('agent_loop');
     if (bloated) return pick('history_bloat');

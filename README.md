@@ -29,6 +29,11 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 | 10 | Bring it in-house | GPU capacity | Self-hosting, batching, quantization, GPU cost |
 | 11 | The provider is down | Provider outage | Retries, retry storms, failover |
 | 12 | The research assistant | One agent doing everything | Multi-agent teams, hand-offs, reviewers, round caps |
+| 13 | Think harder? | Model capability | Reasoning models, thinking budgets, routing |
+| 14 | It broke the parser | Broken structured output | JSON mode, schema validation |
+| 15 | Yesterday's answers | Stale index | Ingestion, re-indexing, layout-aware parsing |
+| 16 | The 20-page system prompt | Paying for the same prompt again | Prompt caching |
+| 17 | The nightly job ate the day | Background jobs in the fast lane | Batch APIs, async work, rate limits |
 | — | Sandbox | Whatever you hit | Free build; set your own traffic mix |
 
 ## Features
@@ -36,8 +41,8 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 - **Binding pressure**: a live diagnosis of the one limit hurting your design most, with what to try next.
 - **Telemetry dock**: accuracy, hallucination, recall, injection, errors, latency, time to first token and cost, with goal targets and trend lines.
 - **Request inspector**: open the Requests tab, click any sampled request and follow it hop by hop (what each component did, how long it took, and why it failed). Its path lights up on the canvas.
-- **Scenario picker**: cards with difficulty, the concepts each scenario teaches, and your progress (saved in your browser).
-- **Learn**: a learning journey of 8 modules (Beginner → Advanced) and 20 short lessons, including a full Inference module (prefill vs decode, GPUs and batching, self-hosting vs API, reliability) and multi-agent systems in plain language, each linked to the scenario that practises it, with your reading progress saved. Plus a searchable glossary of 82 AI terms, each with a simple definition, an everyday analogy and why it matters. Every component's settings panel links to its glossary entry.
+- **Scenario picker**: search and difficulty filters, cards with difficulty, the concepts each scenario teaches, and your progress (saved in your browser).
+- **Learn**: a learning journey of 9 modules (Beginner → Advanced) and 25 short lessons, searchable, including a full Inference module (prefill vs decode, GPUs and batching, self-hosting vs API, reliability) and multi-agent systems in plain language, each linked to the scenario that practises it, with your reading progress saved. Plus a searchable glossary of 97 AI terms, each with a simple definition, an everyday analogy and why it matters. Every component's settings panel links to its glossary entry.
 - **Traffic patterns**: steady, spikes (4× bursts), a daily wave, or a ramp, with a simulation clock.
 - **Sandbox traffic mix**: sliders for docs questions, exact-term lookups, tool requests, attacks, easy requests, repeats, chat length and references back to earlier messages.
 - **Mobile friendly**: on phones the layout stacks into pressure, canvas, telemetry and mission; modals become full-height sheets.
@@ -46,7 +51,7 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 
 ## Components
 
-Users · Input Guardrail · Semantic Cache · Model Router · Conversation Memory (full / sliding window / rolling summary / long-term retrieval) · Embedding Model · Vector DB · Keyword Search (BM25) · Reranker · Agent Loop + Tools · Agent Team (workers, reviewer, max rounds) · LLM (small / medium / large, provider A/B, streaming) · Self-hosted Model (open 8B/70B, GPUs, batch size, quantization) · Retry & Fallback · Output Judge · Eval Harness
+Users · Input Guardrail · Semantic Cache · Model Router · Conversation Memory (full / sliding window / rolling summary / long-term retrieval) · Embedding Model · Vector DB (top-K, chunking, re-indexing, document parsing) · Keyword Search (BM25) · Reranker · Agent Loop + Tools · Agent Team (workers, reviewer, max rounds) · LLM (small / medium / large, thinking budget, provider A/B, streaming, JSON mode, prompt caching) · Self-hosted Model (open 8B/70B, GPUs, batch size, quantization) · Retry & Fallback · Batch Queue · Output Judge · Output Validator · Eval Harness
 
 ## How to play
 

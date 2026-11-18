@@ -14,7 +14,14 @@ export type SimFlowNode = Node<SimNodeData, 'sim'>;
 function chips(kind: ComponentType, config: NodeConfig): string[] {
   switch (kind) {
     case 'llm':
-      return [String(config.size), ...(config.provider === 'B' ? ['provider B'] : []), ...(config.streaming ? ['streaming'] : [])];
+      return [
+        String(config.size),
+        ...(config.thinking && config.thinking !== 'off' ? [`thinking: ${config.thinking}`] : []),
+        ...(config.provider === 'B' ? ['provider B'] : []),
+        ...(config.streaming ? ['streaming'] : []),
+        ...(config.jsonMode ? ['JSON mode'] : []),
+        ...(config.promptCache ? ['cached prompt'] : []),
+      ];
     case 'gpu_llm':
       return [String(config.model).replace('open-', '').toUpperCase(), `${config.gpus} GPU${Number(config.gpus) > 1 ? 's' : ''}`, `batch ${config.batch}`, String(config.quant).toUpperCase()];
     case 'agent_team':
@@ -22,7 +29,12 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
     case 'fallback':
       return [`${config.retries} retr${Number(config.retries) === 1 ? 'y' : 'ies'}`, config.failover ? 'failover on' : 'no failover'];
     case 'vector_db':
-      return [`top-${config.topK}`, `${config.chunk} chunks`];
+      return [
+        `top-${config.topK}`,
+        `${config.chunk} chunks`,
+        ...(config.refresh && config.refresh !== 'weekly' ? [`${{ manual: 'manual', daily: 'nightly', live: 'live' }[String(config.refresh)] ?? config.refresh} re-index`] : []),
+        ...(config.parser === 'layout' ? ['layout-aware'] : []),
+      ];
     case 'reranker':
       return [`keep ${config.keep}`];
     case 'agent':
