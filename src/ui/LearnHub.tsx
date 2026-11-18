@@ -105,13 +105,19 @@ function Lessons({ lesson, onPick, onTerm, onTry }: { lesson: Lesson; onPick: (i
   const hits = LESSON_ORDER.filter(hit).length;
   useEffect(() => {
     readRef.current?.scrollTo({ top: 0 });
+  }, [lesson.id]);
+
+  // A lesson only counts as read when the reader says so (or moves on from it), not when it's merely opened.
+  const setDone = (id: string, done: boolean) =>
     setRead((r) => {
-      if (r.has(lesson.id)) return r;
-      const n = new Set(r).add(lesson.id);
+      if (r.has(id) === done) return r;
+      const n = new Set(r);
+      if (done) n.add(id);
+      else n.delete(id);
       saveRead(n);
       return n;
     });
-  }, [lesson.id]);
+  const isDone = read.has(lesson.id);
 
   return (
     <div className="hub-body lessons">
@@ -225,14 +231,34 @@ function Lessons({ lesson, onPick, onTerm, onTry }: { lesson: Lesson; onPick: (i
 
           <footer className="lesson-foot">
             {scenario ? (
-              <button className="btn btn-primary" onClick={() => onTry(scenario.id)}>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setDone(lesson.id, true);
+                  onTry(scenario.id);
+                }}
+              >
                 <Play size={13} fill="currentColor" aria-hidden /> Try it: {scenario.title.replace(/^\d+ · /, '')}
               </button>
             ) : (
               <span />
             )}
+            <button
+              className={`btn btn-ghost mark-read${isDone ? ' is-done' : ''}`}
+              aria-pressed={isDone}
+              onClick={() => setDone(lesson.id, !isDone)}
+              title={isDone ? 'Mark as not read' : 'Mark as read'}
+            >
+              <Check size={14} strokeWidth={2.5} aria-hidden /> {isDone ? 'Read' : 'Mark as read'}
+            </button>
             {next && (
-              <button className="btn btn-ghost" onClick={() => onPick(next.id)}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  setDone(lesson.id, true);
+                  onPick(next.id);
+                }}
+              >
                 {MODULE_OF[next.id] !== mod ? `Next module: ${MODULE_OF[next.id].title}` : `Next: ${next.title}`} <ArrowRight size={14} aria-hidden />
               </button>
             )}

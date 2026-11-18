@@ -1218,3 +1218,7 @@ body, .topbar, .palette, .side, .canvas, .simnode, .telemetry, .pressure-window 
 .tour-actions > .tour-dots { order: 0; }
 .tour-actions > .btn-ghost { order: 1; }
 .tour-actions > .btn-primary { order: 2; }
+
+/* lesson read toggle */
+.lesson-foot .mark-read { margin-left: auto; }
+.lesson-foot .mark-read.is-done { color: var(--ok); }
