@@ -34,6 +34,7 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 - **Request inspector**: open the Requests tab, click any sampled request and follow it hop by hop (what each component did, how long it took, and why it failed). Its path lights up on the canvas.
 - **Scenario picker**: cards with difficulty, the concepts each scenario teaches, and your progress (saved in your browser).
 - **Learn**: a learning journey of 7 modules (Beginner → Advanced) and 13 short lessons in plain language, each linked to the scenario that practises it, with your reading progress saved. Plus a searchable glossary of 53 AI terms, each with a simple definition, an everyday analogy and why it matters. Every component's settings panel links to its glossary entry.
+- **Light and dark mode**: follows your system setting until you pick one with the toggle in the top bar.
 - **Share**: copies a link that encodes your whole design, so anyone can open and run it.
 
 ## Components

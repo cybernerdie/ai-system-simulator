@@ -117,3 +117,28 @@ export function saveRead(s: Set<string>) {
     /* ignore */
   }
 }
+
+/* ---------- theme ---------- */
+
+export type Theme = 'light' | 'dark';
+const KEY_THEME = 'aisim.theme.v1';
+
+/** Saved choice, or null if the user hasn't picked one (follow the system). */
+export function savedTheme(): Theme | null {
+  try {
+    const v = localStorage.getItem(KEY_THEME);
+    return v === 'light' || v === 'dark' ? v : null;
+  } catch {
+    return null;
+  }
+}
+export function saveTheme(t: Theme) {
+  try {
+    localStorage.setItem(KEY_THEME, t);
+  } catch {
+    /* ignore */
+  }
+}
+export function systemTheme(): Theme {
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}

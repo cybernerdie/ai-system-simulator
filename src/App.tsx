@@ -11,7 +11,7 @@ import {
   useReactFlow,
   type Connection,
 } from '@xyflow/react';
-import { BookOpen, Check, Code, Link2, Pause, Play, RotateCcw } from 'lucide-react';
+import { BookOpen, Check, Code, Link2, Moon, Pause, Play, RotateCcw, Sun } from 'lucide-react';
 import { COMPONENTS } from './engine/components';
 import { simulate } from './engine/simulate';
 import { bindingPressure, goalMet, type Pressure } from './engine/pressures';
@@ -21,7 +21,7 @@ import { SimNodeView, type SimFlowNode } from './ui/SimNodeView';
 import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
 import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
 import { LearnHub, firstUnreadLesson, type HubView } from './ui/LearnHub';
-import { encodeDesign, introSeen, loadCleared, markIntroSeen, readHashDesign, saveCleared } from './ui/persist';
+import { encodeDesign, introSeen, loadCleared, markIntroSeen, readHashDesign, saveCleared, savedTheme, saveTheme, systemTheme, type Theme } from './ui/persist';
 import { IntroDialog, Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from './ui/Panels';
 
 const ALL = [...SCENARIOS, SANDBOX];
@@ -81,7 +81,7 @@ function BrandMark() {
       <rect x="1" y="7" width="8" height="8" rx="2.5" fill="#6366f1" />
       <circle cx="16" cy="5.5" r="4" fill="#0ea5e9" />
       <rect x="12" y="12" width="9" height="9" rx="2.5" fill="#f97316" />
-      <path d="M9 11 L12 7.5 M9 11 L12.5 15.5" stroke="#18181b" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M9 11 L12 7.5 M9 11 L12.5 15.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
 }
@@ -104,6 +104,26 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
   const [hub, setHub] = useState<HubView | null>(null);
+  const [theme, setTheme] = useState<Theme>(() => savedTheme() ?? systemTheme());
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+  // Follow the OS setting until the user picks a theme themselves
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!mq) return;
+    const onChange = () => {
+      if (!savedTheme()) setTheme(mq.matches ? 'dark' : 'light');
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  const toggleTheme = () =>
+    setTheme((t) => {
+      const n = t === 'dark' ? 'light' : 'dark';
+      saveTheme(n);
+      return n;
+    });
   const toastTimer = useRef<number | undefined>(undefined);
   const showToast = useCallback((text: string) => {
     setToast(text);
@@ -248,6 +268,7 @@ export default function App() {
         const onTrace = traced ? traced.some((id, i) => id === e.source && traced.slice(i + 1).includes(e.target)) : false;
         return {
           ...e,
+          markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: theme === 'dark' ? '#71717a' : '#a1a1aa' },
           className: traced ? (onTrace ? 'is-traced' : 'is-dimmed') : undefined,
           data: {
             live: (running && active.has(e.source) && active.has(e.target) && !traced) || onTrace,
@@ -255,7 +276,7 @@ export default function App() {
           },
         };
       }),
-    [edges, running, active, metrics, traced],
+    [edges, running, active, metrics, traced, theme],
   );
 
   const onConnect = useCallback(
@@ -350,6 +371,14 @@ export default function App() {
           <BookOpen size={15} aria-hidden />
           <span>Learn</span>
         </button>
+        <button
+          className="btn btn-ghost theme-toggle"
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? <Sun size={15} aria-hidden /> : <Moon size={15} aria-hidden />}
+        </button>
         <a className="btn btn-ghost btn-icon" href="https://github.com/cybernerdie/ai-system-simulator" target="_blank" rel="noreferrer" title="Source on GitHub">
           <Code size={15} aria-hidden />
           <span className="sr-only">GitHub</span>
@@ -393,9 +422,9 @@ export default function App() {
           fitView
           fitViewOptions={FIT}
           proOptions={{ hideAttribution: true }}
-          connectionLineStyle={{ stroke: '#18181b', strokeWidth: 1.5, strokeDasharray: '4 4' }}
+          connectionLineStyle={{ stroke: 'var(--ink)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color="#d4d4d8" />
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color={theme === 'dark' ? '#2a2a2e' : '#d4d4d8'} />
           <Controls showInteractive={false} position="bottom-right" orientation="horizontal" />
         </ReactFlow>
         <PressureWindow p={pressure} running={running} hasRun={!!metrics} />
