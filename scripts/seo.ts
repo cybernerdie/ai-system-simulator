@@ -21,7 +21,17 @@ const TITLE = 'AISim: AI System Design Simulator. Learn AI engineering by breaki
 const SCENARIO_COUNT = SCENARIOS.filter((s) => s.difficulty > 0).length;
 const DESCRIPTION = `A free, interactive simulator for learning AI system design. Build RAG pipelines, agents and LLM apps from parts, push realistic traffic through them, and learn to fix rate limits, hallucinations, latency, cost and more. ${SCENARIO_COUNT} scenarios, ${LESSONS.length} lessons and a ${TERMS.length}-term glossary in plain English.`;
 const OG_IMAGE = `${SITE}/og.png`;
-const AUTHOR = { '@type': 'Person', name: 'cybernerdie', url: 'https://github.com/cybernerdie' };
+const AUTHOR = {
+  '@type': 'Person',
+  '@id': 'https://joshuapaul.me/#person',
+  name: 'Joshua Paul',
+  alternateName: 'cybernerdie',
+  url: 'https://joshuapaul.me',
+  jobTitle: 'Senior Fullstack and Applied AI Engineer',
+  sameAs: ['https://github.com/cybernerdie', 'https://medium.com/@cybernerdie'],
+};
+const AUTHOR_HTML = `Built by <a href="https://joshuapaul.me" rel="author">Joshua Paul</a> (<a href="https://github.com/cybernerdie">cybernerdie</a>).`;
+const AUTHOR_MD = 'Built by [Joshua Paul](https://joshuapaul.me) ([cybernerdie](https://github.com/cybernerdie) on GitHub).';
 
 const FAQ: { q: string; a: string }[] = [
   {
@@ -50,7 +60,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Is AISim free and open source?',
-    a: 'Yes. AISim is free to use in the browser and open source on GitHub. Your progress is saved in your browser, and you can share any design you build as a link.',
+    a: 'Yes. AISim is free to use in the browser and open source on GitHub. It was built by Joshua Paul (cybernerdie), a Senior Fullstack and Applied AI Engineer. Your progress is saved in your browser, and you can share any design you build as a link.',
   },
 ];
 
@@ -113,7 +123,7 @@ function staticBody(): string {
 <header><h1>AISim: AI System Design Simulator</h1>
 <p>${esc(DESCRIPTION)}</p>
 <p>The point isn't memorising components. It's learning to name the <strong>binding pressure</strong>: the one limit hurting your system right now. AI systems fail in two ways at once: load (rate limits, latency, cost, context windows) and quality (hallucinations, retrieval misses, prompt injection, runaway agents). AISim models both.</p>
-<p>This interactive simulator needs JavaScript. <a href="${REPO}">Source code on GitHub</a>.</p></header>
+<p>This interactive simulator needs JavaScript. <a href="${REPO}">Source code on GitHub</a>.</p><p>${AUTHOR_HTML}</p></header>
 <section><h2>Frequently asked questions</h2>${faq}</section>
 <section><h2>Scenarios (${playable.length})</h2><ol>${scenarios}</ol></section>
 <section><h2>Learn AI system design: ${MODULES.length} modules, ${LESSONS.length} lessons</h2>${modules}</section>
@@ -125,7 +135,7 @@ function staticBody(): string {
 
 function jsonLd(): string {
   const graph = [
-    { '@type': 'WebSite', '@id': `${SITE}/#website`, url: `${SITE}/`, name: NAME, description: DESCRIPTION, inLanguage: 'en' },
+    { '@type': 'WebSite', '@id': `${SITE}/#website`, url: `${SITE}/`, name: NAME, description: DESCRIPTION, inLanguage: 'en', author: AUTHOR, publisher: AUTHOR },
     {
       '@type': 'WebApplication',
       '@id': `${SITE}/#app`,
@@ -155,7 +165,8 @@ function jsonLd(): string {
       name: 'AI system design, from simple to complex',
       description:
         'A free, self-paced learning journey through AI engineering: foundations, RAG, memory, reliability, production, inference, agents, safety and evals, each lesson paired with a hands-on simulator scenario.',
-      provider: { '@type': 'Organization', name: NAME, sameAs: REPO },
+      provider: AUTHOR,
+      author: AUTHOR,
       isAccessibleForFree: true,
       inLanguage: 'en',
       educationalLevel: 'Beginner to Advanced',
@@ -191,7 +202,8 @@ function headTags(): string {
   return `
     <link rel="canonical" href="${SITE}/" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
-    <meta name="author" content="cybernerdie" />
+    <meta name="author" content="Joshua Paul (cybernerdie)" />
+    <link rel="author" href="https://joshuapaul.me" />
     <meta name="theme-color" content="#0b0b0f" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta property="og:type" content="website" />
@@ -225,6 +237,9 @@ AISim teaches AI engineering through hands-on scenarios. Each scenario starts wi
 - [Simulator](${SITE}/): the interactive app (scenarios, Learn section, glossary)
 - [Full content for LLMs](${SITE}/llms-full.txt): every scenario, lesson and glossary term as Markdown
 - [Source code](${REPO})
+- [Author: Joshua Paul](https://joshuapaul.me)
+
+${AUTHOR_MD}
 
 ## Frequently asked questions
 
@@ -246,6 +261,8 @@ function llmsFullTxt(): string {
 > ${DESCRIPTION}
 
 Source: ${SITE}/ · Code: ${REPO}
+
+${AUTHOR_MD}
 
 ## Frequently asked questions
 

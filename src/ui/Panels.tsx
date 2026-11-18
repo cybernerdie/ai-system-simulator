@@ -545,6 +545,17 @@ export function IntroDialog({ step, setStep, onClose }: { step: number; setStep:
             {last ? 'Start scenario 1' : 'Next'}
           </button>
         </div>
+        <p className="dialog-credit">
+          Built by{' '}
+          <a href="https://joshuapaul.me" target="_blank" rel="author noreferrer">
+            Joshua Paul
+          </a>{' '}
+          (
+          <a href="https://github.com/cybernerdie" target="_blank" rel="noreferrer">
+            cybernerdie
+          </a>
+          )
+        </p>
       </div>
     </div>
   );
