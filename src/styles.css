@@ -1347,3 +1347,14 @@ html, body { background: var(--bg); }
   .react-flow__pane, .react-flow__renderer, .react-flow__viewport, .react-flow__node { touch-action: pan-y pinch-zoom !important; }
   .react-flow__handle { touch-action: none !important; }
 }
+/* phones: horizontally scrolling filter pills. overflow-x clips vertically too, so give the
+   pills room for their border and shadow, and hide the scrollbar */
+@media (max-width: 900px) {
+  .picker-tools .chips, .glossary-tools .chips {
+    padding: 3px 2px 5px;
+    margin: -3px -2px -5px;
+    width: calc(100% + 4px);
+    scrollbar-width: none;
+  }
+  .picker-tools .chips::-webkit-scrollbar, .glossary-tools .chips::-webkit-scrollbar { display: none; }
+}
