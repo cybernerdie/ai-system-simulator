@@ -290,9 +290,9 @@ export const SCENARIOS: Scenario[] = [
   {
     id: 'endless-chat',
     difficulty: 3,
-    skills: ['Conversation memory', 'Stateless models', 'Cost'],
+    skills: ['Memory optimization', 'Stateless models', 'Cost'],
     title: '8 · The chat that never ends',
-    tagline: 'It either forgets what you said, or costs a fortune.',
+    tagline: 'Memory optimization: it either forgets what you said, or costs a fortune.',
     brief:
       'Your AI coaching app is a hit: conversations run 20, 40, 80 messages. Users constantly refer back ("like I said earlier, my budget is…"). The prototype resends the entire conversation with every message. The bill grows every week, answers get worse as chats get longer, and the longest chats have started failing.',
     traffic: { ...base, rps: 6, easyShare: 0.6, repeatShare: 0.05, chatTurns: 22, recallShare: 0.35 },
