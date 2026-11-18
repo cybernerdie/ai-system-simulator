@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Check, ChevronDown, Lightbulb, Trash2, TriangleAlert, X } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, Lightbulb, Trash2, TriangleAlert, X } from 'lucide-react';
+import { COMPONENT_TERM, TERM_BY_ID } from '../content/learn';
 import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../engine/components';
 import { goalMet, type Pressure } from '../engine/pressures';
 import type { Scenario } from '../engine/scenarios';
@@ -170,7 +171,9 @@ export function SidePanel({
   running,
   picked,
   onPick,
+  onLearn,
 }: {
+  onLearn: (termId: string) => void;
   running: boolean;
   picked: RequestSample | null;
   onPick: (r: RequestSample | null) => void;
@@ -204,7 +207,7 @@ export function SidePanel({
       ) : tab === 'requests' ? (
         <RequestsPanel samples={m?.samples ?? []} running={running} picked={picked} onPick={onPick} />
       ) : selected ? (
-        <Inspector {...selected} onChange={onChange} onDelete={onDelete} />
+        <Inspector {...selected} onChange={onChange} onDelete={onDelete} onLearn={onLearn} />
       ) : (
         <p className="side-empty">Select a component on the canvas to tune it.</p>
       )}
@@ -299,15 +302,18 @@ function Inspector({
   config,
   onChange,
   onDelete,
+  onLearn,
 }: {
   id: string;
   kind: ComponentType;
   config: NodeConfig;
   onChange: (id: string, key: string, v: ConfigValue) => void;
   onDelete: (id: string) => void;
+  onLearn: (termId: string) => void;
 }) {
   const spec = COMPONENTS[kind];
   const size = config.size as ModelSize | undefined;
+  const termId = COMPONENT_TERM[kind];
   return (
     <div className="inspector">
       <div className="inspector-head">
@@ -315,6 +321,11 @@ function Inspector({
         <h2>{spec.name}</h2>
       </div>
       <p className="inspector-blurb">{spec.blurb}</p>
+      {termId && (
+        <button className="learn-link" onClick={() => onLearn(termId)}>
+          <BookOpen size={13} aria-hidden /> {TERM_BY_ID[termId].term}, explained simply
+        </button>
+      )}
       {spec.fields.length > 0 && (
         <Group title="Settings">
           {spec.fields.map((f) => (

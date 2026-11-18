@@ -11,7 +11,7 @@ import {
   useReactFlow,
   type Connection,
 } from '@xyflow/react';
-import { Check, CircleQuestionMark, Code, Link2, Pause, Play, RotateCcw } from 'lucide-react';
+import { BookOpen, Check, Code, Link2, Pause, Play, RotateCcw } from 'lucide-react';
 import { COMPONENTS } from './engine/components';
 import { simulate } from './engine/simulate';
 import { bindingPressure, goalMet, type Pressure } from './engine/pressures';
@@ -20,6 +20,7 @@ import type { ComponentType, ConfigValue, Metrics, RequestSample, SimGraph } fro
 import { SimNodeView, type SimFlowNode } from './ui/SimNodeView';
 import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
 import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
+import { LearnHub, type HubView } from './ui/LearnHub';
 import { encodeDesign, introSeen, loadCleared, markIntroSeen, readHashDesign, saveCleared } from './ui/persist';
 import { IntroDialog, Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from './ui/Panels';
 
@@ -102,6 +103,7 @@ export default function App() {
   const [intro, setIntro] = useState<number | null>(() => (introSeen() || readHashDesign() ? null : 0));
   const [toast, setToast] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
+  const [hub, setHub] = useState<HubView | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
   const showToast = useCallback((text: string) => {
     setToast(text);
@@ -156,7 +158,9 @@ export default function App() {
     [flow, setEdges, setNodes, setTab],
   );
 
-  useEffect(() => saveCleared(cleared), [cleared]);
+  useEffect(() => {
+    saveCleared(cleared);
+  }, [cleared]);
 
   // Open a shared design from the URL, once
   useEffect(() => {
@@ -306,14 +310,14 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
-      if (e.code === 'Space' && !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag) && intro === null && !won && !picker) {
+      if (e.code === 'Space' && !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag) && intro === null && !won && !picker && !hub) {
         e.preventDefault();
         setRunning((r) => !r);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [intro, won, picker]);
+  }, [intro, won, picker, hub]);
 
   const selected = nodes.find((n) => n.id === selectedId);
   const idx = SCENARIOS.findIndex((s) => s.id === scenario.id);
@@ -342,9 +346,9 @@ export default function App() {
           <Link2 size={15} aria-hidden />
           <span>Share</span>
         </button>
-        <button className="btn btn-ghost btn-icon" onClick={() => setIntro(0)} title="How it works">
-          <CircleQuestionMark size={15} aria-hidden />
-          <span>How it works</span>
+        <button className="btn btn-ghost btn-icon" onClick={() => setHub({ tab: 'lessons', lessonId: 'pipeline' })} title="Lessons and glossary">
+          <BookOpen size={15} aria-hidden />
+          <span>Learn</span>
         </button>
         <a className="btn btn-ghost btn-icon" href="https://github.com/cybernerdie/ai-system-simulator" target="_blank" rel="noreferrer" title="Source on GitHub">
           <Code size={15} aria-hidden />
@@ -413,6 +417,7 @@ export default function App() {
         running={running}
         picked={picked}
         onPick={setPicked}
+        onLearn={(termId) => setHub({ tab: 'glossary', termId })}
       />
 
       {intro !== null && (
@@ -434,6 +439,21 @@ export default function App() {
           onClose={() => setPicker(false)}
           onPick={(id) => {
             setPicker(false);
+            loadScenario(id);
+          }}
+        />
+      )}
+      {hub && (
+        <LearnHub
+          view={hub}
+          setView={setHub}
+          onClose={() => setHub(null)}
+          onReplayIntro={() => {
+            setHub(null);
+            setIntro(0);
+          }}
+          onTryScenario={(id) => {
+            setHub(null);
             loadScenario(id);
           }}
         />

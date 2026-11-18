@@ -32,6 +32,7 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 - **Telemetry dock**: accuracy, hallucination, recall, injection, errors, latency, time to first token and cost, with goal targets and trend lines.
 - **Request inspector**: open the Requests tab, click any sampled request and follow it hop by hop (what each component did, how long it took, and why it failed). Its path lights up on the canvas.
 - **Scenario picker**: cards with difficulty, the concepts each scenario teaches, and your progress (saved in your browser).
+- **Learn**: ten short lessons in plain language (each links to the scenario that practises it) and a searchable glossary of 46 AI terms, each with a simple definition, an everyday analogy and why it matters. Every component's settings panel links to its glossary entry.
 - **Share**: copies a link that encodes your whole design, so anyone can open and run it.
 
 ## Components
