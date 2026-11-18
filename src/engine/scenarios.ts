@@ -1,0 +1,224 @@
+import { COMPONENTS } from './components';
+import type { ComponentType, Goal, NodeConfig, SimEdge, TrafficProfile } from './types';
+
+export interface ScenarioNode {
+  id: string;
+  type: ComponentType;
+  x: number;
+  y: number;
+  config?: NodeConfig;
+}
+
+export interface Scenario {
+  id: string;
+  title: string;
+  tagline: string;
+  brief: string;
+  traffic: TrafficProfile;
+  goals: Goal[];
+  nodes: ScenarioNode[];
+  edges: SimEdge[];
+  hint: string;
+  lesson: string;
+  /** A known-good design, used by tests to prove the scenario is winnable. */
+  solution: { nodes: ScenarioNode[]; edges: SimEdge[] };
+}
+
+const base: TrafficProfile = {
+  rps: 5,
+  kbShare: 0,
+  exactTermShare: 0,
+  toolShare: 0,
+  adversarialShare: 0,
+  easyShare: 0.6,
+  repeatShare: 0.2,
+};
+
+const chain = (...ids: string[]): SimEdge[] => ids.slice(1).map((id, i) => ({ source: ids[i], target: id }));
+
+export const SCENARIOS: Scenario[] = [
+  {
+    id: 'docs-bot',
+    title: '1 · The docs chatbot',
+    tagline: 'It sounds confident. It\'s making things up.',
+    brief:
+      'Your company shipped a chatbot that answers questions about its product docs. It\'s just a prompt and an LLM. Support tickets are piling up: customers got detailed, confident, wrong answers.',
+    traffic: { ...base, kbShare: 0.75, exactTermShare: 0.1 },
+    goals: [
+      { metric: 'accuracy', op: '>=', value: 0.7 },
+      { metric: 'hallucination', op: '<=', value: 0.25 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'llm'),
+    hint: 'The model has never seen your docs. What component lets it look things up at question time?',
+    lesson:
+      'You built retrieval-augmented generation (RAG). A model can only be as right as the information it\'s given — when the answer lives in private data, the fix is retrieval, not a bigger model. Notice recall: it\'s not 100%, and every miss is still a potential hallucination. That\'s the next wall.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 120 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+      ],
+      edges: chain('users', 'emb', 'vdb', 'llm'),
+    },
+  },
+  {
+    id: 'wrong-chunks',
+    title: '2 · Confidently wrong RAG',
+    tagline: 'Retrieval is on. Answers are still wrong.',
+    brief:
+      'You added RAG and things got better — but not good enough. Half the questions mention exact product codes and error numbers ("what does E1043 mean on the X-200?"). Someone also set huge chunks and Top-K 2 to "save tokens".',
+    traffic: { ...base, kbShare: 0.85, exactTermShare: 0.5 },
+    goals: [
+      { metric: 'accuracy', op: '>=', value: 0.85 },
+      { metric: 'hallucination', op: '<=', value: 0.13 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 2, chunk: 'large' } },
+      { id: 'llm', type: 'llm', x: 560, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm'),
+    hint: 'Look at what kind of questions are failing. Embeddings blur "E1043" and "E1034" together. What matches exact strings? And once you retrieve more, what keeps the prompt clean?',
+    lesson:
+      'Retrieval quality is usually the real bottleneck in RAG, not the model. Hybrid search (keywords + vectors) covers both exact identifiers and paraphrases, chunk size trades precision against completeness, and a reranker lets you retrieve wide while still handing the model a short, clean context.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 60 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 60, config: { topK: 12, chunk: 'medium' } },
+        { id: 'kw', type: 'keyword_search', x: 340, y: 200 },
+        { id: 'rr', type: 'reranker', x: 520, y: 120, config: { keep: 4 } },
+        { id: 'llm', type: 'llm', x: 700, y: 120, config: { size: 'medium' } },
+      ],
+      edges: [...chain('users', 'emb', 'vdb', 'rr', 'llm'), ...chain('users', 'kw', 'rr')],
+    },
+  },
+  {
+    id: 'launch-day',
+    title: '3 · Launch day',
+    tagline: 'It works. Now 40× more people want it.',
+    brief:
+      'Quality is great — you\'re running the large model on everything. Then you hit the front page: traffic jumps to 60 req/s. The provider starts returning 429s and finance asks why the bill looks like a phone number. Lots of these questions are repeats, and most are easy.',
+    traffic: { ...base, rps: 60, kbShare: 0.6, exactTermShare: 0.2, easyShare: 0.7, repeatShare: 0.4 },
+    goals: [
+      { metric: 'errorRate', op: '<=', value: 0.01 },
+      { metric: 'costPer1k', op: '<=', value: 15 },
+      { metric: 'accuracy', op: '>=', value: 0.8 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+      { id: 'llm', type: 'llm', x: 560, y: 120, config: { size: 'large' } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm'),
+    hint: 'Do repeat questions need the model at all? Do easy questions need the large model?',
+    lesson:
+      'At scale, the expensive part of an AI system is tokens through your biggest model. A semantic cache removes repeats entirely, and a router sends easy traffic to a model that\'s ~100× cheaper with its own rate limit. You kept the large model — just for the requests that need it.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'sc', type: 'semantic_cache', x: 150, y: 120, config: { threshold: 0.9 } },
+        { id: 'emb', type: 'embedding', x: 300, y: 120 },
+        { id: 'vdb', type: 'vector_db', x: 450, y: 120, config: { topK: 5, chunk: 'medium' } },
+        { id: 'rt', type: 'router', x: 600, y: 120 },
+        { id: 'small', type: 'llm', x: 780, y: 40, config: { size: 'small' } },
+        { id: 'llm', type: 'llm', x: 780, y: 200, config: { size: 'large' } },
+      ],
+      edges: [...chain('users', 'sc', 'emb', 'vdb', 'rt', 'llm'), { source: 'rt', target: 'small' }],
+    },
+  },
+  {
+    id: 'support-agent',
+    title: '4 · The support agent',
+    tagline: 'Users want things done, not explained.',
+    brief:
+      'Most support requests are actions: "where is my order?", "cancel my subscription". Your bot can only talk, so it invents an order status. Leadership wants an agent that actually uses tools — without a surprise bill.',
+    traffic: { ...base, rps: 4, toolShare: 0.65, kbShare: 0.2, easyShare: 0.5 },
+    goals: [
+      { metric: 'accuracy', op: '>=', value: 0.78 },
+      { metric: 'costPer1k', op: '<=', value: 35 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+      { id: 'llm', type: 'llm', x: 560, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm'),
+    hint: 'Add an Agent Loop. Then watch the cost: what happens to the runs that get stuck with a step cap of 20?',
+    lesson:
+      'Agents turn one LLM call into many. Real tasks here need 2–5 steps, but ~10% of runs get stuck repeating themselves — and a stuck agent spends its entire step budget. The step cap is a cost control, not just a safety net: set it just above what real work needs.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 120 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+        { id: 'ag', type: 'agent', x: 500, y: 120, config: { maxSteps: 6 } },
+        { id: 'llm', type: 'llm', x: 680, y: 120, config: { size: 'medium' } },
+      ],
+      edges: chain('users', 'emb', 'vdb', 'ag', 'llm'),
+    },
+  },
+  {
+    id: 'jailbreak',
+    title: '5 · Someone pasted a jailbreak',
+    tagline: '"Ignore previous instructions and…"',
+    brief:
+      'Your assistant is public. 15% of traffic is now people trying to make it leak the system prompt, insult customers, or promise refunds it can\'t give. A screenshot is already on social media.',
+    traffic: { ...base, rps: 6, kbShare: 0.6, exactTermShare: 0.2, adversarialShare: 0.15 },
+    goals: [
+      { metric: 'injection', op: '<=', value: 0.03 },
+      { metric: 'hallucination', op: '<=', value: 0.07 },
+      { metric: 'accuracy', op: '>=', value: 0.7 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 6, chunk: 'medium' } },
+      { id: 'llm', type: 'llm', x: 560, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm'),
+    hint: 'No single defense is enough. What checks the input? What checks the output? Watch the accuracy cost of being too strict.',
+    lesson:
+      'Safety is layered. An input classifier catches most attacks cheaply, an output judge catches what slips through (and many hallucinations too) — but each layer has false positives, and the judge must see the full answer, which breaks streaming. Defense in depth is a trade-off, not a checkbox.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'ig', type: 'input_guard', x: 150, y: 120, config: { strictness: 0.8 } },
+        { id: 'emb', type: 'embedding', x: 300, y: 120 },
+        { id: 'vdb', type: 'vector_db', x: 450, y: 120, config: { topK: 6, chunk: 'medium' } },
+        { id: 'llm', type: 'llm', x: 620, y: 120, config: { size: 'medium' } },
+        { id: 'oj', type: 'output_guard', x: 800, y: 120 },
+      ],
+      edges: [...chain('users', 'ig', 'emb', 'vdb', 'llm'), { source: 'llm', target: 'oj' }],
+    },
+  },
+];
+
+export const SANDBOX: Scenario = {
+  id: 'sandbox',
+  title: 'Sandbox',
+  tagline: 'No goals. Build anything.',
+  brief: 'A mixed workload: docs questions, exact-code lookups, tool requests, a few attackers. Build whatever you like and find each wall.',
+  traffic: { ...base, rps: 10, kbShare: 0.5, exactTermShare: 0.3, toolShare: 0.2, adversarialShare: 0.05, repeatShare: 0.3 },
+  goals: [],
+  nodes: [
+    { id: 'users', type: 'users', x: 0, y: 120 },
+    { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+  ],
+  edges: chain('users', 'llm'),
+  hint: 'Run it, read the binding pressure, fix that one thing, repeat.',
+  lesson: '',
+  solution: { nodes: [], edges: [] },
+};
+
+export function withDefaults(n: ScenarioNode): ScenarioNode {
+  return { ...n, config: { ...COMPONENTS[n.type].defaults, ...(n.config ?? {}) } };
+}
