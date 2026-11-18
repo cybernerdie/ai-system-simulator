@@ -514,12 +514,12 @@ const INTRO = [
     body: 'At any moment one limit hurts more than the rest. The floating window names it. Fix that one thing, run again, and find the next wall. That habit is the real skill.',
   },
   {
-    title: 'How to play',
-    body: 'Add components from the left and connect them by dragging between nodes. Select a node to tune it. Press Space to run. Hold every goal for a few seconds to clear the scenario.',
+    title: 'Want a quick tour?',
+    body: 'In about a minute we\'ll point at each part of the screen and explain what it\'s for. You can replay it any time with the ? button at the top.',
   },
 ];
 
-export function IntroDialog({ step, setStep, onClose }: { step: number; setStep: (n: number) => void; onClose: () => void }) {
+export function IntroDialog({ step, setStep, onClose, onTour }: { step: number; setStep: (n: number) => void; onClose: () => void; onTour: () => void }) {
   const s = INTRO[step];
   const last = step === INTRO.length - 1;
   return (
@@ -539,10 +539,10 @@ export function IntroDialog({ step, setStep, onClose }: { step: number; setStep:
             ))}
           </div>
           <button className="btn btn-ghost" onClick={onClose}>
-            Skip
+            {last ? 'I\'ll explore myself' : 'Skip'}
           </button>
-          <button className="btn btn-primary" autoFocus onClick={() => (last ? onClose() : setStep(step + 1))}>
-            {last ? 'Start scenario 1' : 'Next'}
+          <button className="btn btn-primary" autoFocus onClick={() => (last ? onTour() : setStep(step + 1))}>
+            {last ? 'Show me around' : 'Next'}
           </button>
         </div>
         <p className="dialog-credit">

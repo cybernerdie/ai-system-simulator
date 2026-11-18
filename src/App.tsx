@@ -11,7 +11,7 @@ import {
   useReactFlow,
   type Connection,
 } from '@xyflow/react';
-import { BookOpen, Check, Code, Link2, Moon, Pause, Play, RotateCcw, Sun } from 'lucide-react';
+import { BookOpen, Check, CircleQuestionMark, Code, Link2, Moon, Pause, Play, RotateCcw, Sun } from 'lucide-react';
 import { COMPONENTS } from './engine/components';
 import { simulate } from './engine/simulate';
 import { PATTERNS, TICK_SECONDS, trafficMultiplier, type Pattern } from './engine/patterns';
@@ -24,6 +24,8 @@ import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
 import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
 import { LearnHub, firstUnreadLesson, type HubView } from './ui/LearnHub';
 import { encodeDesign, introSeen, loadCleared, markIntroSeen, readHashDesign, saveCleared, savedTheme, saveTheme, systemTheme, type Theme } from './ui/persist';
+import { Tour, type TourStep } from './ui/Tour';
+import { LESSONS, TERMS } from './content/learn';
 import { IntroDialog, Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from './ui/Panels';
 
 const ALL = [...SCENARIOS, SANDBOX];
@@ -109,6 +111,7 @@ export default function App() {
   const [won, setWon] = useState(false);
   const [cleared, setCleared] = useState<Set<string>>(() => loadCleared());
   const [intro, setIntro] = useState<number | null>(() => (introSeen() || readHashDesign() ? null : 0));
+  const [touring, setTouring] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
   const [hub, setHub] = useState<HubView | null>(null);
@@ -355,14 +358,79 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
-      if (e.code === 'Space' && !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag) && intro === null && !won && !picker && !hub) {
+      if (e.code === 'Space' && !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag) && intro === null && !touring && !won && !picker && !hub) {
         e.preventDefault();
         setRunning((r) => !r);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [intro, won, picker, hub]);
+  }, [intro, touring, won, picker, hub]);
+
+  const tourSteps: TourStep[] = useMemo(
+    () => [
+      {
+        target: '.scenario-trigger',
+        title: 'Pick a scenario',
+        body: `Each scenario is a broken AI system with a real-world story behind it. Open this to browse all ${SCENARIOS.length}, search them, or jump into the sandbox to build anything.`,
+      },
+      {
+        target: '.side',
+        title: 'Your mission',
+        body: 'The brief tells the story. The goals are what you have to hit, like accuracy of at least 80% or cost under a set amount per 1,000 requests. Stuck? There\'s a hint at the bottom.',
+        onEnter: () => setTab('mission'),
+      },
+      {
+        target: '.react-flow__node',
+        title: 'The system you\'re fixing',
+        body: 'Requests flow left to right, from your users to the model. Click a component to tune its settings, drag from a node\'s right dot to connect it to the next one, and press Delete to remove it.',
+      },
+      {
+        target: '.palette',
+        title: 'Components',
+        body: 'Everything you can add: retrieval, memory, agents, self-hosted models, caches, guardrails, evals and more. Click one or drag it onto the canvas. Each one fixes some problems and causes others.',
+      },
+      {
+        target: '.btn-run',
+        title: 'Run it',
+        body: 'This sends traffic through your design. We\'ve started it for you. Press Space any time to pause or resume.',
+        onEnter: () => setRunning(true),
+      },
+      {
+        target: '.traffic',
+        title: 'Traffic',
+        body: 'How many requests per second hit your system, and their shape: steady, sudden spikes, a daily wave or a slow ramp. Turn it up to find the next wall.',
+      },
+      {
+        target: '.pressure-window',
+        title: 'The binding pressure',
+        body: 'The most important panel. It names the one limit hurting your system right now, explains why in plain words, and suggests what to try. Fix it, and the next pressure shows up.',
+      },
+      {
+        target: '.telemetry',
+        title: 'Live numbers',
+        body: 'Quality (accuracy, hallucination, recall, injection) and load (errors, latency, cost), updating as traffic flows. Red means a goal isn\'t met yet. Hold every goal for a few seconds to clear the scenario.',
+      },
+      {
+        target: '.side',
+        title: 'Follow single requests',
+        body: 'The Requests tab shows individual requests: each step they went through, how long it took, and why some failed. Click one to light up its path on the canvas.',
+        onEnter: () => setTab('requests'),
+      },
+      {
+        target: '[data-tour="learn"]',
+        title: 'Learn as you go',
+        body: `${LESSONS.length} short lessons that start from zero and build up to agents and inference, plus a plain-English glossary of ${TERMS.length} terms. Every component links to its glossary entry.`,
+        onEnter: () => setTab('mission'),
+      },
+      {
+        target: '[data-tour="reset"], [data-tour="share"], [data-tour="help"]',
+        title: 'Share, reset, replay',
+        body: 'Share copies a link to your exact design. Reset puts the scenario back to how it started. The ? button replays this tour. Your progress is saved in this browser.',
+      },
+    ],
+    [setTab],
+  );
 
   const selected = nodes.find((n) => n.id === selectedId);
   const idx = SCENARIOS.findIndex((s) => s.id === scenario.id);
@@ -398,15 +466,15 @@ export default function App() {
         </div>
         <div className="topbar-spacer" />
         <div className="topbar-tools">
-        <button className="btn btn-ghost btn-icon" onClick={() => loadScenario(scenario.id)} title="Reset scenario">
+        <button className="btn btn-ghost btn-icon" data-tour="reset" onClick={() => loadScenario(scenario.id)} title="Reset scenario">
           <RotateCcw size={15} aria-hidden />
           <span>Reset</span>
         </button>
-        <button className="btn btn-ghost btn-icon" onClick={share} title="Copy a link to this design">
+        <button className="btn btn-ghost btn-icon" data-tour="share" onClick={share} title="Copy a link to this design">
           <Link2 size={15} aria-hidden />
           <span>Share</span>
         </button>
-        <button className="btn btn-ghost btn-icon" onClick={() => setHub({ tab: 'lessons', lessonId: firstUnreadLesson() })} title="Lessons and glossary">
+        <button className="btn btn-ghost btn-icon" data-tour="learn" onClick={() => setHub({ tab: 'lessons', lessonId: firstUnreadLesson() })} title="Lessons and glossary">
           <BookOpen size={15} aria-hidden />
           <span>Learn</span>
         </button>
@@ -417,6 +485,9 @@ export default function App() {
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {theme === 'dark' ? <Sun size={15} aria-hidden /> : <Moon size={15} aria-hidden />}
+        </button>
+        <button className="btn btn-ghost theme-toggle" data-tour="help" onClick={() => setTouring(true)} title="Take the tour" aria-label="Take the tour">
+          <CircleQuestionMark size={15} aria-hidden />
         </button>
         <a className="btn btn-ghost btn-icon" href="https://github.com/cybernerdie/ai-system-simulator" target="_blank" rel="noreferrer" title="Source code on GitHub">
           <Code size={15} aria-hidden />
@@ -503,6 +574,20 @@ export default function App() {
           onClose={() => {
             setIntro(null);
             markIntroSeen();
+          }}
+          onTour={() => {
+            setIntro(null);
+            markIntroSeen();
+            setTouring(true);
+          }}
+        />
+      )}
+      {touring && (
+        <Tour
+          steps={tourSteps}
+          onClose={() => {
+            setTouring(false);
+            setTab(selectedRef.current ? 'component' : 'mission');
           }}
         />
       )}

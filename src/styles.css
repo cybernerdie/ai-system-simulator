@@ -1177,3 +1177,44 @@ body, .topbar, .palette, .side, .canvas, .simnode, .telemetry, .pressure-window 
 .dialog .dialog-credit { margin: var(--sp-4) 0 0; padding-top: var(--sp-3); border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-3); text-align: center; }
 .dialog .dialog-credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .dialog .dialog-credit a:hover { color: var(--ink); }
+
+/* ---------- guided tour ---------- */
+.tour { position: fixed; inset: 0; z-index: 200; }
+.tour-blocker { position: absolute; inset: 0; }
+.tour-scrim { position: absolute; inset: 0; background: rgba(9, 9, 11, 0.55); }
+.tour-spot {
+  position: fixed;
+  border-radius: 14px;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink), 0 0 0 9999px rgba(9, 9, 11, 0.55);
+  pointer-events: none;
+  transition: top 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.tour-card {
+  position: fixed;
+  width: min(340px, calc(100vw - 24px));
+  padding: var(--sp-5);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--float);
+  outline: none;
+  transition: top 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.tour-card.is-docked { left: 12px; right: 12px; bottom: 12px; width: auto; }
+.tour-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-2); }
+.tour-count { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tour-close { display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-3); cursor: pointer; }
+.tour-close:hover { background: var(--subtle); color: var(--ink); }
+.tour-card h2 { margin: 0 0 var(--sp-2); font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.tour-card p { margin: 0 0 var(--sp-5); font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.tour-actions { display: flex; align-items: center; gap: var(--sp-2); }
+.tour-dots { display: flex; gap: 4px; margin-right: auto; }
+.tour-dots i { width: 6px; height: 6px; border-radius: 99px; background: var(--track); transition: width 0.2s, background 0.2s; }
+.tour-dots i.done { background: var(--ink-3); }
+.tour-dots i.on { width: 16px; background: var(--ink); }
+.tour-actions .btn-primary { display: inline-flex; align-items: center; gap: 6px; }
+@media (prefers-reduced-motion: reduce) { .tour-spot, .tour-card { transition: none; } }
+.tour-card.is-docked.is-top { top: 12px; bottom: auto; }
+.tour-actions > .tour-dots { order: 0; }
+.tour-actions > .btn-ghost { order: 1; }
+.tour-actions > .btn-primary { order: 2; }
