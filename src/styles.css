@@ -1331,3 +1331,19 @@ html, body { background: var(--bg); }
 }
 @keyframes sheet-up { from { transform: translateY(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .side.is-sheet { animation: none; } }
+
+/* phones: bigger, easier-to-hit top bar icons; no sticky hover highlight after a tap */
+@media (max-width: 900px) {
+  .topbar-tools .btn-icon, .topbar-tools .theme-toggle { width: 40px; height: 40px; }
+  .topbar-tools svg { width: 20px; height: 20px; }
+  .brand { font-size: 17px; }
+}
+@media (hover: none) {
+  .btn-ghost:hover { background: transparent; color: inherit; }
+}
+
+/* phones: let vertical swipes over the canvas scroll the page (handles still connect by drag) */
+@media (max-width: 900px) {
+  .react-flow__pane, .react-flow__renderer, .react-flow__viewport, .react-flow__node { touch-action: pan-y pinch-zoom !important; }
+  .react-flow__handle { touch-action: none !important; }
+}

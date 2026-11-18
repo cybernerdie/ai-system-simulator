@@ -675,6 +675,11 @@ export default function App() {
             else if (tab === 'component') setTab('mission');
           }}
           deleteKeyCode={['Backspace', 'Delete']}
+          // Phones: one-finger swipes scroll the page instead of getting trapped in the canvas.
+          // Pinch still zooms, and the fit button re-centres the diagram.
+          panOnDrag={!isPhone}
+          preventScrolling={!isPhone}
+          nodesDraggable={!isPhone}
           fitView
           fitViewOptions={fitOptions()}
           onMoveStart={(e) => {
@@ -685,7 +690,11 @@ export default function App() {
           connectionLineStyle={{ stroke: 'var(--ink)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color={theme === 'dark' ? '#2a2a2e' : '#d4d4d8'} />
-          {!isPhone && <Controls showInteractive={false} position="bottom-right" orientation="horizontal" />}
+          {isPhone ? (
+            <Controls showInteractive={false} showZoom={false} position="top-right" fitViewOptions={fitOptions()} />
+          ) : (
+            <Controls showInteractive={false} position="bottom-right" orientation="horizontal" />
+          )}
         </ReactFlow>
         <PressureWindow p={pressure} running={running} hasRun={!!metrics} />
         <Telemetry m={metrics} history={history} goals={scenario.goals} />
