@@ -1,6 +1,6 @@
 import type { Cause, Goal, GoalMetric, Metrics } from './types';
 
-export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind';
+export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode';
 
 export interface Pressure {
   key: PressureKey;
@@ -75,6 +75,26 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     why: 'Users refer back to things they said earlier, but your memory strategy dropped those turns, so the model guesses.',
     try: 'Keep the facts that matter, not every word: summarise older turns, or store them as long-term memory and retrieve what each message needs.',
   },
+  provider_down: {
+    title: 'Provider outage',
+    why: 'Your model provider is failing most requests, and every call depends on it. A single provider is a single point of failure.',
+    try: 'Put Retry & Fallback in front of your model, connect a second model on another provider (or your own GPUs), and turn on failover. Retries alone won\'t survive a real outage.',
+  },
+  gpu_saturated: {
+    title: 'GPU capacity',
+    why: 'Your self-hosted GPUs can\'t write tokens as fast as requests arrive. Requests queue, then time out.',
+    try: 'Add GPUs, raise the batch size (more total throughput, slower per request), or quantize the model so each GPU does more.',
+  },
+  idle_gpus: {
+    title: 'Paying for idle GPUs',
+    why: 'GPUs cost the same per hour whether they\'re busy or not. At this traffic most of yours sit idle, so each request carries a big share of the bill.',
+    try: 'Use fewer GPUs with bigger batches, or a smaller or quantized model. If traffic is low or spiky, an API may simply be cheaper.',
+  },
+  slow_decode: {
+    title: 'Slow token generation',
+    why: 'Each request is written slowly: big batches share the GPU between many requests, and big models write fewer tokens per second.',
+    try: 'Lower the batch size and add GPUs, quantize to speed up decoding, or turn on streaming so users see words sooner.',
+  },
   blind: {
     title: 'Flying blind',
     why: 'You can see speed, cost and errors, but not whether answers are right. Every quality fix is a guess until you measure it.',
@@ -130,21 +150,22 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
   causes.sort((a, b) => b[1] - a[1]);
   const pick = (k: PressureKey): Pressure => ({ key: k, ...PRESSURES[k] });
 
-  const errorCause = causes.find(([c]) => c === 'rate_limit' || c === 'context_overflow');
+  const errorCause = causes.find(([c]) => c === 'rate_limit' || c === 'context_overflow' || c === 'provider_down' || c === 'gpu_saturated');
   const bloated = m.avgHistoryTokens > 4000;
   if (unmet.includes('errorRate') && errorCause) return pick(bloated ? 'history_bloat' : errorCause[0]);
   if (unmet.includes('injection')) return pick('injection');
   if (unmet.some((u) => QUALITY.includes(u))) {
-    const q = causes.find(([c]) => c !== 'rate_limit' && c !== 'context_overflow' && c !== 'injection');
+    const q = causes.find(([c]) => !['rate_limit', 'context_overflow', 'injection', 'provider_down', 'gpu_saturated'].includes(c));
     if (q) return pick(q[0]);
   }
   if (unmet.includes('costPer1k')) {
+    if (m.gpuUtil !== null && m.gpuUtil < 0.45) return pick('idle_gpus');
     if (bloated) return pick('history_bloat');
     if ((m.causes.agent_loop ?? 0) > 0) return pick('agent_loop');
     return pick('cost');
   }
   if (unmet.includes('ttftP50')) return pick('ttft');
-  if (unmet.includes('p50')) return pick('latency');
+  if (unmet.includes('p50')) return pick(m.gpuUtil !== null ? 'slow_decode' : 'latency');
   if (unmet.length && causes.length) return pick(causes[0][0]);
 
   // Sandbox: no goals — flag anything clearly bad

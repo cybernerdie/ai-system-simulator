@@ -1,10 +1,5 @@
-import {
-  CHUNK_SPECS,
-  MODEL_RANK,
-  MODEL_SPECS,
-  type ChunkSize,
-  type ModelSize,
-} from './components';
+import { CHUNK_SPECS, type ChunkSize } from './components';
+import { hostLabel, isModelNode, profileOf, type ModelProfile } from './models';
 import type {
   Cause,
   ComponentType,
@@ -122,6 +117,8 @@ export const CAUSE_TEXT: Record<Cause, string> = {
   injection: 'The model followed the attacker\'s instructions.',
   cache_false_hit: 'The cache matched a different question and returned its answer.',
   guard_false_positive: 'A guardrail rejected a legitimate request.',
+  provider_down: 'The model provider was failing requests, and nothing retried or failed over to another model.',
+  gpu_saturated: 'Your GPUs were already at full capacity, so the request queued until it timed out.',
   forgot_context: 'The user referred back to something said earlier, but that part of the conversation was no longer in the prompt.',
 };
 
@@ -160,7 +157,7 @@ export function activeNodes(graph: SimGraph): Set<string> {
     return seen;
   };
   const users = graph.nodes.filter((n) => n.type === 'users').map((n) => n.id);
-  const llms = graph.nodes.filter((n) => n.type === 'llm').map((n) => n.id);
+  const llms = graph.nodes.filter(isModelNode).map((n) => n.id);
   const fwd = walk(users, out);
   const back = walk(llms, inc);
   const core = new Set([...fwd].filter((id) => back.has(id)));
@@ -198,7 +195,9 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
 
   const warnings: string[] = [];
   const users = graph.nodes.find((n) => n.type === 'users');
-  const llms = on('llm');
+  const llms = graph.nodes.filter((n) => isModelNode(n) && active.has(n.id));
+  const prof = new Map<string, ModelProfile>(llms.map((l) => [l.id, profileOf(l)]));
+  const P = (n: SimNode) => prof.get(n.id)!;
   if (!users) warnings.push('Add a Users node — nothing is sending traffic.');
   if (!llms.length) warnings.push('No LLM is reachable from Users. Connect a path Users → … → LLM.');
 
@@ -222,7 +221,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   if (vdb && !embedding)
     warnings.push('Vector DB has no Embedding Model on its path — queries can\'t be turned into vectors, so it returns nothing.');
   if (reranker && !vdb && !kw) warnings.push('Reranker has nothing to rerank — add a retriever before it.');
-  const sizes = new Set(llms.map((l) => cfgStr<ModelSize>(l, 'size', 'medium')));
+  const sizes = new Set(llms.map((l) => P(l).rank));
   if (router && sizes.size < 2)
     warnings.push('Router needs at least two different model sizes downstream to route between.');
   for (const n of graph.nodes) {
@@ -259,9 +258,18 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   })();
 
   // LLM choice
-  const sortedLLMs = [...llms].sort(
-    (a, b) => MODEL_RANK[cfgStr<ModelSize>(a, 'size', 'medium')] - MODEL_RANK[cfgStr<ModelSize>(b, 'size', 'medium')],
-  );
+  const sortedLLMs = [...llms].sort((a, b) => P(a).rank - P(b).rank);
+  const fb = first('fallback');
+  const retries = fb ? cfgNum(fb, 'retries', 2) : 0;
+  const failover = fb ? fb.config.failover === true : false;
+  // A struggling provider gets worse the harder everyone retries against it (retry storm)
+  const errOf = (n: SimNode) => {
+    const h = P(n).host;
+    const base = h === 'self' ? 0 : traffic.providerErrors?.[h] ?? 0;
+    return base > 0 ? Math.min(0.97, base * (1 + 0.08 * retries)) : 0;
+  };
+  if (fb && failover && new Set(llms.map((l) => P(l).host)).size < 2)
+    warnings.push('Failover is on, but every connected model runs on the same host. Connect a model on another provider or your own GPUs.');
   const pickLLM = (req: Req, i: number): SimNode => {
     if (router && sizes.size >= 2) return req.easy ? sortedLLMs[0] : sortedLLMs[sortedLLMs.length - 1];
     return llms[i % llms.length];
@@ -458,8 +466,8 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     const historyPenalty = Math.max(0.6, 1 - 0.03 * Math.max(0, (historyTokens - 4000) / 1000));
 
     // 5. LLM (+ agent loop)
-    const llm = pickLLM(req, i);
-    const size = cfgStr<ModelSize>(llm, 'size', 'medium');
+    let llm = pickLLM(req, i);
+    const size = P(llm).label;
     if (router)
       t.steps.splice(
         t.steps.findIndex((x) => x.kind !== 'users' && x.kind !== 'input_guard' && x.kind !== 'semantic_cache') === -1
@@ -468,9 +476,42 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
         0,
         { nodeId: router.id, kind: 'router', text: sizes.size >= 2 ? `${req.easy ? 'Easy' : 'Hard'} request, sent to the ${size} model` : 'Only one model size, nothing to route', tone: 'neutral', ms: 12 },
       );
-    const m = MODEL_SPECS[size];
-    const streaming = llm.config.streaming === true;
     const inputTokens = BASE_PROMPT_TOKENS + chunksToLLM * cs.tokens + historyTokens;
+
+    // Provider reliability: retries on the same host, then optional failover
+    const pErr = errOf(llm);
+    if (pErr > 0) {
+      let ok = false;
+      let tries = 0;
+      for (let k = 0; k <= retries && !ok; k++) {
+        tries++;
+        if (rng() >= pErr) ok = true;
+        else {
+          t.latency += 450 + (k < retries ? 250 * 2 ** k : 0); // 503 + backoff before the next attempt
+          t.llmTokens[llm.id] = (t.llmTokens[llm.id] ?? 0) + inputTokens; // failed calls still eat quota
+        }
+      }
+      const where = hostLabel(P(llm).host);
+      if (!ok && failover) {
+        const backup = llms.find((l) => P(l).host !== P(llm).host && errOf(l) < pErr);
+        if (backup) {
+          if (fb) step(fb, `${where} failed ${tries}× — failed over to ${hostLabel(P(backup).host)}`, 'warn');
+          llm = backup;
+          ok = true;
+        }
+      } else if (fb && tries > 1 && ok) step(fb, `${where} failed ${tries - 1}×, retry succeeded`, 'warn');
+      if (!ok) {
+        if (fb) step(fb, `${where} failed all ${tries} attempt${tries > 1 ? 's' : ''}`, 'bad');
+        t.steps.push({ nodeId: llm.id, kind: 'llm', text: `503 from ${where}: the provider is failing requests`, tone: 'bad', ms: 450 });
+        t.touched.push(llm.id);
+        t.outcome = 'failed';
+        t.cause = 'provider_down';
+        t.ttft = t.latency;
+        continue;
+      }
+    }
+    const m = P(llm);
+    const streaming = llm.config.streaming === true;
 
     let steps = 1;
     let toolOk = !req.tool;
@@ -531,14 +572,14 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     }
     t.touched.push(llm.id);
     if (t.outcome === 'overflow') {
-      step(llm, `Prompt is ${fmtTok(inputTokens)} tokens, the ${size} model's window is ${fmtTok(m.context)}`, 'bad', m.ttftBase);
+      step(llm, `Prompt is ${fmtTok(inputTokens)} tokens, the ${m.label} model's window is ${fmtTok(m.context)}`, 'bad', m.ttftBase);
       t.latency += m.ttftBase;
       t.ttft = t.latency;
       continue;
     }
     step(
       llm,
-      `${size[0].toUpperCase() + size.slice(1)} model, ${fmtTok(totalIn)} tokens in${steps > 1 ? ` over ${steps} calls` : ''}, ${streaming ? 'streamed' : 'generated'} in ${fmtMs(llmMs)}`,
+      `${m.label[0].toUpperCase() + m.label.slice(1)} model${m.host === 'self' ? ' on your GPUs' : m.host === 'B' ? ' (provider B)' : ''}, ${fmtTok(totalIn)} tokens in${steps > 1 ? ` over ${steps} calls` : ''}, ${streaming ? 'streamed' : 'generated'} in ${fmtMs(llmMs)}`,
       'neutral',
       llmMs,
     );
@@ -612,8 +653,41 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   }
   const rejectP: Record<string, number> = {};
   for (const l of llms) {
-    const limit = MODEL_SPECS[cfgStr<ModelSize>(l, 'size', 'medium')].tpm;
+    const limit = P(l).tpm;
     rejectP[l.id] = tpmUse[l.id] > limit ? 1 - limit / tpmUse[l.id] : 0;
+  }
+
+  // Self-hosted GPUs: decode capacity, queueing and saturation
+  const gpuUtil: Record<string, number> = {};
+  for (const l of llms) {
+    const g = P(l).gpu;
+    if (!g) continue;
+    const through = traces.filter((t) => t.llmTokens[l.id]);
+    // decode (writing) is the bottleneck; prefill is ~50x cheaper per token
+    const outTok = through.length * OUTPUT_TOKENS + through.reduce((a, t) => a + (t.llmTokens[l.id] - OUTPUT_TOKENS) / 50, 0);
+    const demandTps = (outTok / N) * rps;
+    const u = demandTps / g.capacityTps;
+    gpuUtil[l.id] = u;
+    const dropP = u > 1 ? 1 - 1 / u : 0;
+    const waitFactor = u < 1 ? Math.min(3, (u * u) / (1 - u) / 8) : 3;
+    for (const t of through) {
+      if (dropP && rng() < dropP) {
+        t.outcome = 'failed';
+        t.cause = 'gpu_saturated';
+        t.latency = NETWORK_MS + 30_000;
+        t.ttft = t.latency;
+        t.steps = t.steps.filter((x) => x.nodeId !== l.id);
+        t.steps.push({ nodeId: l.id, kind: 'gpu_llm', text: `Queue full: your ${g.gpus} GPU${g.gpus > 1 ? 's' : ''} are at ${Math.round(u * 100)}% of capacity, request timed out`, tone: 'bad', ms: 30_000 });
+        continue;
+      }
+      const wait = OUTPUT_TOKENS * (1000 / g.perStreamTps) * waitFactor;
+      if (wait > 50) {
+        t.latency += wait;
+        t.ttft += wait;
+        const idx = t.steps.findIndex((x) => x.nodeId === l.id);
+        if (idx >= 0) t.steps.splice(idx, 0, { nodeId: l.id, kind: 'gpu_llm', text: `Waited in the GPU queue (${Math.round(u * 100)}% busy)`, tone: u > 0.85 ? 'warn' : 'neutral', ms: wait });
+      }
+    }
   }
   for (const t of traces) {
     const ids = Object.keys(t.llmTokens);
@@ -627,35 +701,44 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       const keepUntil = t.steps.findIndex((x) => x.nodeId === llmId);
       t.steps = t.steps.slice(0, keepUntil === -1 ? t.steps.length : keepUntil);
       const ln = llms.find((l) => l.id === llmId)!;
-      t.steps.push({ nodeId: llmId, kind: 'llm', text: `429 Too Many Requests: over the ${cfgStr<ModelSize>(ln, 'size', 'medium')} model's tokens-per-minute limit`, tone: 'bad', ms: 80 });
+      t.steps.push({ nodeId: llmId, kind: 'llm', text: `429 Too Many Requests: over the ${P(ln).label} model's tokens-per-minute limit`, tone: 'bad', ms: 80 });
     }
   }
 
   // Aggregate
   const outcomes: Record<Outcome, number> = {
-    correct: 0, hallucinated: 0, declined: 0, blocked: 0, injected: 0, rate_limited: 0, overflow: 0,
+    correct: 0, hallucinated: 0, declined: 0, blocked: 0, injected: 0, rate_limited: 0, overflow: 0, failed: 0,
   };
   const causes: Partial<Record<Cause, number>> = {};
   for (const t of traces) {
     outcomes[t.outcome]++;
     if (t.cause) causes[t.cause] = (causes[t.cause] ?? 0) + 1;
   }
-  const legit = traces.filter((t) => !t.req.adversarial && t.outcome !== 'rate_limited' && t.outcome !== 'overflow');
-  const adv = traces.filter((t) => t.req.adversarial && t.outcome !== 'rate_limited' && t.outcome !== 'overflow');
+  const isError = (t: Trace) => t.outcome === 'rate_limited' || t.outcome === 'overflow' || t.outcome === 'failed';
+  const legit = traces.filter((t) => !t.req.adversarial && !isError(t));
+  const adv = traces.filter((t) => t.req.adversarial && !isError(t));
   const kbT = traces.filter((t) => t.req.kb && t.recallHit !== undefined);
-  const lat = traces.filter((t) => t.outcome !== 'rate_limited').map((t) => t.latency).sort((a, b) => a - b);
-  const ttfts = traces.filter((t) => t.outcome !== 'rate_limited').map((t) => t.ttft).sort((a, b) => a - b);
+  const lat = traces.filter((t) => t.outcome !== 'rate_limited' && t.cause !== 'provider_down').map((t) => t.latency).sort((a, b) => a - b);
+  const ttfts = traces.filter((t) => t.outcome !== 'rate_limited' && t.cause !== 'provider_down').map((t) => t.ttft).sort((a, b) => a - b);
 
   const costByNode: Record<string, number> = {};
   // attribute LLM cost to LLM nodes, the rest proportionally is small; keep it simple: LLM tokens
+  // GPUs are billed by the hour whether busy or idle: spread that over the traffic
+  let gpuPer1k = 0;
   for (const l of llms) {
-    const s = MODEL_SPECS[cfgStr<ModelSize>(l, 'size', 'medium')];
+    const p = P(l);
     const toks = traces.reduce((acc, t) => acc + (t.llmTokens[l.id] ?? 0), 0);
-    costByNode[l.id] = ((toks / N) * ((s.inPerM * 0.85 + s.outPerM * 0.15) / 1_000_000)) * 1000;
+    costByNode[l.id] = ((toks / N) * ((p.inPerM * 0.85 + p.outPerM * 0.15) / 1_000_000)) * 1000;
+    if (p.gpu) {
+      const c = (p.gpu.hourly / 3600 / Math.max(0.1, rps)) * 1000;
+      costByNode[l.id] += c;
+      gpuPer1k += c;
+    }
   }
   const servedCost = traces.filter((t) => t.outcome !== 'rate_limited').reduce((s, t) => s + t.cost, 0);
-  const costPer1k = (servedCost / Math.max(1, N - outcomes.rate_limited)) * 1000;
+  const costPer1k = (servedCost / Math.max(1, N - outcomes.rate_limited)) * 1000 + gpuPer1k;
 
+  const errOfHost = (n: SimNode) => (prof.has(n.id) ? errOf(n) : 0);
   // Per-node stats for the canvas
   const nodeStats: Record<string, NodeStat> = {};
   for (const n of graph.nodes) {
@@ -663,8 +746,8 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     const nrps = n.type === 'users' ? rps : (through / N) * rps;
     let status: NodeStat['status'] = active.has(n.id) || n.type === 'users' ? (nrps > 0 ? 'ok' : 'idle') : 'idle';
     let label = nrps > 0 ? `${fmtRps(nrps)} rps` : 'idle';
-    if (n.type === 'llm' && active.has(n.id)) {
-      const limit = MODEL_SPECS[cfgStr<ModelSize>(n, 'size', 'medium')].tpm;
+    if (n.type === 'llm' && active.has(n.id) && prof.has(n.id)) {
+      const limit = P(n).tpm;
       const util = tpmUse[n.id] / limit;
       label = `${Math.round(util * 100)}% TPM`;
       status = util > 1 ? 'hot' : util > 0.75 ? 'warn' : nrps > 0 ? 'ok' : 'idle';
@@ -672,6 +755,15 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
         status = 'hot';
         label = 'context overflow';
       }
+    }
+    if (n.type === 'gpu_llm' && active.has(n.id) && gpuUtil[n.id] !== undefined) {
+      const u = gpuUtil[n.id];
+      label = `${Math.round(u * 100)}% GPU busy`;
+      status = u > 1 ? 'hot' : u > 0.85 ? 'warn' : u < 0.25 ? 'warn' : 'ok';
+    }
+    if (n.type === 'llm' && active.has(n.id) && errOfHost(n) > 0) {
+      status = 'hot';
+      label = `provider ${String(n.config.provider ?? 'A')} failing ${Math.round(errOfHost(n) * 100)}%`;
     }
     if (n.type === 'semantic_cache' && through) {
       const hits = traces.filter((t) => t.cacheHit).length;
@@ -727,13 +819,15 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     nodeStats[evals.id] = { ...nodeStats[evals.id], label: `judging ${Math.round(evalRate * 100)}% of traffic`, status: 'ok' };
   }
 
+  const utils = Object.values(gpuUtil);
   return {
+    gpuUtil: utils.length ? Math.max(...utils) : null,
     qualityVisible,
     avgHistoryTokens,
     samples,
     offered: rps,
-    served: (rps * (N - outcomes.rate_limited - outcomes.overflow)) / N,
-    errorRate: (outcomes.rate_limited + outcomes.overflow) / N,
+    served: (rps * (N - outcomes.rate_limited - outcomes.overflow - outcomes.failed)) / N,
+    errorRate: (outcomes.rate_limited + outcomes.overflow + outcomes.failed) / N,
     accuracy: legit.length ? legit.filter((t) => t.outcome === 'correct').length / legit.length : 0,
     hallucination: legit.length ? legit.filter((t) => t.outcome === 'hallucinated').length / legit.length : 0,
     injection: adv.length ? adv.filter((t) => t.outcome === 'injected').length / adv.length : 0,
@@ -759,7 +853,7 @@ function labelOf(n: SimNode) {
   const names: Record<ComponentType, string> = {
     users: 'Users', input_guard: 'Input Guardrail', semantic_cache: 'Semantic Cache', router: 'Model Router',
     embedding: 'Embedding Model', vector_db: 'Vector DB', keyword_search: 'Keyword Search', reranker: 'Reranker',
-    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory', eval_harness: 'Eval Harness',
+    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory', eval_harness: 'Eval Harness', gpu_llm: 'Self-hosted Model', fallback: 'Retry & Fallback',
   };
   return names[n.type];
 }

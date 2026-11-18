@@ -11,7 +11,9 @@ export type ComponentType =
   | 'llm'
   | 'output_guard'
   | 'memory'
-  | 'eval_harness';
+  | 'eval_harness'
+  | 'gpu_llm'
+  | 'fallback';
 
 export type ConfigValue = number | string | boolean;
 export type NodeConfig = Record<string, ConfigValue>;
@@ -53,6 +55,8 @@ export interface TrafficProfile {
   recallShare?: number;
   /** Real life: answer quality is invisible unless you run evals. */
   qualityHidden?: boolean;
+  /** Share of calls each model provider fails (outages, 5xx). */
+  providerErrors?: Partial<Record<'A' | 'B', number>>;
 }
 
 export type Outcome =
@@ -62,7 +66,8 @@ export type Outcome =
   | 'blocked'
   | 'injected'
   | 'rate_limited'
-  | 'overflow';
+  | 'overflow'
+  | 'failed';
 
 export type Cause =
   | 'no_knowledge'
@@ -77,7 +82,9 @@ export type Cause =
   | 'injection'
   | 'cache_false_hit'
   | 'guard_false_positive'
-  | 'forgot_context';
+  | 'forgot_context'
+  | 'provider_down'
+  | 'gpu_saturated';
 
 export type StepTone = 'ok' | 'bad' | 'warn' | 'neutral';
 
@@ -136,6 +143,8 @@ export interface Metrics {
   avgHistoryTokens: number;
   /** False when quality can't be observed (no evals in a scenario that hides quality). */
   qualityVisible: boolean;
+  /** Highest utilisation across self-hosted GPU pools (null if none). */
+  gpuUtil: number | null;
   /** A handful of individual requests from this tick, failures first. */
   samples: RequestSample[];
 }

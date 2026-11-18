@@ -13,6 +13,7 @@ export const OUTCOME_META: Record<Outcome | 'unverified', { label: string; tone:
   injected: { label: 'Injected', tone: 'bad' },
   rate_limited: { label: '429 rate limited', tone: 'bad' },
   overflow: { label: 'Context overflow', tone: 'bad' },
+  failed: { label: 'Failed (5xx / timeout)', tone: 'bad' },
 };
 
 const KIND_LABEL: Record<RequestSample['kind'], string> = {
@@ -58,7 +59,7 @@ export function RequestsPanel({
       qualityVisible
         ? samples
         : samples.map((r) =>
-            r.outcome === 'rate_limited' || r.outcome === 'overflow' ? r : { ...r, outcome: 'unverified' as const, cause: undefined },
+            r.outcome === 'rate_limited' || r.outcome === 'overflow' || r.outcome === 'failed' ? r : { ...r, outcome: 'unverified' as const, cause: undefined },
           ),
     [samples, qualityVisible],
   );

@@ -2,7 +2,9 @@ import {
   ArrowDownWideNarrow,
   Binary,
   Bot,
+  Cpu,
   Database,
+  RefreshCw,
   FlaskConical,
   History,
   ScanEye,
@@ -31,6 +33,8 @@ export const ICONS: Record<ComponentType, LucideIcon> = {
   output_guard: ScanEye,
   memory: History,
   eval_harness: FlaskConical,
+  gpu_llm: Cpu,
+  fallback: RefreshCw,
 };
 
 export function KindIcon({ kind, size = 'md' }: { kind: ComponentType; size?: 'sm' | 'md' | 'lg' }) {

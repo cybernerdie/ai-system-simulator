@@ -23,6 +23,91 @@ export interface Lesson {
 
 export const LESSONS: Lesson[] = [
   {
+    id: 'how-inference-works',
+    title: 'What happens when you call a model',
+    summary: 'Reading your prompt is fast. Writing the answer is slow.',
+    minutes: 4,
+    scenarioId: 'feels-slow',
+    components: ['llm'],
+    terms: ['inference', 'prefill', 'decode', 'kv-cache', 'max-output-tokens', 'temperature'],
+    blocks: [
+      { kind: 'p', text: 'Every model call runs in two phases. First the model reads your whole prompt at once (prefill). GPUs are built for this kind of parallel work, so even a long prompt is read quickly. Then it writes the answer one token at a time (decode). Each new token depends on the one before it, so this part can\'t be parallelised.' },
+      { kind: 'list', items: [
+        'This is why output length drives latency. A 2,000-token prompt with a 50-token answer is quick; a 50-token prompt with a 2,000-token answer is slow.',
+        'It\'s also why output tokens cost several times more than input tokens.',
+        'Capping the maximum output length is one of the cheapest speed and cost wins there is.',
+        'While writing, the model keeps a working memory of everything it has read so far (the KV cache), so it doesn\'t re-read the prompt for every new word. Prompt caching reuses that work across requests.',
+      ] },
+      { kind: 'analogy', text: 'Reading a page takes a glance; writing a page takes a while. A model is the same: it skims your prompt in one go, then writes its reply word by word.' },
+      { kind: 'p', text: 'Temperature controls how each next token is picked: low means the most likely word almost every time (consistent), high means more variety (creative, but less reliable).' },
+      { kind: 'takeaway', text: 'Speed is mostly about how much the model writes, not how much it reads.' },
+    ],
+  },
+  {
+    id: 'serving',
+    title: 'Serving models on GPUs',
+    summary: 'Batching and quantization decide how much one GPU can do.',
+    minutes: 5,
+    scenarioId: 'self-host',
+    components: ['gpu_llm'],
+    terms: ['gpu', 'batching', 'continuous-batching', 'quantization', 'throughput', 'speculative-decoding'],
+    blocks: [
+      { kind: 'p', text: 'A GPU writing tokens for a single request is mostly waiting: the bottleneck is moving the model\'s weights through memory, not the maths. Batching fixes that. The GPU works on many requests at once, reusing each pass through the weights for all of them.' },
+      { kind: 'list', items: [
+        'Bigger batches mean much more total throughput (tokens per second across all requests).',
+        'But each individual request gets a smaller slice, so it\'s written more slowly. Throughput and per-request latency pull against each other.',
+        'Modern servers use continuous batching: new requests join the batch the moment a slot frees up, instead of waiting for the whole batch to finish.',
+      ] },
+      { kind: 'p', text: 'Quantization stores the model\'s numbers with fewer bits (16 → 8 → 4). The model gets smaller and faster, more fits per GPU, and quality drops slightly: barely at 8-bit, noticeably at 4-bit.' },
+      { kind: 'analogy', text: 'A bus versus a taxi. One taxi per passenger is fast for each rider but wasteful. A full bus moves far more people per hour, but each stop takes longer. Quantization is fitting more seats into the same bus by making them narrower.' },
+      { kind: 'p', text: 'There are more tricks, like speculative decoding, where a small model drafts several tokens and the big model checks them in one pass. They all chase the same goal: more useful tokens per GPU-second.' },
+      { kind: 'takeaway', text: 'An idle GPU slot is wasted money; an overfull one is wasted time.' },
+    ],
+  },
+  {
+    id: 'self-host-vs-api',
+    title: 'API or your own GPUs?',
+    summary: 'Pay per token, or pay per hour whether you use it or not.',
+    minutes: 4,
+    scenarioId: 'self-host',
+    components: ['llm', 'gpu_llm'],
+    terms: ['self-hosting', 'open-weights', 'gpu-utilization', 'rate-limit'],
+    blocks: [
+      { kind: 'p', text: 'An API charges per token. You pay nothing when nobody is using it, and someone else handles the hardware, scaling and upgrades. Self-hosting an open-weights model charges per GPU-hour: you pay the same at 3am as at peak.' },
+      { kind: 'list', items: [
+        'At high, steady traffic, self-hosting can be many times cheaper per request, because busy GPUs spread their hourly cost over lots of requests.',
+        'At low or spiky traffic it\'s often more expensive: you pay for idle GPUs, or under-provision and fall over at peak.',
+        'Self-hosting also means you own capacity planning, on-call, model upgrades and GPU shortages. That\'s real engineering cost.',
+        'Reasons to self-host beyond price: data never leaves your infrastructure, no provider rate limits, and full control over the model.',
+      ] },
+      { kind: 'analogy', text: 'Taxis versus owning a car. If you drive all day every day, owning is cheaper. If you drive twice a month, the car mostly sits in the garage costing you money.' },
+      { kind: 'p', text: 'Many teams mix both: self-host a strong open model for the steady bulk of traffic, and use an API for spikes, the hardest requests, or as a fallback.' },
+      { kind: 'takeaway', text: 'Self-hosting pays off when your GPUs stay busy.' },
+    ],
+  },
+  {
+    id: 'reliability',
+    title: 'When the provider goes down',
+    summary: 'Retries handle blips. Outages need somewhere else to go.',
+    minutes: 4,
+    scenarioId: 'provider-down',
+    components: ['fallback', 'llm', 'gpu_llm'],
+    terms: ['failover', 'retry', 'exponential-backoff', 'retry-storm', 'circuit-breaker', 'timeout'],
+    blocks: [
+      { kind: 'p', text: 'Model providers have outages and slowdowns like any other service. If your product calls one provider for every request, their bad day is your bad day.' },
+      { kind: 'list', items: [
+        'Timeouts: never wait forever. Give up on a call after a sensible limit so one slow request doesn\'t hold everything up.',
+        'Retries with exponential backoff: try again after a short wait, doubling the wait each time. Great for brief blips.',
+        'Retry storms: during a real outage, everyone retrying multiplies the load on a provider that is already struggling, and makes it worse.',
+        'Failover: send the request to a different provider or your own model when the first keeps failing.',
+        'Circuit breaker: after enough failures, stop calling the broken provider for a while and go straight to the fallback.',
+      ] },
+      { kind: 'analogy', text: 'If the shop is closed, knocking louder doesn\'t help, and neither does the whole street knocking. You go to the other shop.' },
+      { kind: 'p', text: 'The backup doesn\'t need to be as good as the primary. A slightly weaker model that answers is better than a perfect one that returns errors. That\'s graceful degradation.' },
+      { kind: 'takeaway', text: 'Have a plan B before you need it, and cap your retries.' },
+    ],
+  },
+  {
     id: 'evals',
     title: 'Evals: you can\'t fix what you can\'t see',
     summary: 'Measure answer quality before and after every change.',
@@ -314,6 +399,13 @@ export const MODULES: Module[] = [
     lessons: ['scale', 'latency'],
   },
   {
+    id: 'inference',
+    title: 'Inference: how models actually run',
+    level: 'Intermediate',
+    blurb: 'Prefill and decode, GPUs and batching, self-hosting, and staying up when providers fail.',
+    lessons: ['how-inference-works', 'serving', 'self-host-vs-api', 'reliability'],
+  },
+  {
     id: 'agents',
     title: 'Agents',
     level: 'Advanced',
@@ -340,7 +432,7 @@ export const MODULES: Module[] = [
 /* Glossary: complex terms in simple words                             */
 /* ------------------------------------------------------------------ */
 
-export type TermCategory = 'Models' | 'Retrieval' | 'Memory' | 'Production' | 'Agents' | 'Safety' | 'Quality';
+export type TermCategory = 'Models' | 'Retrieval' | 'Memory' | 'Inference' | 'Production' | 'Agents' | 'Safety' | 'Quality';
 
 export interface Term {
   id: string;
@@ -360,7 +452,7 @@ export const TERMS: Term[] = [
   { id: 'token', term: 'Token', category: 'Models', simple: 'The unit models read and write in. Roughly ¾ of an English word; "unbelievable" might be 3 tokens.', analogy: 'Like syllables for a machine.', why: 'Pricing, speed and limits are all measured in tokens.', related: ['context-window', 'input-output-tokens', 'tpm'], lesson: 'tokens' },
   { id: 'prompt', term: 'Prompt', category: 'Models', simple: 'Everything you send the model in one request: instructions, retrieved documents, conversation history and the user\'s message.', analogy: 'The briefing pack you hand someone before they start a task.', related: ['system-prompt', 'context-window'], lesson: 'pipeline' },
   { id: 'system-prompt', term: 'System prompt', category: 'Models', simple: 'The hidden instructions at the top of the prompt that set the model\'s role and rules ("You are a support assistant. Only answer from the sources.").', analogy: 'The job description pinned above the desk.', why: 'Attackers try to override or reveal it.', related: ['prompt', 'prompt-injection'] },
-  { id: 'inference', term: 'Inference', category: 'Models', simple: 'Running a trained model to get an answer. Every request you make is an inference call.', analogy: 'Training is going to school; inference is doing the job.', related: ['llm', 'latency'] },
+  { id: 'inference', term: 'Inference', category: 'Inference', simple: 'Running a trained model to get an answer. Every request you make is an inference call.', analogy: 'Training is going to school; inference is doing the job.', related: ['llm', 'latency', 'prefill', 'decode'], lesson: 'how-inference-works' },
   { id: 'context-window', term: 'Context window', category: 'Models', simple: 'The maximum number of tokens a model can read in one request, including the prompt and its answer.', analogy: 'The size of the desk: only so many pages fit on it at once.', why: 'Go over it and the request fails or gets cut off.', related: ['token', 'lost-in-the-middle'], lesson: 'tokens' },
   { id: 'input-output-tokens', term: 'Input vs output tokens', category: 'Models', simple: 'Input tokens are what you send; output tokens are what the model writes. Output is usually several times more expensive.', why: 'Long answers cost more than long prompts, token for token.', related: ['token', 'cost-per-request'], lesson: 'tokens' },
   { id: 'training-data', term: 'Training data', category: 'Models', simple: 'The text a model learned from before it was released. It doesn\'t include your private documents.', related: ['knowledge-cutoff', 'hallucination'], lesson: 'hallucination' },
@@ -389,6 +481,27 @@ export const TERMS: Term[] = [
   { id: 'conversation-summary', term: 'Rolling summary', category: 'Memory', simple: 'Regularly compressing older turns into a short summary that travels with the conversation, while the latest turns stay word for word.', analogy: 'Meeting minutes instead of the full recording.', why: 'Keeps the gist in few tokens, but specific details like numbers and names can get lost.', related: ['sliding-window', 'long-term-memory'], lesson: 'memory-strategies' },
   { id: 'long-term-memory', term: 'Long-term memory', aka: 'Memory retrieval', category: 'Memory', simple: 'Storing past turns, or facts pulled out of them, in a searchable store, and fetching only the ones relevant to the current message.', analogy: 'An assistant\'s notebook: they don\'t read it all out, they flip to the page they need.', why: 'Keeps prompts small while still remembering details from long ago.', related: ['rag', 'embedding', 'conversation-memory'], lesson: 'memory-strategies' },
   { id: 'prompt-caching', term: 'Prompt caching', category: 'Memory', simple: 'Providers can store the unchanging beginning of a prompt (system prompt, long documents) and reuse it across requests for less money and time.', analogy: 'Keeping the reference book open on your desk instead of fetching it from the shelf every time.', why: 'Cuts cost for apps that resend the same big prefix. Different from a semantic cache, which skips the model entirely.', related: ['token', 'semantic-cache'], lesson: 'memory-strategies' },
+
+  // Inference
+  { id: 'prefill', term: 'Prefill', category: 'Inference', simple: 'The first phase of a model call: reading the whole prompt at once. GPUs do this in parallel, so it\'s fast.', analogy: 'Skimming a page in one glance.', why: 'Long prompts add surprisingly little latency compared with long answers.', related: ['decode', 'kv-cache'], lesson: 'how-inference-works' },
+  { id: 'decode', term: 'Decode', category: 'Inference', simple: 'The second phase: writing the answer one token at a time, each depending on the last. It can\'t be parallelised, so it\'s the slow part.', analogy: 'Writing a page by hand, word by word.', why: 'Output length, not prompt length, mostly decides how long a call takes.', related: ['prefill', 'max-output-tokens'], lesson: 'how-inference-works' },
+  { id: 'kv-cache', term: 'KV cache', category: 'Inference', simple: 'The model\'s working memory of everything it has read so far in a request, so it doesn\'t re-read the whole prompt for every new word.', analogy: 'Notes in the margin so you don\'t reread the chapter before each sentence.', why: 'It\'s what makes prompt caching possible, and it takes up GPU memory.', related: ['prompt-caching', 'prefill'], lesson: 'how-inference-works' },
+  { id: 'max-output-tokens', term: 'Max output tokens', category: 'Inference', simple: 'A cap on how long the model\'s answer can be.', why: 'One of the cheapest ways to cut latency and cost, since writing is the slow, expensive part.', related: ['decode', 'input-output-tokens'], lesson: 'how-inference-works' },
+  { id: 'gpu', term: 'GPU', category: 'Inference', simple: 'The chip that runs AI models: thousands of small cores doing maths in parallel, plus fast memory that holds the model.', why: 'GPU memory decides which models fit; GPU speed decides how fast they write.', related: ['batching', 'quantization', 'self-hosting'], lesson: 'serving' },
+  { id: 'batching', term: 'Batching', category: 'Inference', simple: 'Running many requests through the model at the same time on one GPU.', analogy: 'A bus instead of a taxi per passenger.', why: 'Multiplies total throughput, but each request is written a bit more slowly.', related: ['continuous-batching', 'throughput'], lesson: 'serving' },
+  { id: 'continuous-batching', term: 'Continuous batching', category: 'Inference', simple: 'Letting new requests join a running batch as soon as a slot frees up, instead of waiting for the whole batch to finish.', analogy: 'A bus that picks up passengers at every stop rather than waiting at the depot until it\'s full.', related: ['batching', 'throughput'], lesson: 'serving' },
+  { id: 'quantization', term: 'Quantization', category: 'Inference', simple: 'Storing a model\'s numbers with fewer bits (16 → 8 → 4) so it\'s smaller and faster.', analogy: 'Saving a photo as a smaller JPEG: much lighter, mostly looks the same, artefacts if you push it too far.', why: 'More speed and capacity per GPU for a small quality cost; 4-bit can noticeably hurt accuracy.', related: ['gpu', 'open-weights'], lesson: 'serving' },
+  { id: 'throughput', term: 'Throughput', category: 'Inference', simple: 'How much work a system completes per second, for example total tokens written across all requests.', why: 'Different from latency: you can raise throughput while making each request slower.', related: ['batching', 'latency'], lesson: 'serving' },
+  { id: 'speculative-decoding', term: 'Speculative decoding', category: 'Inference', simple: 'A small, fast model drafts several tokens ahead, and the big model checks them all in one pass, keeping the ones it agrees with.', analogy: 'An assistant drafts the email; the expert just approves or fixes it.', why: 'Speeds up writing without changing the big model\'s answers.', related: ['decode'], lesson: 'serving' },
+  { id: 'open-weights', term: 'Open-weights model', category: 'Inference', simple: 'A model whose trained weights are published, so you can download it and run it on your own hardware.', why: 'Makes self-hosting possible: full control, data stays with you.', related: ['self-hosting', 'quantization'], lesson: 'self-host-vs-api' },
+  { id: 'self-hosting', term: 'Self-hosting', category: 'Inference', simple: 'Running a model on GPUs you rent or own, instead of calling a provider\'s API.', analogy: 'Owning a car instead of taking taxis.', why: 'Cheaper at high, steady traffic; more expensive when GPUs sit idle, and you own the operations.', related: ['gpu-utilization', 'open-weights', 'gpu'], lesson: 'self-host-vs-api' },
+  { id: 'gpu-utilization', term: 'GPU utilization', category: 'Inference', simple: 'How busy your GPUs are compared with what they could handle.', why: 'Low means paying for idle hardware; near 100% means queues and timeouts. Aim for busy but not full.', related: ['self-hosting', 'throughput'], lesson: 'self-host-vs-api' },
+  { id: 'timeout', term: 'Timeout', category: 'Inference', simple: 'The longest you\'ll wait for a call before giving up on it.', why: 'Without one, a single stuck call can hold up a user, or your whole system.', related: ['retry', 'circuit-breaker'], lesson: 'reliability' },
+  { id: 'retry', term: 'Retry', category: 'Inference', simple: 'Trying a failed call again, usually after a short wait.', why: 'Fixes brief blips; makes real outages worse if overused.', related: ['exponential-backoff', 'retry-storm'], lesson: 'reliability' },
+  { id: 'exponential-backoff', term: 'Exponential backoff', category: 'Inference', simple: 'Waiting longer before each retry (say 0.25s, 0.5s, 1s, 2s), usually with a little randomness so clients don\'t retry in sync.', analogy: 'Giving a busy friend more time between each call instead of ringing non-stop.', related: ['retry', 'retry-storm'], lesson: 'reliability' },
+  { id: 'retry-storm', term: 'Retry storm', category: 'Inference', simple: 'When a struggling service gets hammered by everyone\'s retries at once, pushing it from slow to completely down.', why: 'The reason retries need caps, backoff and circuit breakers.', related: ['retry', 'circuit-breaker'], lesson: 'reliability' },
+  { id: 'failover', term: 'Failover', category: 'Inference', simple: 'Automatically switching to a backup (another provider or your own model) when the primary keeps failing.', analogy: 'A hospital\'s backup generator kicking in during a power cut.', related: ['circuit-breaker', 'retry'], lesson: 'reliability' },
+  { id: 'circuit-breaker', term: 'Circuit breaker', category: 'Inference', simple: 'After enough failures, stop calling a broken service for a while and go straight to the fallback, then test it again later.', analogy: 'The breaker in your fuse box that trips so a fault doesn\'t burn the house down.', related: ['failover', 'retry-storm'], lesson: 'reliability' },
 
   // Production
   { id: 'latency', term: 'Latency', category: 'Production', simple: 'How long a request takes from the user asking to the user getting an answer.', related: ['ttft', 'p50-p99'], lesson: 'latency' },
@@ -444,4 +557,6 @@ export const COMPONENT_TERM: Partial<Record<ComponentType, string>> = {
   output_guard: 'llm-as-judge',
   memory: 'conversation-memory',
   eval_harness: 'eval',
+  gpu_llm: 'self-hosting',
+  fallback: 'failover',
 };

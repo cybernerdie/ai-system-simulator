@@ -8,7 +8,7 @@ import { COMPONENTS } from '../engine/components';
 
 export type HubView = { tab: 'lessons'; lessonId: string } | { tab: 'glossary'; termId?: string };
 
-const CATEGORIES: TermCategory[] = ['Models', 'Retrieval', 'Memory', 'Production', 'Agents', 'Safety', 'Quality'];
+const CATEGORIES: TermCategory[] = ['Models', 'Retrieval', 'Memory', 'Inference', 'Production', 'Agents', 'Safety', 'Quality'];
 
 /** Where to open the lessons tab: the first lesson not read yet. */
 export function firstUnreadLesson(): string {

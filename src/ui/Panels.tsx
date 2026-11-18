@@ -6,6 +6,7 @@ import { QUALITY_METRICS, goalMet, type Pressure } from '../engine/pressures';
 import type { Scenario } from '../engine/scenarios';
 import type { ComponentType, ConfigValue, Goal, GoalMetric, Metrics, NodeConfig, TrafficProfile } from '../engine/types';
 import { KindIcon } from './icons';
+import { profileOf } from '../engine/models';
 import { RequestsPanel, type Shown } from './Requests';
 
 /* ---------- formatting ---------- */
@@ -26,7 +27,7 @@ export const METRIC_META: Record<GoalMetric, { label: string; fmt: (v: number) =
 
 /* ---------- palette ---------- */
 
-const GROUPS = ['Retrieval', 'Memory', 'Generation', 'Efficiency', 'Safety', 'Quality'] as const;
+const GROUPS = ['Retrieval', 'Memory', 'Generation', 'Inference', 'Efficiency', 'Safety', 'Quality'] as const;
 
 export function Palette({ onAdd }: { onAdd: (t: ComponentType) => void }) {
   return (
@@ -466,6 +467,25 @@ function Inspector({
           </dl>
         </Group>
       )}
+      {kind === 'gpu_llm' &&
+        (() => {
+          const p = profileOf({ id, type: kind, config });
+          const g = p.gpu!;
+          return (
+            <Group title="Capacity card">
+              <dl className="spec">
+                <dt>Total throughput</dt>
+                <dd>{Math.round(g.capacityTps).toLocaleString()} tokens/s</dd>
+                <dt>Speed per request</dt>
+                <dd>{Math.round(g.perStreamTps)} tokens/s</dd>
+                <dt>Time to write a typical answer</dt>
+                <dd>{(220 / g.perStreamTps).toFixed(1)}s</dd>
+                <dt>GPU bill</dt>
+                <dd>${g.hourly.toFixed(2)} / hour</dd>
+              </dl>
+            </Group>
+          );
+        })()}
       {kind !== 'users' && (
         <button className="btn btn-ghost btn-danger btn-block" onClick={() => onDelete(id)}>
           <Trash2 size={14} aria-hidden /> Remove {spec.name}

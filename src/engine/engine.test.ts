@@ -37,6 +37,8 @@ describe('scenarios', () => {
       'feels-slow': 'ttft',
       'endless-chat': 'history_bloat',
       'flying-blind': 'blind',
+      'self-host': 'gpu_saturated',
+      'provider-down': 'provider_down',
     };
     for (const s of SCENARIOS) {
       const m = run(s.nodes, s.edges, s.traffic);
@@ -126,6 +128,36 @@ describe('engine behaviour', () => {
     expect(bindingPressure(m, s.goals).key).toBe('blind');
   });
 
+  it('retries alone make an outage worse; failover fixes it', () => {
+    const s = SCENARIOS.find((x) => x.id === 'provider-down')!;
+    const withRetries = (r: number, failover: boolean, backup: boolean) =>
+      run(
+        [
+          ...s.nodes.filter((n) => n.type !== 'llm'),
+          { id: 'fb', type: 'fallback', x: 0, y: 0, config: { retries: r, failover } },
+          { id: 'llm', type: 'llm', x: 0, y: 0, config: { size: 'medium', provider: 'A' } },
+          ...(backup ? [{ id: 'b', type: 'llm' as const, x: 0, y: 0, config: { size: 'medium', provider: 'B' } }] : []),
+        ],
+        [
+          { source: 'users', target: 'emb' },
+          { source: 'emb', target: 'vdb' },
+          { source: 'vdb', target: 'fb' },
+          { source: 'fb', target: 'llm' },
+          ...(backup ? [{ source: 'fb', target: 'b' }] : []),
+        ],
+        s.traffic,
+      );
+    expect(withRetries(5, false, false).errorRate).toBeGreaterThan(0.2);
+    expect(withRetries(1, true, true).errorRate).toBeLessThan(0.01);
+  });
+
+  it('GPU batching trades per-request speed for throughput', () => {
+    const gpu = (batch: number, quant = 'fp16') => profileOf({ id: 'g', type: 'gpu_llm', config: { model: 'open-70b', gpus: 4, batch, quant } }).gpu!;
+    expect(gpu(32).capacityTps).toBeGreaterThan(gpu(1).capacityTps * 15);
+    expect(gpu(32).perStreamTps).toBeLessThan(gpu(1).perStreamTps * 0.75);
+    expect(gpu(8, 'int8').capacityTps).toBeGreaterThan(gpu(8).capacityTps);
+  });
+
   it('single-shot traffic sends no history', () => {
     const m = run(SCENARIOS[0].nodes, SCENARIOS[0].edges, SCENARIOS[0].traffic);
     expect(m.avgHistoryTokens).toBe(0);
@@ -138,6 +170,7 @@ describe('engine behaviour', () => {
 });
 
 import { trafficMultiplier } from './patterns';
+import { profileOf } from './models';
 describe('traffic patterns', () => {
   it('steady is flat, spikes burst, waves stay positive, ramps climb', () => {
     expect(trafficMultiplier('steady', 37)).toBe(1);

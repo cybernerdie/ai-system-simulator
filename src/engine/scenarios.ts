@@ -356,6 +356,81 @@ export const SCENARIOS: Scenario[] = [
       edges: [...chain('users', 'emb', 'vdb', 'rr', 'llm', 'ev'), ...chain('users', 'kw', 'rr')],
     },
   },
+  {
+    id: 'self-host',
+    difficulty: 3,
+    skills: ['Self-hosting', 'Batching', 'Quantization', 'GPU capacity'],
+    title: '10 · Bring it in-house',
+    tagline: 'We moved off the API to save money. Now everything times out.',
+    brief:
+      'The API bill was about $10 per 1,000 requests, so the team moved to an open 70B model on rented GPUs: 4 GPUs, one request at a time, full precision. The bill dropped to almost nothing, because almost nothing gets answered. Find a setup that is cheap, fast enough and still as good as the API.',
+    traffic: { ...base, rps: 30, kbShare: 0.6, exactTermShare: 0.2, easyShare: 0.6, repeatShare: 0.1 },
+    goals: [
+      { metric: 'errorRate', op: '<=', value: 0.01 },
+      { metric: 'accuracy', op: '>=', value: 0.88 },
+      { metric: 'p50', op: '<=', value: 7000 },
+      { metric: 'costPer1k', op: '<=', value: 0.7 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 60 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 60, config: { topK: 12, chunk: 'medium' } },
+      { id: 'kw', type: 'keyword_search', x: 340, y: 200 },
+      { id: 'rr', type: 'reranker', x: 520, y: 120, config: { keep: 4 } },
+      { id: 'gpu', type: 'gpu_llm', x: 700, y: 120, config: { model: 'open-70b', gpus: 4, batch: 1, quant: 'fp16' } },
+    ],
+    edges: [...chain('users', 'emb', 'vdb', 'rr', 'gpu'), ...chain('users', 'kw', 'rr')],
+    hint: 'One request per GPU wastes almost all of it. Raise the batch size and watch throughput jump while each answer slows down. Then decide how many GPUs you really need, and whether you can afford full precision.',
+    lesson:
+      'Self-hosting turns a per-token bill into a capacity-planning problem. Batching is the biggest lever (one GPU serves many requests at once), quantization makes each GPU faster for a small quality cost, and the GPU count sets your bill whether the GPUs are busy or not. The sweet spot is busy but not saturated: too few GPUs and requests queue and time out, too many and you pay for idle silicon.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 60 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 60, config: { topK: 12, chunk: 'medium' } },
+        { id: 'kw', type: 'keyword_search', x: 340, y: 200 },
+        { id: 'rr', type: 'reranker', x: 520, y: 120, config: { keep: 4 } },
+        { id: 'gpu', type: 'gpu_llm', x: 700, y: 120, config: { model: 'open-70b', gpus: 16, batch: 16, quant: 'int8' } },
+      ],
+      edges: [...chain('users', 'emb', 'vdb', 'rr', 'gpu'), ...chain('users', 'kw', 'rr')],
+    },
+  },
+  {
+    id: 'provider-down',
+    difficulty: 2,
+    skills: ['Outages', 'Retries', 'Failover'],
+    title: '11 · The provider is down',
+    tagline: '503, 503, 503. Your status page is getting traffic.',
+    brief:
+      'Your model provider is having a bad day: 70% of calls fail with 503 errors. Your whole product depends on that one provider, so your users see errors too. Keep the product up without wrecking speed or quality.',
+    traffic: { ...base, rps: 8, kbShare: 0.6, exactTermShare: 0.2, easyShare: 0.6, repeatShare: 0.1, providerErrors: { A: 0.7 } },
+    goals: [
+      { metric: 'errorRate', op: '<=', value: 0.01 },
+      { metric: 'accuracy', op: '>=', value: 0.74 },
+      { metric: 'p50', op: '<=', value: 6000 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+      { id: 'llm', type: 'llm', x: 560, y: 120, config: { size: 'medium', provider: 'A' } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm'),
+    hint: 'Try Retry & Fallback with only retries first, and push them up. Does it get better or worse? Then give it somewhere else to go: a second model on provider B, or your own GPUs.',
+    lesson:
+      'Retries help with brief blips, but during a real outage they pile more load onto a struggling provider and make things worse (a retry storm). Resilience means having somewhere else to go: a second provider or a self-hosted model, with automatic failover, timeouts and a cap on retries. The backup doesn\'t need to be identical, just good enough to keep you up.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'emb', type: 'embedding', x: 170, y: 120 },
+        { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+        { id: 'fb', type: 'fallback', x: 510, y: 120, config: { retries: 1, failover: true } },
+        { id: 'llm', type: 'llm', x: 690, y: 40, config: { size: 'medium', provider: 'A' } },
+        { id: 'llmb', type: 'llm', x: 690, y: 200, config: { size: 'medium', provider: 'B' } },
+      ],
+      edges: [...chain('users', 'emb', 'vdb', 'fb', 'llm'), { source: 'fb', target: 'llmb' }],
+    },
+  },
 ];
 
 export const SANDBOX: Scenario = {

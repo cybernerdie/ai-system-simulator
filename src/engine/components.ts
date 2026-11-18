@@ -15,7 +15,7 @@ export interface ComponentSpec {
   type: ComponentType;
   name: string;
   short: string;
-  group: 'Input' | 'Retrieval' | 'Memory' | 'Generation' | 'Efficiency' | 'Safety' | 'Quality';
+  group: 'Input' | 'Retrieval' | 'Memory' | 'Generation' | 'Inference' | 'Efficiency' | 'Safety' | 'Quality';
   color: string;
   blurb: string;
   defaults: NodeConfig;
@@ -241,8 +241,18 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     group: 'Generation',
     color: '#0ea5e9',
     blurb: 'The model that writes the answer. Bigger is smarter and safer, but slower, pricier and more rate-limited.',
-    defaults: { size: 'medium', streaming: false },
+    defaults: { size: 'medium', streaming: false, provider: 'A' },
     fields: [
+      {
+        key: 'provider',
+        label: 'Provider',
+        kind: 'select',
+        options: [
+          { value: 'A', label: 'Provider A' },
+          { value: 'B', label: 'Provider B' },
+        ],
+        help: 'Which API company runs this model. Two providers means one outage can\'t take you down.',
+      },
       {
         key: 'size',
         label: 'Model size',
@@ -310,6 +320,74 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
       },
     ],
   },
+  gpu_llm: {
+    type: 'gpu_llm',
+    name: 'Self-hosted Model',
+    short: 'GPU',
+    group: 'Inference',
+    color: '#0d9488',
+    blurb: 'An open-weights model running on GPUs you rent by the hour. No per-token price and no provider rate limit, but you pay for the GPUs whether they\'re busy or idle, and you own the capacity planning.',
+    defaults: { model: 'open-70b', gpus: 4, batch: 8, quant: 'fp16' },
+    fields: [
+      {
+        key: 'model',
+        label: 'Model',
+        kind: 'select',
+        options: [
+          { value: 'open-8b', label: 'Open 8B (fast, weaker)' },
+          { value: 'open-70b', label: 'Open 70B (strong, slower)' },
+        ],
+        help: 'Bigger open models are smarter but write tokens more slowly on the same GPU.',
+      },
+      { key: 'gpus', label: 'GPUs', kind: 'range', min: 1, max: 32, step: 1, help: 'Each GPU costs about $2.40/hour, busy or not. More GPUs = more capacity.' },
+      {
+        key: 'batch',
+        label: 'Batch size',
+        kind: 'range',
+        min: 1,
+        max: 64,
+        step: 1,
+        help: 'How many requests share a GPU at once. Bigger batches = far more total throughput, but each request is written more slowly.',
+      },
+      {
+        key: 'quant',
+        label: 'Quantization',
+        kind: 'select',
+        options: [
+          { value: 'fp16', label: 'FP16 (full precision)' },
+          { value: 'int8', label: 'INT8 (~1.5× faster, tiny quality loss)' },
+          { value: 'int4', label: 'INT4 (~2× faster, noticeable loss)' },
+        ],
+        help: 'Storing the model\'s numbers with fewer bits makes it smaller and faster, at some cost to accuracy.',
+      },
+    ],
+  },
+  fallback: {
+    type: 'fallback',
+    name: 'Retry & Fallback',
+    short: 'RF',
+    group: 'Inference',
+    color: '#ea580c',
+    blurb: 'Sits in front of your models. Retries failed calls with backoff, and can fail over to a model on a different provider (or your own GPUs) when one goes down.',
+    defaults: { retries: 2, failover: false },
+    fields: [
+      {
+        key: 'retries',
+        label: 'Retries',
+        kind: 'range',
+        min: 0,
+        max: 5,
+        step: 1,
+        help: 'Extra attempts on the same provider. Helps with brief blips, but during an outage every retry is more load and more waiting.',
+      },
+      {
+        key: 'failover',
+        label: 'Fail over to another model',
+        kind: 'toggle',
+        help: 'If the first provider keeps failing, send the request to a connected model on a different host.',
+      },
+    ],
+  },
   output_guard: {
     type: 'output_guard',
     name: 'Output Judge',
@@ -333,6 +411,8 @@ export const PALETTE_ORDER: ComponentType[] = [
   'reranker',
   'agent',
   'llm',
+  'gpu_llm',
+  'fallback',
   'output_guard',
   'eval_harness',
 ];
