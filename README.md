@@ -4,6 +4,8 @@
 
 Build an AI system from parts, push real-shaped traffic through it, and watch which part breaks first. Then fix it and push harder.
 
+[![AISim in dark and light mode: a self-hosted RAG pipeline hitting its GPU capacity limit](docs/screenshot.png)](https://ai-system-simulator.vercel.app/)
+
 The point isn't memorising components. It's learning to name the **binding pressure**: the one limit hurting your system right now.
 
 AI systems fail in two ways at once:
