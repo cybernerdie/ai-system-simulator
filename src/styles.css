@@ -1222,3 +1222,36 @@ body, .topbar, .palette, .side, .canvas, .simnode, .telemetry, .pressure-window 
 /* lesson read toggle */
 .lesson-foot .mark-read { margin-left: auto; }
 .lesson-foot .mark-read.is-done { color: var(--ok); }
+
+.toast-action { margin-left: var(--sp-2); padding: 2px 8px; border: 0; border-radius: 6px; background: rgba(255,255,255,0.14); color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+.toast-action:hover { background: rgba(255,255,255,0.24); }
+[data-theme='dark'] .toast-action { background: rgba(0,0,0,0.08); }
+[data-theme='dark'] .toast-action:hover { background: rgba(0,0,0,0.16); }
+
+/* ---------- medium desktops: keep the top bar on one line, the Run button always visible ---------- */
+@media (min-width: 901px) {
+  .brand, .topbar-tools, .btn-run { flex-shrink: 0; }
+  .scenario-trigger { min-width: 0; flex: 0 1 auto; }
+  .traffic { min-width: 0; flex-shrink: 1; }
+}
+@media (max-width: 1400px) and (min-width: 901px) {
+  .topbar-tools .btn-icon span:not(.sr-only) { display: none; }
+  .topbar-tools .btn-icon { width: 32px; padding: 0; justify-content: center; }
+}
+@media (max-width: 1180px) and (min-width: 901px) {
+  .brand > span, .scenario-trigger-all, .btn-run kbd { display: none; }
+  .btn-run { min-width: 0; }
+  .traffic-rate input { width: 84px; }
+}
+/* 8 metrics in one row only fit on wide screens; below that, two rows of four so labels aren't cut off */
+@media (max-width: 1420px) and (min-width: 901px) {
+  .telemetry { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tele:nth-child(5) { border-left: 0; }
+  .tele:nth-child(n + 5) { border-top: 1px solid var(--line); }
+  /* pressure window: title and explanation stacked on the left, suggestion on the right, to save height */
+  .pressure-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: var(--sp-2) var(--sp-4); }
+  .pressure-title { grid-column: 1; grid-row: 1; }
+  .pressure-why { grid-column: 1; grid-row: 2; }
+  .pressure-try { grid-column: 2; grid-row: 1 / 3; align-self: start; }
+}
+.toast { width: max-content; max-width: calc(100vw - 24px); }

@@ -214,3 +214,37 @@ describe('traffic patterns', () => {
     expect(trafficMultiplier('ramp', 0)).toBe(1);
   });
 });
+
+describe('broken designs', () => {
+  const s = SCENARIOS[0];
+  it('names a missing path to the model as the binding pressure', () => {
+    const lonely = run([{ id: 'u', type: 'users', x: 0, y: 0 }], [], s.traffic);
+    expect(lonely.noModel).toBe(true);
+    expect(bindingPressure(lonely, s.goals).key).toBe('no_model');
+    const unplugged = run(
+      [
+        { id: 'u', type: 'users', x: 0, y: 0 },
+        { id: 'l', type: 'llm', x: 200, y: 0 },
+      ],
+      [],
+      s.traffic,
+    );
+    expect(bindingPressure(unplugged, s.goals).key).toBe('no_model');
+  });
+  it('survives cycles without hanging or producing NaN', () => {
+    const m = run(
+      [
+        { id: 'u', type: 'users', x: 0, y: 0 },
+        { id: 'l', type: 'llm', x: 200, y: 0 },
+        { id: 'a', type: 'agent', x: 400, y: 0 },
+      ],
+      [
+        { source: 'u', target: 'l' },
+        { source: 'l', target: 'a' },
+        { source: 'a', target: 'l' },
+      ],
+      s.traffic,
+    );
+    for (const k of ['accuracy', 'errorRate', 'costPer1k', 'p50'] as const) expect(Number.isFinite(m[k])).toBe(true);
+  });
+});

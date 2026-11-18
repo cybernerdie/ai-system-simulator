@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  type FitViewOptions,
   Background,
   BackgroundVariant,
   Controls,
@@ -23,7 +24,7 @@ import type { Shown } from './ui/Requests';
 import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
 import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
 import { LearnHub, firstUnreadLesson, type HubView } from './ui/LearnHub';
-import { encodeDesign, introSeen, loadCleared, markIntroSeen, readHashDesign, saveCleared, savedTheme, saveTheme, systemTheme, type Theme } from './ui/persist';
+import { clearDesign, encodeDesign, introSeen, loadCleared, loadDesign, loadLastScenario, markIntroSeen, readHashDesign, saveCleared, saveDesign, saveLastScenario, savedTheme, saveTheme, systemTheme, type SharedDesign, type Theme } from './ui/persist';
 import { Tour, type TourStep } from './ui/Tour';
 import { LESSONS, TERMS } from './content/learn';
 import { IntroDialog, Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from './ui/Panels';
@@ -32,10 +33,19 @@ const ALL = [...SCENARIOS, SANDBOX];
 const TICK_MS = 700;
 const HOLD_TICKS = 5;
 const HISTORY = 40;
-const DESKTOP_FIT = { padding: { top: '190px', bottom: '150px', left: '48px', right: '48px' }, maxZoom: 1.05 } as const;
 const MOBILE_FIT = { padding: 0.12, maxZoom: 1 } as const;
-// On phones the overlays sit outside the canvas, so no space needs reserving
-const fitOptions = () => (window.innerWidth <= 900 ? MOBILE_FIT : DESKTOP_FIT);
+/** Fit the diagram into the canvas space that the floating pressure window and metrics dock leave free. */
+function fitOptions(): FitViewOptions {
+  // On phones the overlays sit outside the canvas, so no space needs reserving
+  if (window.innerWidth <= 900) return MOBILE_FIT;
+  const canvas = document.querySelector('.canvas')?.getBoundingClientRect();
+  const top = document.querySelector('.pressure-window')?.getBoundingClientRect();
+  const bottom = document.querySelector('.telemetry')?.getBoundingClientRect();
+  const padTop = canvas && top ? Math.max(top.bottom - canvas.top + 24, 120) : 190;
+  const padBottom = canvas && bottom ? Math.max(canvas.bottom - bottom.top + 24, 100) : 150;
+  const px = (n: number) => `${Math.round(n)}px` as `${number}px`;
+  return { padding: { top: px(padTop), bottom: px(padBottom), left: px(48), right: px(48) }, maxZoom: 1.05, minZoom: 0.35 };
+}
 const nodeTypes = { sim: SimNodeView };
 const edgeTypes = { flow: FlowEdge };
 
@@ -62,6 +72,27 @@ function buildFlow(s: Scenario): { nodes: SimFlowNode[]; edges: FlowEdgeType[] }
     })),
     edges: s.edges.map((e) => edgeOf(e.source, e.target)),
   };
+}
+
+function designToFlow(d: SharedDesign) {
+  return {
+    nodes: d.nodes.map((n) => ({
+      id: n.id,
+      type: 'sim' as const,
+      position: { x: n.x, y: n.y },
+      deletable: n.type !== 'users',
+      data: { kind: n.type, config: n.config },
+    })),
+    edges: d.edges.map((e) => edgeOf(e.source, e.target)),
+  };
+}
+
+/** Where to start: the scenario you were last on, with your work restored. */
+function startingPoint(): { id: string; restored: boolean; flow: ReturnType<typeof buildFlow> } {
+  const last = loadLastScenario();
+  const s = ALL.find((x) => x.id === last) ?? SCENARIOS[0];
+  const saved = loadDesign(s.id);
+  return { id: s.id, restored: !!saved, flow: saved ? designToFlow(saved) : buildFlow(s) };
 }
 
 /** Exponential smoothing so the numbers settle instead of flickering. */
@@ -94,9 +125,10 @@ function BrandMark() {
 }
 
 export default function App() {
-  const [scenarioId, setScenarioId] = useState(SCENARIOS[0].id);
+  const start = useMemo(() => startingPoint(), []);
+  const [scenarioId, setScenarioId] = useState(start.id);
   const scenario = ALL.find((s) => s.id === scenarioId)!;
-  const initial = useMemo(() => buildFlow(SCENARIOS[0]), []);
+  const initial = start.flow;
   const [nodes, setNodes, onNodesChange] = useNodesState<SimFlowNode>(initial.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdgeType>(initial.edges);
   const [running, setRunning] = useState(false);
@@ -112,7 +144,7 @@ export default function App() {
   const [cleared, setCleared] = useState<Set<string>>(() => loadCleared());
   const [intro, setIntro] = useState<number | null>(() => (introSeen() || readHashDesign() ? null : 0));
   const [touring, setTouring] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; action?: { label: string; run: () => void } } | null>(null);
   const [picker, setPicker] = useState(false);
   const [hub, setHub] = useState<HubView | null>(null);
   const [theme, setTheme] = useState<Theme>(() => savedTheme() ?? systemTheme());
@@ -136,10 +168,10 @@ export default function App() {
       return n;
     });
   const toastTimer = useRef<number | undefined>(undefined);
-  const showToast = useCallback((text: string) => {
-    setToast(text);
+  const showToast = useCallback((text: string, action?: { label: string; run: () => void }) => {
+    setToast({ text, action });
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
+    toastTimer.current = window.setTimeout(() => setToast(null), action ? 6000 : 2600);
   }, []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedRef = useRef<string | null>(null);
@@ -156,6 +188,38 @@ export default function App() {
   const metricsRef = useRef<Metrics | null>(null);
   const streakRef = useRef(0);
   const flow = useReactFlow();
+  // Refit the diagram when the overlays change size, unless the user has panned or zoomed themselves
+  const userMoved = useRef(false);
+  useEffect(() => {
+    let last = '';
+    let t = 0;
+    const check = () => {
+      const a = document.querySelector('.pressure-window')?.getBoundingClientRect().height ?? 0;
+      const b = document.querySelector('.telemetry')?.getBoundingClientRect().height ?? 0;
+      const key = `${Math.round(a)}:${Math.round(b)}:${window.innerWidth}:${window.innerHeight}`;
+      if (key === last) return;
+      last = key;
+      window.clearTimeout(t);
+      t = window.setTimeout(() => {
+        if (!userMoved.current) flow.fitView({ ...fitOptions(), duration: 200 });
+      }, 120);
+    };
+    const ro = new ResizeObserver(check);
+    const watch = () => {
+      ro.disconnect();
+      document.querySelectorAll('.pressure-window, .telemetry, .canvas').forEach((el) => ro.observe(el));
+    };
+    watch();
+    // the overlays re-mount when they switch between empty and live states
+    const mo = new MutationObserver(watch);
+    const canvas = document.querySelector('.canvas');
+    if (canvas) mo.observe(canvas, { childList: true });
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+      window.clearTimeout(t);
+    };
+  }, [flow]);
 
   const graph: SimGraph = useMemo(
     () => ({
@@ -166,6 +230,8 @@ export default function App() {
   );
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
+  const edgesRef = useRef(edges);
+  edgesRef.current = edges;
   const [mixOverride, setMixOverride] = useState<Partial<TrafficProfile> | null>(null);
   const traffic: TrafficProfile = useMemo(
     () => ({ ...scenario.traffic, ...(scenario.id === SANDBOX.id ? mixOverride ?? {} : {}) }),
@@ -177,9 +243,11 @@ export default function App() {
   graphRef.current = graph;
 
   const loadScenario = useCallback(
-    (id: string) => {
+    (id: string, opts: { fresh?: boolean } = {}) => {
       const s = ALL.find((x) => x.id === id)!;
-      const f = buildFlow(s);
+      if (opts.fresh) clearDesign(id);
+      const saved = opts.fresh ? null : loadDesign(id);
+      const f = saved ? designToFlow(saved) : buildFlow(s);
       setScenarioId(id);
       setNodes(f.nodes);
       setEdges(f.edges);
@@ -197,6 +265,7 @@ export default function App() {
       setTab('mission');
       setPicked(null);
       if (window.location.hash) window.history.replaceState(null, '', window.location.pathname);
+      userMoved.current = false;
       requestAnimationFrame(() => flow.fitView({ ...fitOptions(), duration: 250 }));
     },
     [flow, setEdges, setNodes, setTab],
@@ -208,22 +277,71 @@ export default function App() {
 
   // Open a shared design from the URL, once
   useEffect(() => {
-    const d = readHashDesign();
-    if (!d) return;
-    loadScenario(ALL.some((x) => x.id === d.scenarioId) ? d.scenarioId : SANDBOX.id);
-    setNodes(
-      d.nodes.map((n) => ({
-        id: n.id,
-        type: 'sim',
-        position: { x: n.x, y: n.y },
-        deletable: n.type !== 'users',
-        data: { kind: n.type, config: n.config },
-      })),
-    );
-    setEdges(d.edges.map((e) => edgeOf(e.source, e.target)));
-    showToast('Loaded a shared design. Press Space to run it.');
+    if (/^#d=/.test(window.location.hash)) {
+      const d = readHashDesign();
+      if (!d) {
+        window.history.replaceState(null, '', window.location.pathname);
+        showToast('That share link is broken or incomplete, so it couldn\'t be opened.');
+        return;
+      }
+      const target = ALL.some((x) => x.id === d.scenarioId) ? d.scenarioId : SANDBOX.id;
+      const mine = loadDesign(target);
+      loadScenario(target);
+      const f = designToFlow({ ...d, scenarioId: target });
+      setNodes(f.nodes);
+      setEdges(f.edges);
+      showToast(
+        'Loaded a shared design. Press Space to run it.',
+        mine
+          ? {
+              label: 'Back to my design',
+              run: () => {
+                const m = designToFlow(mine);
+                setNodes(m.nodes);
+                setEdges(m.edges);
+              },
+            }
+          : undefined,
+      );
+    } else if (start.restored) {
+      showToast('Picked up where you left off.', { label: 'Start over', run: () => loadScenario(start.id, { fresh: true }) });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep your work: remember the scenario you're on and your design in each one
+  useEffect(() => {
+    saveLastScenario(scenarioId);
+  }, [scenarioId]);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const s = ALL.find((x) => x.id === scenarioId)!;
+      const pack = (ns: SimFlowNode[], es: FlowEdgeType[]): SharedDesign => ({
+        scenarioId,
+        nodes: ns.map((n) => ({ id: n.id, type: n.data.kind, x: n.position.x, y: n.position.y, config: n.data.config })),
+        edges: es.map((e) => ({ source: e.source, target: e.target })),
+      });
+      const mine = pack(nodes, edges);
+      const b = buildFlow(s);
+      // don't store anything until the design actually differs from the scenario's starting point
+      if (encodeDesign(mine) === encodeDesign(pack(b.nodes, b.edges))) clearDesign(scenarioId);
+      else saveDesign(mine);
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [nodes, edges, scenarioId]);
+
+  const resetScenario = useCallback(() => {
+    const id = scenario.id;
+    const before = { nodes: nodesRef.current, edges: edgesRef.current };
+    loadScenario(id, { fresh: true });
+    showToast('Scenario reset.', {
+      label: 'Undo',
+      run: () => {
+        setNodes(before.nodes);
+        setEdges(before.edges);
+      },
+    });
+  }, [scenario.id, loadScenario, showToast, setNodes, setEdges]);
 
   const share = useCallback(async () => {
     const code = encodeDesign({
@@ -354,6 +472,18 @@ export default function App() {
     [setEdges, setNodes, setTab],
   );
 
+  // After a mouse click, don't leave focus on the button: otherwise Space presses it again
+  // (adding another component, flipping the theme) instead of running the simulation.
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (e.detail === 0) return; // keyboard activation: keep focus where it is
+      const b = (e.target as HTMLElement).closest?.('.palette-item, .topbar button, .topbar a');
+      if (b instanceof HTMLElement) b.blur();
+    };
+    window.addEventListener('click', onClick);
+    return () => window.removeEventListener('click', onClick);
+  }, []);
+
   // Space toggles run
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -466,7 +596,7 @@ export default function App() {
         </div>
         <div className="topbar-spacer" />
         <div className="topbar-tools">
-        <button className="btn btn-ghost btn-icon" data-tour="reset" onClick={() => loadScenario(scenario.id)} title="Reset scenario">
+        <button className="btn btn-ghost btn-icon" data-tour="reset" onClick={resetScenario} title="Reset scenario">
           <RotateCcw size={15} aria-hidden />
           <span>Reset</span>
         </button>
@@ -536,6 +666,10 @@ export default function App() {
           deleteKeyCode={['Backspace', 'Delete']}
           fitView
           fitViewOptions={fitOptions()}
+          onMoveStart={(e) => {
+            // e is null for programmatic moves (fitView); only real drags/zooms count
+            if (e) userMoved.current = true;
+          }}
           proOptions={{ hideAttribution: true }}
           connectionLineStyle={{ stroke: 'var(--ink)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
         >
@@ -622,7 +756,18 @@ export default function App() {
       {toast && (
         <div className="toast" role="status">
           <Check size={14} strokeWidth={2.5} aria-hidden />
-          {toast}
+          {toast.text}
+          {toast.action && (
+            <button
+              className="toast-action"
+              onClick={() => {
+                toast.action!.run();
+                setToast(null);
+              }}
+            >
+              {toast.action.label}
+            </button>
+          )}
         </div>
       )}
       {won && <WinDialog s={scenario} next={next} onStay={() => setWon(false)} onNext={() => loadScenario(next ? next.id : SANDBOX.id)} />}

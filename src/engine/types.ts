@@ -193,6 +193,8 @@ export interface Metrics {
   piiLeak: number;
   /** Abusive accounts are running unchecked. */
   abuseUnchecked: boolean;
+  /** No path from Users to any model: nothing can be answered. */
+  noModel: boolean;
   /** A voice app: first-token time is time to first audio. */
   voice: boolean;
   /** A handful of individual requests from this tick, failures first. */

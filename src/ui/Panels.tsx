@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BookOpen, Check, ChevronDown, Lightbulb, Trash2, TriangleAlert, X } from 'lucide-react';
 import { COMPONENT_TERM, TERM_BY_ID } from '../content/learn';
 import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../engine/components';
@@ -522,6 +522,13 @@ const INTRO = [
 export function IntroDialog({ step, setStep, onClose, onTour }: { step: number; setStep: (n: number) => void; onClose: () => void; onTour: () => void }) {
   const s = INTRO[step];
   const last = step === INTRO.length - 1;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="intro-title">
       <div className="dialog">
@@ -562,6 +569,13 @@ export function IntroDialog({ step, setStep, onClose, onTour }: { step: number; 
 }
 
 export function WinDialog({ s, next, onNext, onStay }: { s: Scenario; next?: Scenario; onNext: () => void; onStay: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onStay();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onStay]);
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="win-title">
       <div className="dialog">

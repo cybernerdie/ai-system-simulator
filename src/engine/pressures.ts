@@ -1,6 +1,6 @@
 import type { Cause, Goal, GoalMetric, Metrics } from './types';
 
-export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent' | 'background_jobs' | 'uncached_prompt' | 'pii_leak' | 'abuse' | 'slow_voice';
+export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent' | 'background_jobs' | 'uncached_prompt' | 'pii_leak' | 'abuse' | 'slow_voice' | 'no_model';
 
 export interface Pressure {
   key: PressureKey;
@@ -185,6 +185,11 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     why: 'Users stare at a blank screen until the whole answer is generated.',
     try: 'Turn on streaming. Note: anything that must read the full answer first (an Output Judge) blocks streaming.',
   },
+  no_model: {
+    title: 'Nothing reaches a model',
+    why: 'Requests leave Users but never arrive at an LLM, so every one of them fails. Components only do anything when they sit on a path from Users to a model.',
+    try: 'Connect a path Users → … → LLM: drag from a node\'s right dot to the next node. Add an LLM from the left if there isn\'t one.',
+  },
   stable: {
     title: 'Holding',
     why: 'Nothing is binding right now. Push more traffic or change the mix to find the next wall.',
@@ -210,6 +215,7 @@ export function goalMet(m: Metrics, g: Goal) {
 
 /** Name the single limit that hurts most right now. */
 export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
+  if (m.noModel) return { key: 'no_model', ...PRESSURES.no_model };
   const unmet = goals.filter((g) => !goalMet(m, g)).map((g) => g.metric);
   if (!m.qualityVisible && unmet.some((u) => QUALITY_METRICS.includes(u))) return { key: 'blind', ...PRESSURES.blind };
   const causes = Object.entries(m.causes) as [Cause, number][];

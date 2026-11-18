@@ -142,3 +142,59 @@ export function saveTheme(t: Theme) {
 export function systemTheme(): Theme {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
+
+/* ---------- work in progress (per scenario) ---------- */
+
+const KEY_LAST = 'aisim.lastScenario.v1';
+const KEY_DESIGNS = 'aisim.designs.v1';
+
+export function loadLastScenario(): string | null {
+  try {
+    return localStorage.getItem(KEY_LAST);
+  } catch {
+    return null;
+  }
+}
+export function saveLastScenario(id: string) {
+  try {
+    localStorage.setItem(KEY_LAST, id);
+  } catch {
+    /* ignore */
+  }
+}
+function readDesigns(): Record<string, string> {
+  try {
+    const v = JSON.parse(localStorage.getItem(KEY_DESIGNS) ?? '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+}
+/** The design you last left in this scenario, if you changed it. */
+export function loadDesign(scenarioId: string): SharedDesign | null {
+  const raw = readDesigns()[scenarioId];
+  if (typeof raw !== 'string') return null;
+  const d = decodeDesign(raw);
+  return d && d.scenarioId === scenarioId ? d : null;
+}
+export function saveDesign(d: SharedDesign) {
+  try {
+    const all = readDesigns();
+    all[d.scenarioId] = encodeDesign(d);
+    localStorage.setItem(KEY_DESIGNS, JSON.stringify(all));
+  } catch {
+    /* storage full or unavailable: work just won't persist */
+  }
+}
+export function clearDesign(scenarioId: string) {
+  try {
+    const all = readDesigns();
+    delete all[scenarioId];
+    localStorage.setItem(KEY_DESIGNS, JSON.stringify(all));
+  } catch {
+    /* ignore */
+  }
+}
+export function savedScenarioIds(): Set<string> {
+  return new Set(Object.keys(readDesigns()));
+}

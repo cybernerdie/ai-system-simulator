@@ -1140,6 +1140,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     offlineInRealtime: (traffic.batchShare ?? 0) > 0 && !batchQ,
     piiLeak: piiReqs.length ? piiReqs.filter((t) => t.piiLeak).length / piiReqs.length : 0,
     abuseUnchecked: (traffic.abuseShare ?? 0) > 0 && !limits,
+    noModel: !users || !llms.length,
     voice: !!traffic.voice,
     bigUncachedPrompt: basePrompt > 3000 && llms.some((l) => !P(l).promptCache),
     qualityVisible,
