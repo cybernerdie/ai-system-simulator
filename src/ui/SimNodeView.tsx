@@ -1,6 +1,7 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { COMPONENTS } from '../engine/components';
 import type { ComponentType, NodeConfig, NodeStat } from '../engine/types';
+import { KindIcon } from './icons';
 
 export type SimNodeData = {
   kind: ComponentType;
@@ -10,40 +11,46 @@ export type SimNodeData = {
 };
 export type SimFlowNode = Node<SimNodeData, 'sim'>;
 
-function subtitle(kind: ComponentType, config: NodeConfig) {
+function chips(kind: ComponentType, config: NodeConfig): string[] {
   switch (kind) {
     case 'llm':
-      return `${config.size}${config.streaming ? ' · streaming' : ''}`;
+      return [String(config.size), ...(config.streaming ? ['streaming'] : [])];
     case 'vector_db':
-      return `top-${config.topK} · ${config.chunk} chunks`;
+      return [`top-${config.topK}`, `${config.chunk} chunks`];
     case 'reranker':
-      return `keep ${config.keep}`;
+      return [`keep ${config.keep}`];
     case 'agent':
-      return `max ${config.maxSteps} steps`;
+      return [`≤ ${config.maxSteps} steps`];
     case 'semantic_cache':
-      return `threshold ${Number(config.threshold).toFixed(2)}`;
+      return [`≥ ${Number(config.threshold).toFixed(2)} sim`];
     case 'input_guard':
-      return `strictness ${Number(config.strictness).toFixed(2)}`;
+      return [`strict ${Number(config.strictness).toFixed(2)}`];
     default:
-      return '';
+      return [];
   }
 }
 
 export function SimNodeView({ data, selected }: NodeProps<SimFlowNode>) {
   const spec = COMPONENTS[data.kind];
   const status = data.running ? data.stat?.status ?? 'idle' : 'idle';
-  const sub = subtitle(data.kind, data.config);
+  const tags = chips(data.kind, data.config);
   return (
-    <div className={`simnode status-${status}${selected ? ' is-selected' : ''}`} style={{ ['--kind' as string]: spec.color }}>
+    <div className={`simnode status-${status}${selected ? ' is-selected' : ''}`}>
       {data.kind !== 'users' && <Handle type="target" position={Position.Left} />}
-      <div className="simnode-badge">{spec.short}</div>
-      <div className="simnode-body">
-        <div className="simnode-name">{spec.name}</div>
-        {sub && <div className="simnode-sub">{sub}</div>}
-        <div className="simnode-stat">
-          <span className="dot" />
-          {data.running ? data.stat?.label ?? 'idle' : 'idle'}
+      <div className="simnode-head">
+        <KindIcon kind={data.kind} />
+        <span className="simnode-name">{spec.name}</span>
+      </div>
+      {tags.length > 0 && (
+        <div className="simnode-chips">
+          {tags.map((t) => (
+            <span key={t}>{t}</span>
+          ))}
         </div>
+      )}
+      <div className="simnode-stat">
+        <span className="dot" />
+        <span>{data.running ? data.stat?.label ?? 'idle' : 'idle'}</span>
       </div>
       <Handle type="source" position={Position.Right} />
     </div>

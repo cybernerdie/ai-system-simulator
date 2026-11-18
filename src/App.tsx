@@ -10,36 +10,46 @@ import {
   useNodesState,
   useReactFlow,
   type Connection,
-  type Edge,
 } from '@xyflow/react';
+import { CircleQuestionMark, Code, Pause, Play, RotateCcw } from 'lucide-react';
 import { COMPONENTS } from './engine/components';
 import { simulate } from './engine/simulate';
 import { bindingPressure, goalMet, type Pressure } from './engine/pressures';
 import { SANDBOX, SCENARIOS, withDefaults, type Scenario } from './engine/scenarios';
 import type { ComponentType, ConfigValue, Metrics, SimGraph } from './engine/types';
 import { SimNodeView, type SimFlowNode } from './ui/SimNodeView';
-import { Inspector, IntroDialog, MetricsBar, Palette, PressureCard, ScenarioBrief, WinDialog } from './ui/Panels';
+import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
+import { IntroDialog, Palette, PressureWindow, SidePanel, Telemetry, WinDialog } from './ui/Panels';
 
 const ALL = [...SCENARIOS, SANDBOX];
 const TICK_MS = 700;
 const HOLD_TICKS = 5;
+const HISTORY = 40;
+const FIT = { padding: { top: '190px', bottom: '150px', left: '48px', right: '48px' }, maxZoom: 1.05 } as const;
 const nodeTypes = { sim: SimNodeView };
+const edgeTypes = { flow: FlowEdge };
 
-function buildFlow(s: Scenario): { nodes: SimFlowNode[]; edges: Edge[] } {
+function edgeOf(source: string, target: string): FlowEdgeType {
+  return {
+    id: `${source}->${target}`,
+    source,
+    target,
+    type: 'flow',
+    markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: '#a1a1aa' },
+  };
+}
+
+function buildFlow(s: Scenario): { nodes: SimFlowNode[]; edges: FlowEdgeType[] } {
   return {
     nodes: s.nodes.map(withDefaults).map((n) => ({
       id: n.id,
       type: 'sim',
-      position: { x: n.x, y: n.y },
+      position: { x: n.x * 1.15, y: n.y },
       deletable: n.type !== 'users',
       data: { kind: n.type, config: n.config! },
     })),
     edges: s.edges.map((e) => edgeOf(e.source, e.target)),
   };
-}
-
-function edgeOf(source: string, target: string): Edge {
-  return { id: `${source}->${target}`, source, target, markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 } };
 }
 
 /** Exponential smoothing so the numbers settle instead of flickering. */
@@ -60,22 +70,34 @@ function smooth(prev: Metrics | null, next: Metrics, a = 0.35): Metrics {
   };
 }
 
+function BrandMark() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden>
+      <rect x="1" y="7" width="8" height="8" rx="2.5" fill="#6366f1" />
+      <circle cx="16" cy="5.5" r="4" fill="#0ea5e9" />
+      <rect x="12" y="12" width="9" height="9" rx="2.5" fill="#f97316" />
+      <path d="M9 11 L12 7.5 M9 11 L12.5 15.5" stroke="#18181b" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function App() {
   const [scenarioId, setScenarioId] = useState(SCENARIOS[0].id);
   const scenario = ALL.find((s) => s.id === scenarioId)!;
   const initial = useMemo(() => buildFlow(SCENARIOS[0]), []);
   const [nodes, setNodes, onNodesChange] = useNodesState<SimFlowNode>(initial.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initial.edges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdgeType>(initial.edges);
   const [running, setRunning] = useState(false);
   const [rps, setRps] = useState(scenario.traffic.rps);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [history, setHistory] = useState<Metrics[]>([]);
   const [pressure, setPressure] = useState<Pressure | null>(null);
   const [streak, setStreak] = useState(0);
   const [won, setWon] = useState(false);
   const [cleared, setCleared] = useState<Set<string>>(() => new Set());
-  const [showHint, setShowHint] = useState(false);
   const [intro, setIntro] = useState<number | null>(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<'mission' | 'component'>('mission');
   const seed = useRef(1);
   const metricsRef = useRef<Metrics | null>(null);
   const streakRef = useRef(0);
@@ -103,13 +125,14 @@ export default function App() {
       setRps(s.traffic.rps);
       setRunning(false);
       setMetrics(null);
+      setHistory([]);
       metricsRef.current = null;
       setPressure(null);
       setStreak(0);
       setWon(false);
-      setShowHint(false);
       setSelectedId(null);
-      requestAnimationFrame(() => flow.fitView({ padding: 0.35, maxZoom: 1.1 }));
+      setTab('mission');
+      requestAnimationFrame(() => flow.fitView({ ...FIT, duration: 250 }));
     },
     [flow, setEdges, setNodes],
   );
@@ -129,6 +152,7 @@ export default function App() {
       const m = smooth(metricsRef.current, raw);
       metricsRef.current = m;
       setMetrics(m);
+      setHistory((h) => [...h.slice(-(HISTORY - 1)), m]);
       setPressure(bindingPressure(m, scenario.goals));
       if (scenario.goals.length) {
         const ok = scenario.goals.every((g) => goalMet(m, g));
@@ -154,11 +178,14 @@ export default function App() {
   );
   const viewEdges = useMemo(
     () =>
-      edges.map((e) => {
-        const live = running && active.has(e.source) && active.has(e.target);
-        return { ...e, animated: live, className: live ? 'live' : undefined };
-      }),
-    [edges, running, active],
+      edges.map((e) => ({
+        ...e,
+        data: {
+          live: running && active.has(e.source) && active.has(e.target),
+          rate: metrics?.nodeStats[e.target]?.rps ?? 0,
+        },
+      })),
+    [edges, running, active, metrics],
   );
 
   const onConnect = useCallback(
@@ -179,16 +206,17 @@ export default function App() {
         const minX = Math.min(0, ...ns.map((n) => n.position.x));
         const maxY = Math.max(0, ...ns.map((n) => n.position.y));
         const taken = (p: { x: number; y: number }) =>
-          ns.some((n) => Math.abs(n.position.x - p.x) < 180 && Math.abs(n.position.y - p.y) < 100);
-        pos = { x: minX + 190, y: maxY + 150 };
-        while (taken(pos)) pos = { x: pos.x + 200, y: pos.y };
-        setTimeout(() => flow.fitView({ padding: 0.3, maxZoom: 1.1, duration: 300 }), 30);
+          ns.some((n) => Math.abs(n.position.x - p.x) < 210 && Math.abs(n.position.y - p.y) < 110);
+        pos = { x: minX + 220, y: maxY + 160 };
+        while (taken(pos)) pos = { x: pos.x + 230, y: pos.y };
+        setTimeout(() => flow.fitView({ ...FIT, duration: 300 }), 30);
       }
       setNodes((ns) => [
         ...ns.map((n) => ({ ...n, selected: false })),
         { id, type: 'sim', position: pos!, selected: true, data: { kind: type, config: { ...COMPONENTS[type].defaults } } },
       ]);
       setSelectedId(id);
+      setTab('component');
     },
     [flow, setNodes],
   );
@@ -203,6 +231,7 @@ export default function App() {
       setNodes((ns) => ns.filter((n) => n.id !== id));
       setEdges((es) => es.filter((e) => e.source !== id && e.target !== id));
       setSelectedId(null);
+      setTab('mission');
     },
     [setEdges, setNodes],
   );
@@ -228,10 +257,11 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden />
-          AISim
+          <BrandMark />
+          <span>AISim</span>
         </div>
-        <label className="scenario-select">
+        <span className="topbar-divider" aria-hidden />
+        <label className="select-pill">
           <span className="sr-only">Scenario</span>
           <select value={scenario.id} onChange={(e) => loadScenario(e.target.value)}>
             {ALL.map((s) => (
@@ -242,24 +272,29 @@ export default function App() {
             ))}
           </select>
         </label>
-        <button className={`run ${running ? 'is-running' : ''}`} onClick={() => setRunning((r) => !r)}>
-          {running ? 'Pause' : 'Run'}
-        </button>
         <label className="traffic">
           <span>Traffic</span>
           <input type="range" min={1} max={150} value={rps} onChange={(e) => setRps(Number(e.target.value))} />
           <output>{rps} req/s</output>
         </label>
         <div className="topbar-spacer" />
-        <button className="link" onClick={() => loadScenario(scenario.id)}>
-          Reset scenario
+        <button className="btn btn-ghost btn-icon" onClick={() => loadScenario(scenario.id)} title="Reset scenario">
+          <RotateCcw size={15} aria-hidden />
+          <span>Reset</span>
         </button>
-        <button className="link" onClick={() => setIntro(0)}>
-          How it works
+        <button className="btn btn-ghost btn-icon" onClick={() => setIntro(0)} title="How it works">
+          <CircleQuestionMark size={15} aria-hidden />
+          <span>How it works</span>
         </button>
-        <a className="link" href="https://github.com/cybernerdie/ai-system-simulator" target="_blank" rel="noreferrer">
-          GitHub
+        <a className="btn btn-ghost btn-icon" href="https://github.com/cybernerdie/ai-system-simulator" target="_blank" rel="noreferrer" title="Source on GitHub">
+          <Code size={15} aria-hidden />
+          <span className="sr-only">GitHub</span>
         </a>
+        <button className={`btn btn-primary btn-run${running ? ' is-running' : ''}`} onClick={() => setRunning((r) => !r)}>
+          {running ? <Pause size={14} fill="currentColor" aria-hidden /> : <Play size={14} fill="currentColor" aria-hidden />}
+          {running ? 'Pause' : 'Run'}
+          <kbd>Space</kbd>
+        </button>
       </header>
 
       <Palette onAdd={(t) => addNode(t)} />
@@ -273,46 +308,51 @@ export default function App() {
         onDrop={(e) => {
           e.preventDefault();
           const t = e.dataTransfer.getData('application/aisim') as ComponentType;
-          if (t && COMPONENTS[t]) addNode(t, flow.screenToFlowPosition({ x: e.clientX - 80, y: e.clientY - 30 }));
+          if (t && COMPONENTS[t]) addNode(t, flow.screenToFlowPosition({ x: e.clientX - 100, y: e.clientY - 36 }));
         }}
       >
         <ReactFlow
           nodes={viewNodes}
           edges={viewEdges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
-          onSelectionChange={({ nodes: sel }) => setSelectedId(sel[0]?.id ?? null)}
+          onSelectionChange={({ nodes: sel }) => {
+            const id = sel[0]?.id ?? null;
+            setSelectedId(id);
+            setTab(id ? 'component' : 'mission');
+          }}
           deleteKeyCode={['Backspace', 'Delete']}
           fitView
-          fitViewOptions={{ padding: 0.35, maxZoom: 1.1 }}
+          fitViewOptions={FIT}
           proOptions={{ hideAttribution: true }}
+          connectionLineStyle={{ stroke: '#18181b', strokeWidth: 1.5, strokeDasharray: '4 4' }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={22} size={1.4} color="#b9c2cf" />
-          <Controls showInteractive={false} />
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color="#d4d4d8" />
+          <Controls showInteractive={false} position="bottom-right" orientation="horizontal" />
         </ReactFlow>
+        <PressureWindow p={pressure} running={running} hasRun={!!metrics} />
+        <Telemetry m={metrics} history={history} goals={scenario.goals} />
       </main>
 
-      <aside className="side">
-        <ScenarioBrief s={scenario} m={metrics} streak={streak} needed={HOLD_TICKS} showHint={showHint} onHint={() => setShowHint(true)} />
-        <PressureCard p={pressure} running={running || !!metrics} warnings={metrics?.warnings ?? []} />
-        {selected && (
-          <Inspector id={selected.id} kind={selected.data.kind} config={selected.data.config} onChange={updateConfig} onDelete={deleteNode} />
-        )}
-      </aside>
-
-      <MetricsBar m={metrics} goals={scenario.goals} />
+      <SidePanel
+        key={scenario.id}
+        scenario={scenario}
+        m={metrics}
+        streak={streak}
+        needed={HOLD_TICKS}
+        warnings={metrics?.warnings ?? []}
+        selected={selected ? { id: selected.id, kind: selected.data.kind, config: selected.data.config } : undefined}
+        onChange={updateConfig}
+        onDelete={deleteNode}
+        tab={tab}
+        setTab={setTab}
+      />
 
       {intro !== null && <IntroDialog step={intro} setStep={setIntro} onClose={() => setIntro(null)} />}
-      {won && (
-        <WinDialog
-          s={scenario}
-          next={next}
-          onStay={() => setWon(false)}
-          onNext={() => loadScenario(next ? next.id : SANDBOX.id)}
-        />
-      )}
+      {won && <WinDialog s={scenario} next={next} onStay={() => setWon(false)} onNext={() => loadScenario(next ? next.id : SANDBOX.id)} />}
     </div>
   );
 }
