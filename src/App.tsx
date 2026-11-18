@@ -179,6 +179,15 @@ export default function App() {
     selectedRef.current = selectedId;
   }, [selectedId]);
   const [tab, setTabRaw] = useState<Tab>('mission');
+  // Phones: component settings open as a bottom sheet over the canvas instead of far down the page
+  const [isPhone, setIsPhone] = useState(() => window.matchMedia('(max-width: 900px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)');
+    const on = () => setIsPhone(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [picked, setPicked] = useState<Shown | null>(null);
   const setTab = useCallback((t: Tab) => {
     setTabRaw(t);
@@ -196,7 +205,8 @@ export default function App() {
     const check = () => {
       const a = document.querySelector('.pressure-window')?.getBoundingClientRect().height ?? 0;
       const b = document.querySelector('.telemetry')?.getBoundingClientRect().height ?? 0;
-      const key = `${Math.round(a)}:${Math.round(b)}:${window.innerWidth}:${window.innerHeight}`;
+      const rf = document.querySelector('.react-flow')?.getBoundingClientRect();
+      const key = `${Math.round(a)}:${Math.round(b)}:${Math.round(rf?.width ?? 0)}x${Math.round(rf?.height ?? 0)}:${window.innerWidth}`;
       if (key === last) return;
       last = key;
       window.clearTimeout(t);
@@ -207,7 +217,7 @@ export default function App() {
     const ro = new ResizeObserver(check);
     const watch = () => {
       ro.disconnect();
-      document.querySelectorAll('.pressure-window, .telemetry, .canvas').forEach((el) => ro.observe(el));
+      document.querySelectorAll('.pressure-window, .telemetry, .canvas, .react-flow').forEach((el) => ro.observe(el));
     };
     watch();
     // the overlays re-mount when they switch between empty and live states
@@ -660,6 +670,7 @@ export default function App() {
             if (id === selectedRef.current) return;
             selectedRef.current = id;
             setSelectedId(id);
+            setSheetOpen(!!id);
             if (id) setTab('component');
             else if (tab === 'component') setTab('mission');
           }}
@@ -674,13 +685,15 @@ export default function App() {
           connectionLineStyle={{ stroke: 'var(--ink)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color={theme === 'dark' ? '#2a2a2e' : '#d4d4d8'} />
-          <Controls showInteractive={false} position="bottom-right" orientation="horizontal" />
+          {!isPhone && <Controls showInteractive={false} position="bottom-right" orientation="horizontal" />}
         </ReactFlow>
         <PressureWindow p={pressure} running={running} hasRun={!!metrics} />
         <Telemetry m={metrics} history={history} goals={scenario.goals} />
       </main>
 
+      {isPhone && sheetOpen && selected && <div className="sheet-backdrop" onClick={() => setSheetOpen(false)} aria-hidden />}
       <SidePanel
+        sheet={isPhone ? { open: sheetOpen && !!selected, onClose: () => setSheetOpen(false) } : undefined}
         key={scenario.id}
         scenario={scenario}
         m={metrics}

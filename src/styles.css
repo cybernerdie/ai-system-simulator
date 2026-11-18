@@ -1255,3 +1255,79 @@ body, .topbar, .palette, .side, .canvas, .simnode, .telemetry, .pressure-window 
   .pressure-try { grid-column: 2; grid-row: 1 / 3; align-self: start; }
 }
 .toast { width: max-content; max-width: calc(100vw - 24px); }
+
+/* =========================================================
+   Phones — final pass (must stay at the end of the file)
+   ========================================================= */
+html, body { background: var(--bg); }
+.only-touch { display: none; }
+@media (pointer: coarse) {
+  .only-keys, .btn-run kbd { display: none !important; }
+  .only-touch { display: inline; }
+}
+.sheet-bar, .sheet-backdrop { display: none; }
+@media (max-width: 900px) {
+  /* iOS zooms the page into any input under 16px; keep everything at 16 so it never shifts */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* top bar: brand + tools / scenario + Run / traffic */
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'head head' 'scenario run' 'traffic traffic';
+    gap: var(--sp-2);
+    height: auto;
+  }
+  /* brand and tools share the first row: brand on the left, tools on the right */
+  .topbar > .brand { grid-area: head; justify-self: start; align-self: center; }
+  .topbar > .topbar-tools { grid-area: head; order: 0; justify-self: end; gap: 0; }
+  .topbar > .scenario-trigger { grid-area: scenario; min-width: 0; width: 100%; max-width: none; height: 40px; }
+  .topbar > .scenario-trigger .scenario-trigger-title { flex: 1; text-align: left; }
+  .topbar > .btn-run { grid-area: run; height: 40px; min-width: 0; padding: 0 var(--sp-4); }
+  .topbar > .traffic { grid-area: traffic; }
+  .topbar-tools .btn-icon, .topbar-tools .theme-toggle { width: 34px; height: 34px; }
+
+  /* scenario picker: let cards be as tall as their content, and give the list the room */
+  .picker-grid { grid-auto-rows: max-content; align-content: start; }
+  .picker-head > div > p { display: none; }
+  .picker-head { gap: var(--sp-2); padding: var(--sp-4); }
+  .scard { min-height: 0; }
+
+  /* Learn: lesson list is a compact strip; the lesson gets the screen */
+  .lesson-nav { max-height: 28vh; }
+
+  /* React Flow zoom buttons are hidden on phones (pinch to zoom); give the canvas a sensible height */
+  .canvas .react-flow { min-height: 260px; }
+
+  /* component settings as a bottom sheet */
+  .sheet-backdrop { display: block; position: fixed; inset: 0; z-index: 59; background: rgba(9, 9, 11, 0.45); }
+  .side.is-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    max-height: 78vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 18px 18px 0 0;
+    background: var(--surface);
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .side.is-sheet .sheet-bar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: var(--sp-2) var(--sp-3) 0;
+    background: var(--surface);
+  }
+  .sheet-grip { position: absolute; left: 50%; top: 8px; width: 36px; height: 4px; margin-left: -18px; border-radius: 4px; background: var(--track); }
+  .side.is-sheet .tabs { display: none; }
+}
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .side.is-sheet { animation: none; } }

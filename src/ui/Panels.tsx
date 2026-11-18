@@ -79,9 +79,10 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
   if (!m) {
     return (
       <div className="telemetry is-empty">
-        <span>Press</span>
-        <kbd>Space</kbd>
-        <span>to send traffic through your design.</span>
+        <span className="only-keys">Press</span>
+        <kbd className="only-keys">Space</kbd>
+        <span className="only-keys">to send traffic through your design.</span>
+        <span className="only-touch">Tap Run to send traffic through your design.</span>
       </div>
     );
   }
@@ -202,6 +203,7 @@ export function PressureWindow({ p, running, hasRun }: { p: Pressure | null; run
 export type Tab = 'mission' | 'requests' | 'component';
 
 export function SidePanel({
+  sheet,
   scenario,
   m,
   streak,
@@ -237,9 +239,19 @@ export function SidePanel({
   onDelete: (id: string) => void;
   tab: Tab;
   setTab: (t: Tab) => void;
+  /** Phones: show the panel as a bottom sheet over the canvas (component settings) */
+  sheet?: { open: boolean; onClose: () => void };
 }) {
   return (
-    <aside className="side">
+    <aside className={`side${sheet?.open ? ' is-sheet' : ''}`} aria-modal={sheet?.open || undefined} role={sheet?.open ? 'dialog' : undefined}>
+      {sheet?.open && (
+        <div className="sheet-bar">
+          <span className="sheet-grip" aria-hidden />
+          <button className="btn btn-ghost sheet-done" onClick={sheet.onClose}>
+            Done
+          </button>
+        </div>
+      )}
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'mission'} onClick={() => setTab('mission')}>
           Mission

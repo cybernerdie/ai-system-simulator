@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, Search, Shapes, X } from 'lucide-react';
 import type { Scenario } from '../engine/scenarios';
 
+// Phones: don't pop the keyboard up the moment a sheet opens
+const TOUCH = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+
 const LEVEL: Record<Scenario['difficulty'], string> = { 0: 'Open', 1: 'Intro', 2: 'Core', 3: 'Advanced' };
 
 function Difficulty({ level }: { level: Scenario['difficulty'] }) {
@@ -105,7 +108,7 @@ export function ScenarioPicker({
           <label className="search">
             <Search size={15} aria-hidden />
             <span className="sr-only">Search scenarios</span>
-            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by topic: memory, GPUs, agents, JSON…" />
+            <input autoFocus={!TOUCH} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by topic: memory, GPUs, agents, JSON…" />
           </label>
           <div className="chips" role="group" aria-label="Filter scenarios">
             {(
