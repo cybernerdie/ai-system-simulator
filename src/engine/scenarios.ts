@@ -431,6 +431,38 @@ export const SCENARIOS: Scenario[] = [
       edges: [...chain('users', 'emb', 'vdb', 'fb', 'llm'), { source: 'fb', target: 'llmb' }],
     },
   },
+  {
+    id: 'research-team',
+    difficulty: 3,
+    skills: ['Multi-agent', 'Orchestration', 'Hand-offs'],
+    title: '12 · The research assistant',
+    tagline: 'One agent, twenty tabs open, forty seconds per answer.',
+    brief:
+      'Analysts ask your assistant multi-part research questions: compare three vendors, summarise five competitors, build a briefing. A single agent works through every sub-question one after another, its prompt growing with each search result. Answers are slow and keep missing things. Leadership heard "multi-agent" on a podcast.',
+    traffic: { ...base, rps: 1, easyShare: 0.6, repeatShare: 0, complexShare: 0.7 },
+    goals: [
+      { metric: 'accuracy', op: '>=', value: 0.8 },
+      { metric: 'p50', op: '<=', value: 20000 },
+      { metric: 'costPer1k', op: '<=', value: 150 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'ag', type: 'agent', x: 260, y: 120, config: { maxSteps: 20 } },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'ag', 'llm'),
+    hint: 'Swap the single agent for an Agent Team. Then tune it: how many workers before hand-offs and loops cost more than they save? What do you do about the answers that come back wrong, and about teams that bounce work around forever?',
+    lesson:
+      'Multi-agent systems trade money for speed and focus. Parallel workers with small, focused contexts beat one agent drowning in its own history, but every agent is more calls, every hand-off loses detail, and agents can loop. Good teams are small (about one worker per sub-task), have a reviewer to catch what the hand-offs dropped, and have a hard cap on rounds.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'team', type: 'agent_team', x: 260, y: 120, config: { workers: 4, reviewer: true, maxRounds: 3 } },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+      ],
+      edges: chain('users', 'team', 'llm'),
+    },
+  },
 ];
 
 export const SANDBOX: Scenario = {

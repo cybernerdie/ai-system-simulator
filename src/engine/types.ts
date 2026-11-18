@@ -13,7 +13,8 @@ export type ComponentType =
   | 'memory'
   | 'eval_harness'
   | 'gpu_llm'
-  | 'fallback';
+  | 'fallback'
+  | 'agent_team';
 
 export type ConfigValue = number | string | boolean;
 export type NodeConfig = Record<string, ConfigValue>;
@@ -57,6 +58,8 @@ export interface TrafficProfile {
   qualityHidden?: boolean;
   /** Share of calls each model provider fails (outages, 5xx). */
   providerErrors?: Partial<Record<'A' | 'B', number>>;
+  /** Multi-part research tasks that need several lookups (3–6 sub-questions each). */
+  complexShare?: number;
 }
 
 export type Outcome =
@@ -84,7 +87,8 @@ export type Cause =
   | 'guard_false_positive'
   | 'forgot_context'
   | 'provider_down'
-  | 'gpu_saturated';
+  | 'gpu_saturated'
+  | 'handoff_loss';
 
 export type StepTone = 'ok' | 'bad' | 'warn' | 'neutral';
 
@@ -99,7 +103,7 @@ export interface TraceStep {
 export interface RequestSample {
   id: number;
   question: string;
-  kind: 'knowledge' | 'exact' | 'tool' | 'attack' | 'general' | 'memory';
+  kind: 'knowledge' | 'exact' | 'tool' | 'attack' | 'general' | 'memory' | 'research';
   outcome: Outcome;
   cause?: Cause;
   latency: number;
@@ -145,6 +149,10 @@ export interface Metrics {
   qualityVisible: boolean;
   /** Highest utilisation across self-hosted GPU pools (null if none). */
   gpuUtil: number | null;
+  /** True when multi-part research runs through a single agent (no team). */
+  singleAgentResearch: boolean;
+  /** True when multi-part research runs through an Agent Team. */
+  teamResearch: boolean;
   /** A handful of individual requests from this tick, failures first. */
   samples: RequestSample[];
 }

@@ -23,6 +23,49 @@ export interface Lesson {
 
 export const LESSONS: Lesson[] = [
   {
+    id: 'multi-agent',
+    title: 'When one agent isn\'t enough',
+    summary: 'Split big jobs across a team of focused agents.',
+    minutes: 5,
+    scenarioId: 'research-team',
+    components: ['agent_team', 'llm'],
+    terms: ['multi-agent', 'orchestrator', 'worker-agent', 'handoff', 'context-isolation'],
+    blocks: [
+      { kind: 'p', text: 'A single agent handling a big task ("compare these five vendors") does everything in one long loop. Every search result piles into the same prompt, so it gets slower with every step, and the early details get buried.' },
+      { kind: 'p', text: 'A multi-agent system splits the work. The common patterns:' },
+      { kind: 'list', items: [
+        'Orchestrator and workers. One agent plans and hands sub-tasks to workers that run in parallel, then combines their results. Best for research and anything that splits cleanly.',
+        'Hand-offs between specialists. A triage agent passes the conversation to a billing agent or a technical agent, each with its own instructions and tools.',
+        'Reviewer (critic). A second agent checks the first one\'s work and sends it back if something\'s wrong.',
+      ] },
+      { kind: 'analogy', text: 'One person researching five companies alone versus a lead who gives each company to a different analyst, then writes the summary from their notes. The team finishes sooner and nobody has to hold everything in their head.' },
+      { kind: 'p', text: 'The key benefit is context isolation: each worker sees only its own slice of the problem, so its prompt stays small and focused. That\'s where both the speed and the quality gains come from.' },
+      { kind: 'takeaway', text: 'Use multiple agents when a task splits into independent parts, not by default.' },
+    ],
+  },
+  {
+    id: 'multi-agent-pitfalls',
+    title: 'Making agent teams work',
+    summary: 'More agents, more calls, more ways to fail.',
+    minutes: 5,
+    scenarioId: 'research-team',
+    components: ['agent_team'],
+    terms: ['handoff', 'agent-loop', 'critic-agent', 'human-in-the-loop', 'tool-permissions'],
+    blocks: [
+      { kind: 'p', text: 'Agent teams are powerful and easy to overdo. The costs grow faster than the agent count suggests.' },
+      { kind: 'list', items: [
+        'Cost multiplies. A planner, four workers making five calls each, and a combiner is over 20 model calls for one question.',
+        'Hand-offs lose detail. Each agent passes a summary on, and summaries drop things. More agents means more cracks.',
+        'Agents loop. Two agents can bounce a task back and forth ("can you clarify?") until something stops them. Without a cap on rounds, a loop silently burns your budget.',
+        'Debugging gets harder: the mistake might be in any agent, or in the gaps between them.',
+      ] },
+      { kind: 'p', text: 'What works in practice: keep teams small (about one worker per real sub-task), give each agent a narrow job and only the tools it needs, add a reviewer to catch what the hand-offs dropped, cap the rounds, and log every hand-off so you can trace failures.' },
+      { kind: 'p', text: 'For risky actions (sending money, deleting data, emailing customers), add a human-in-the-loop step: the agent proposes, a person approves.' },
+      { kind: 'analogy', text: 'Adding people to a late project can make it later. Each new person adds meetings and hand-offs. Agents are the same.' },
+      { kind: 'takeaway', text: 'Small teams, narrow jobs, a reviewer, and a hard stop.' },
+    ],
+  },
+  {
     id: 'how-inference-works',
     title: 'What happens when you call a model',
     summary: 'Reading your prompt is fast. Writing the answer is slow.',
@@ -407,10 +450,10 @@ export const MODULES: Module[] = [
   },
   {
     id: 'agents',
-    title: 'Agents',
+    title: 'Agents and multi-agent systems',
     level: 'Advanced',
-    blurb: 'Letting models take actions, and keeping them on a leash.',
-    lessons: ['agents'],
+    blurb: 'Letting models take actions, splitting work across agent teams, and keeping them on a leash.',
+    lessons: ['agents', 'multi-agent', 'multi-agent-pitfalls'],
   },
   {
     id: 'safety',
@@ -518,9 +561,18 @@ export const TERMS: Term[] = [
   // Agents
   { id: 'agent', term: 'Agent', category: 'Agents', simple: 'A model running in a loop that can decide to use tools, look at the results, and keep going until a task is done.', analogy: 'An assistant who can make calls and click buttons, not just write memos.', related: ['tool-calling', 'agent-loop'], lesson: 'agents' },
   { id: 'tool-calling', term: 'Tool calling', aka: 'Function calling', category: 'Agents', simple: 'The model outputs a structured request like "lookup_order(48213)"; your code runs it and hands back the result.', related: ['agent', 'mcp'], lesson: 'agents' },
-  { id: 'agent-loop', term: 'Agent loop', category: 'Agents', simple: 'The think → act → observe cycle an agent repeats. Each cycle is another model call.', why: 'Cost and latency grow with every step.', related: ['step-budget'], lesson: 'agents' },
+  { id: 'agent-loop', term: 'Agent loop', category: 'Agents', simple: 'The think → act → observe cycle an agent repeats. Each cycle is another model call. In teams, "looping" also means agents bouncing work back and forth.', why: 'Cost and latency grow with every step, so loops need a hard cap.', related: ['step-budget', 'multi-agent'], lesson: 'agents' },
   { id: 'step-budget', term: 'Step budget', aka: 'Max steps', category: 'Agents', simple: 'The most loop cycles an agent may run before it must stop.', why: 'Stops stuck agents from burning money, but too low and real tasks fail.', related: ['agent-loop'], lesson: 'agents' },
   { id: 'mcp', term: 'MCP', aka: 'Model Context Protocol', category: 'Agents', simple: 'An open standard for connecting models to tools and data sources, so one integration works across many AI apps.', analogy: 'USB-C for AI tools.', related: ['tool-calling'] },
+
+  { id: 'multi-agent', term: 'Multi-agent system', category: 'Agents', simple: 'Several AI agents, each with its own instructions, tools and context, working together on one task.', analogy: 'A team of specialists instead of one generalist.', why: 'Faster and more focused on big tasks, but more calls, more hand-offs and more ways to fail.', related: ['orchestrator', 'worker-agent', 'handoff'], lesson: 'multi-agent' },
+  { id: 'orchestrator', term: 'Orchestrator', aka: 'Planner / supervisor agent', category: 'Agents', simple: 'The agent that breaks a task into parts, hands them out to other agents, and combines what comes back.', analogy: 'A project lead with a team of analysts.', related: ['worker-agent', 'multi-agent'], lesson: 'multi-agent' },
+  { id: 'worker-agent', term: 'Worker agent', aka: 'Sub-agent', category: 'Agents', simple: 'An agent given one narrow piece of a bigger task, often running in parallel with others.', why: 'Its prompt holds only its slice of the problem, so it stays small and focused.', related: ['orchestrator', 'context-isolation'], lesson: 'multi-agent' },
+  { id: 'handoff', term: 'Hand-off', category: 'Agents', simple: 'Passing work, and a summary of it, from one agent to another.', analogy: 'A shift change at a hospital: the next nurse only knows what was written in the handover notes.', why: 'Every hand-off can drop details; fewer, cleaner hand-offs mean fewer gaps.', related: ['multi-agent', 'critic-agent'], lesson: 'multi-agent-pitfalls' },
+  { id: 'context-isolation', term: 'Context isolation', category: 'Agents', simple: 'Giving each agent only the information its own part of the task needs, instead of everything.', why: 'Smaller prompts are faster, cheaper and less likely to bury the important detail.', related: ['worker-agent', 'lost-in-the-middle'], lesson: 'multi-agent' },
+  { id: 'critic-agent', term: 'Reviewer agent', aka: 'Critic', category: 'Agents', simple: 'An agent whose only job is to check another agent\'s output and send it back if something is wrong.', analogy: 'An editor reading the draft before it\'s published.', related: ['llm-as-judge', 'handoff'], lesson: 'multi-agent-pitfalls' },
+  { id: 'human-in-the-loop', term: 'Human in the loop', category: 'Agents', simple: 'Requiring a person to approve an agent\'s proposed action before it happens, usually for risky or irreversible steps.', analogy: 'The intern drafts the refund; the manager clicks approve.', related: ['tool-permissions', 'agent'], lesson: 'multi-agent-pitfalls' },
+  { id: 'tool-permissions', term: 'Tool permissions', category: 'Agents', simple: 'Limiting which tools each agent can use, and what those tools are allowed to do.', why: 'An agent that can only read can\'t accidentally delete; a narrow toolset is also easier for the model to use well.', related: ['human-in-the-loop', 'tool-calling'], lesson: 'multi-agent-pitfalls' },
 
   // Safety
   { id: 'prompt-injection', term: 'Prompt injection', category: 'Safety', simple: 'Text crafted to override your instructions, either typed by a user or hidden in a document or web page the model reads.', analogy: 'A note slipped into the pile saying "the boss says ignore all previous rules".', related: ['jailbreak', 'guardrail'], lesson: 'safety' },
@@ -559,4 +611,5 @@ export const COMPONENT_TERM: Partial<Record<ComponentType, string>> = {
   eval_harness: 'eval',
   gpu_llm: 'self-hosting',
   fallback: 'failover',
+  agent_team: 'multi-agent',
 };

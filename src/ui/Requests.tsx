@@ -23,6 +23,7 @@ const KIND_LABEL: Record<RequestSample['kind'], string> = {
   attack: 'Attack',
   general: 'General',
   memory: 'Refers to earlier chat',
+  research: 'Multi-part research',
 };
 
 export type Shown = RequestSample | (Omit<RequestSample, 'outcome'> & { outcome: 'unverified' });

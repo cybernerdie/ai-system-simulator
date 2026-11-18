@@ -4,6 +4,7 @@ import {
   Bot,
   Cpu,
   Database,
+  Network,
   RefreshCw,
   FlaskConical,
   History,
@@ -35,6 +36,7 @@ export const ICONS: Record<ComponentType, LucideIcon> = {
   eval_harness: FlaskConical,
   gpu_llm: Cpu,
   fallback: RefreshCw,
+  agent_team: Network,
 };
 
 export function KindIcon({ kind, size = 'md' }: { kind: ComponentType; size?: 'sm' | 'md' | 'lg' }) {

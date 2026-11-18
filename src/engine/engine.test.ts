@@ -39,6 +39,7 @@ describe('scenarios', () => {
       'flying-blind': 'blind',
       'self-host': 'gpu_saturated',
       'provider-down': 'provider_down',
+      'research-team': 'sequential_agent',
     };
     for (const s of SCENARIOS) {
       const m = run(s.nodes, s.edges, s.traffic);
@@ -156,6 +157,28 @@ describe('engine behaviour', () => {
     expect(gpu(32).capacityTps).toBeGreaterThan(gpu(1).capacityTps * 15);
     expect(gpu(32).perStreamTps).toBeLessThan(gpu(1).perStreamTps * 0.75);
     expect(gpu(8, 'int8').capacityTps).toBeGreaterThan(gpu(8).capacityTps);
+  });
+
+  it('agent teams: parallel is faster, too many workers backfires, round caps bound cost', () => {
+    const s = SCENARIOS.find((x) => x.id === 'research-team')!;
+    const team = (workers: number, maxRounds: number) =>
+      run(
+        [
+          { id: 'users', type: 'users', x: 0, y: 0 },
+          { id: 't', type: 'agent_team', x: 0, y: 0, config: { workers, reviewer: true, maxRounds } },
+          { id: 'llm', type: 'llm', x: 0, y: 0, config: { size: 'medium' } },
+        ],
+        [
+          { source: 'users', target: 't' },
+          { source: 't', target: 'llm' },
+        ],
+        s.traffic,
+      );
+    const single = run(s.nodes, s.edges, s.traffic);
+    const four = team(4, 3);
+    expect(four.p50).toBeLessThan(single.p50);
+    expect(team(8, 3).accuracy).toBeLessThan(four.accuracy);
+    expect(team(4, 12).costPer1k).toBeGreaterThan(four.costPer1k * 1.3);
   });
 
   it('single-shot traffic sends no history', () => {

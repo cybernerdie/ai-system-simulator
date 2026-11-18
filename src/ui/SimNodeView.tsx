@@ -17,6 +17,8 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
       return [String(config.size), ...(config.provider === 'B' ? ['provider B'] : []), ...(config.streaming ? ['streaming'] : [])];
     case 'gpu_llm':
       return [String(config.model).replace('open-', '').toUpperCase(), `${config.gpus} GPU${Number(config.gpus) > 1 ? 's' : ''}`, `batch ${config.batch}`, String(config.quant).toUpperCase()];
+    case 'agent_team':
+      return [`${config.workers} worker${Number(config.workers) > 1 ? 's' : ''}`, ...(config.reviewer ? ['reviewer'] : []), `≤ ${config.maxRounds} rounds`];
     case 'fallback':
       return [`${config.retries} retr${Number(config.retries) === 1 ? 'y' : 'ies'}`, config.failover ? 'failover on' : 'no failover'];
     case 'vector_db':

@@ -1,6 +1,6 @@
 import type { Cause, Goal, GoalMetric, Metrics } from './types';
 
-export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode';
+export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent';
 
 export interface Pressure {
   key: PressureKey;
@@ -43,7 +43,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   agent_loop: {
     title: 'Runaway agents',
     why: 'Some agents get stuck repeating themselves. With a huge step cap, each stuck run burns dozens of LLM calls.',
-    try: 'Cap Max steps just above what real tasks need. Stuck runs fail fast and cheap instead of slow and expensive.',
+    try: 'Cap Max steps (or an Agent Team\'s Max rounds) just above what real tasks need. Stuck runs then fail fast and cheap instead of slow and expensive. Fewer agents also means fewer chances to loop.',
   },
   rate_limit: {
     title: 'Tokens-per-minute limit',
@@ -74,6 +74,16 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     title: 'Memory loss',
     why: 'Users refer back to things they said earlier, but your memory strategy dropped those turns, so the model guesses.',
     try: 'Keep the facts that matter, not every word: summarise older turns, or store them as long-term memory and retrieve what each message needs.',
+  },
+  handoff_loss: {
+    title: 'Lost in hand-offs',
+    why: 'Each agent passes a summary to the next, and details fall through the cracks. More agents means more cracks.',
+    try: 'Use fewer, better-scoped workers (about one per sub-question), and add a reviewer agent to catch what the hand-offs dropped.',
+  },
+  sequential_agent: {
+    title: 'One agent doing everything',
+    why: 'A single agent works through every sub-question one after another, and its prompt grows with each one. It\'s slow, and the details get buried in its own context.',
+    try: 'Split the work: an Agent Team runs worker agents in parallel, each with a small, focused context, and combines their results.',
   },
   provider_down: {
     title: 'Provider outage',
@@ -154,12 +164,20 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
   const bloated = m.avgHistoryTokens > 4000;
   if (unmet.includes('errorRate') && errorCause) return pick(bloated ? 'history_bloat' : errorCause[0]);
   if (unmet.includes('injection')) return pick('injection');
+  if (m.singleAgentResearch && unmet.some((u) => u === 'p50' || QUALITY.includes(u))) return pick('sequential_agent');
   if (unmet.some((u) => QUALITY.includes(u))) {
+    // In a team, wrong answers mostly come from loops and detail lost between agents
+    if (m.teamResearch) {
+      const loops = m.causes.agent_loop ?? 0;
+      const other = (m.causes.weak_reasoning ?? 0) + (m.causes.handoff_loss ?? 0);
+      return pick(loops > other ? 'agent_loop' : 'handoff_loss');
+    }
     const q = causes.find(([c]) => !['rate_limit', 'context_overflow', 'injection', 'provider_down', 'gpu_saturated'].includes(c));
     if (q) return pick(q[0]);
   }
   if (unmet.includes('costPer1k')) {
     if (m.gpuUtil !== null && m.gpuUtil < 0.45) return pick('idle_gpus');
+    if (m.teamResearch) return pick('agent_loop');
     if (bloated) return pick('history_bloat');
     if ((m.causes.agent_loop ?? 0) > 0) return pick('agent_loop');
     return pick('cost');
