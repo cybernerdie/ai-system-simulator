@@ -269,7 +269,13 @@ export default function App() {
   const [hub, setHub] = useState<HubView | null>(null);
   const [theme, setTheme] = useState<Theme>(() => savedTheme() ?? systemTheme());
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
+    // switch in one frame: pause every transition while the colours flip, so nothing lags or gets stuck halfway
+    const root = document.documentElement;
+    root.classList.add('theme-switching');
+    root.dataset.theme = theme;
+    void root.offsetHeight;
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('theme-switching')));
+    return () => cancelAnimationFrame(id);
   }, [theme]);
   // Follow the OS setting until the user picks a theme themselves
   useEffect(() => {
@@ -1039,6 +1045,15 @@ export default function App() {
     },
     [showToast],
   );
+  // build today's daily while the browser is idle, so opening it is instant
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const warm = () => void findBuiltIn(`daily-${todayKey()}`);
+      if ('requestIdleCallback' in window) window.requestIdleCallback(warm, { timeout: 4000 });
+      else warm();
+    }, 1200);
+    return () => window.clearTimeout(t);
+  }, []);
   useEffect(() => {
     if (EMBED) track('embed_view', { level: scenarioId });
     // eslint-disable-next-line react-hooks/exhaustive-deps

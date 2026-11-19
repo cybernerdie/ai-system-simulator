@@ -885,7 +885,8 @@ input[type='range']::-moz-range-thumb { width: 14px; height: 14px; border: 0; bo
 .lesson-meta .level { margin: 0; }
 
 /* ---------- theme plumbing ---------- */
-body, .topbar, .palette, .side, .canvas, .simnode, .telemetry, .pressure-window { transition: background-color 200ms, color 200ms; }
+/* switching theme is instant: no element fades between the two palettes */
+html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after { transition: none !important; }
 .react-flow { --xy-background-color: transparent; }
 .react-flow__controls-button { background: var(--surface); color: var(--ink); fill: var(--ink); }
 .react-flow__controls-button:hover { background: var(--subtle); }
