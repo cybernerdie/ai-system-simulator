@@ -91,14 +91,14 @@ The numbers are calibrated to be *directionally* right (relative prices, latenci
 New visitors land on a welcome screen with **Play level 1**. Level 1 is coached step by step: the guide points at what to do next and waits until you do it (press Run, add a component, watch it improve). After that you're on your own, with help if you need it:
 
 - **Tap to add:** tapping a component in the list connects it where it belongs in the pipeline. Deleting one reconnects its neighbours. You can still drag and rewire by hand.
-- **Components unlock as you play.** Each level shows only what you've met so far, plus what's new (marked *New*). "Show all" lifts the limit; Sandbox always has everything.
+- **Components unlock as you play.** Every component is listed; ones you haven't reached are greyed out with a lock and the level that unlocks them. New ones are marked *New*. Sandbox and "Unlock every level" open everything.
 - **Customer complaints** pop up over the canvas while things are failing ("Same invoice, two different totals?!"), so problems read as people, not just numbers.
 - **Hints when you're stuck:** after 25 seconds without progress the guide points at the binding pressure, then shows the level's hint, then highlights a component to try.
 - **Level map and stars:** the 25 levels sit in five chapters; clearing one unlocks the next (or tick "Unlock every level"). Each level awards up to three stars: clear it, keep it within budget (par is the reference solution's cost, plus a little slack), and build it lean (no more components than the reference). Improving your best celebrates again.
 - **What you just learned:** the win card shows your stars, why you got them, the level's key takeaway and a link to the full lesson.
 - **Share your result:** the win card's "Share result" draws a 1200×630 image of your before → after numbers (e.g. accuracy 23% → 77%) and stars. Phones open the share sheet; desktops download it and copy a post to paste.
 - **Sound effects:** small synthesised sounds for adding parts, running, new problems, goals met and level clears. Off by default (toggle in the top bar or on the welcome screen).
-- **Voice guide:** the guide reads its messages aloud (mute in the top bar). Captions are always shown.
+- **Voice guide:** the guide reads its messages aloud. The speaker button in the top bar (or "Choose voice" on the welcome screen) turns it on or off, picks any English voice the device has, sets the speed and plays a sample. Captions are always shown.
 
 ### Natural voice clips
 

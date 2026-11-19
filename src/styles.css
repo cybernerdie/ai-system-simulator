@@ -1594,3 +1594,30 @@ html, body { background: var(--bg); }
 .theme-toggle.is-off svg { opacity: 0.45; }
 
 .win-actions .win-share { margin-right: auto; gap: 6px; }
+
+/* voice settings panel */
+.voice-menu { position: fixed; z-index: 120; width: 300px; padding: var(--sp-4); background: var(--surface); border-radius: 14px; box-shadow: var(--float); animation: guide-in 0.18s ease-out; text-align: left; }
+.voice-menu.is-docked { left: 12px; right: 12px; top: auto; bottom: 12px; width: auto; padding-bottom: calc(var(--sp-4) + env(safe-area-inset-bottom)); }
+.voice-menu-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); font-size: 14px; }
+.voice-field { display: grid; gap: 6px; margin-bottom: var(--sp-3); font-size: 13px; color: var(--ink-2); }
+.voice-field span { display: flex; justify-content: space-between; }
+.voice-field em { font-style: normal; font-family: var(--mono); color: var(--ink); }
+.voice-field select { height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: var(--subtle); color: var(--ink); font: inherit; font-size: 14px; }
+.voice-field input[type='range'] { width: 100%; accent-color: var(--ink); }
+.voice-sample { gap: 6px; width: 100%; justify-content: center; box-shadow: var(--ring); }
+.voice-note { margin: var(--sp-3) 0 0; font-size: 12px; line-height: 1.45; color: var(--ink-3); }
+.welcome-choose { font-size: 13px; }
+/* on/off switch */
+.switch { position: relative; display: inline-block; width: 36px; height: 22px; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.switch span[aria-hidden] { position: absolute; inset: 0; border-radius: 99px; background: var(--track); transition: background 0.15s; }
+.switch span[aria-hidden]::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: transform 0.15s; }
+.switch input:checked + span { background: var(--ink); }
+.switch input:checked + span::after { transform: translateX(14px); }
+.switch input:focus-visible + span { outline: 2px solid #3b82f6; outline-offset: 2px; }
+.switch input:checked + span::after { background: var(--surface); }
+
+.palette-item.is-locked { cursor: not-allowed; }
+.palette-item.is-locked > :not(.palette-lock) { opacity: 0.45; }
+.palette-item.is-locked:hover { background: transparent; }
+.palette-lock { display: inline-flex; align-items: center; gap: 3px; margin-left: auto; padding: 1px 7px; border-radius: 99px; background: var(--subtle); color: var(--ink-3); font-size: 11px; font-style: normal; font-weight: 600; font-variant-numeric: tabular-nums; }

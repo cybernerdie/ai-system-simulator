@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Check, ChevronDown, Circle, Lightbulb, Share2, Star, Trash2, TriangleAlert, X } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, Circle, Lightbulb, Lock, Share2, Star, Trash2, TriangleAlert, X } from 'lucide-react';
 import { COMPONENT_TERM, TERM_BY_ID, type Lesson } from '../content/learn';
 import type { StarResult } from '../engine/stars';
 import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../engine/components';
@@ -35,59 +35,57 @@ const GROUPS = ['Retrieval', 'Memory', 'Generation', 'Inference', 'Voice', 'Effi
 
 export function Palette({
   onAdd,
-  unlocked = null,
+  locks,
   fresh,
-  showAll,
-  onToggleAll,
+  onLocked,
 }: {
   onAdd: (t: ComponentType) => void;
-  /** components available on this level; null = all of them */
-  unlocked?: Set<ComponentType> | null;
+  /** components not reached yet → the level that unlocks them */
+  locks?: Map<ComponentType, number>;
   /** components that are new on this level */
   fresh?: Set<ComponentType>;
-  showAll?: boolean;
-  onToggleAll?: () => void;
+  onLocked?: (t: ComponentType, level: number) => void;
 }) {
-  const visible = PALETTE_ORDER.filter((t) => !unlocked || unlocked.has(t));
-  const locked = PALETTE_ORDER.length - visible.length;
   return (
     <aside className="palette" aria-label="Components">
       {GROUPS.map((g) => {
-        const items = visible.filter((t) => COMPONENTS[t].group === g);
+        const items = PALETTE_ORDER.filter((t) => COMPONENTS[t].group === g);
         if (!items.length) return null;
         return (
           <section key={g}>
             <h3>{g}</h3>
-            {items.map((t) => (
-              <button
-                key={t}
-                className="palette-item"
-                data-palette={t}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('application/aisim', t);
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-                onClick={() => onAdd(t)}
-                title={COMPONENTS[t].blurb}
-              >
-                <KindIcon kind={t} size="sm" />
-                <span>{COMPONENTS[t].name}</span>
-                {fresh?.has(t) && <em className="palette-new">New</em>}
-              </button>
-            ))}
+            {items.map((t) => {
+              const lockedAt = locks?.get(t);
+              return (
+                <button
+                  key={t}
+                  className={`palette-item${lockedAt ? ' is-locked' : ''}`}
+                  data-palette={t}
+                  draggable={!lockedAt}
+                  aria-disabled={!!lockedAt}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/aisim', t);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onClick={() => (lockedAt ? onLocked?.(t, lockedAt) : onAdd(t))}
+                  title={lockedAt ? `Unlocks in level ${lockedAt}` : COMPONENTS[t].blurb}
+                >
+                  <KindIcon kind={t} size="sm" />
+                  <span>{COMPONENTS[t].name}</span>
+                  {lockedAt ? (
+                    <em className="palette-lock" aria-label={`Unlocks in level ${lockedAt}`}>
+                      <Lock size={11} aria-hidden /> {lockedAt}
+                    </em>
+                  ) : (
+                    fresh?.has(t) && <em className="palette-new">New</em>
+                  )}
+                </button>
+              );
+            })}
           </section>
         );
       })}
-      <p className="palette-help">Tap a component to add it: it connects itself where it belongs. You can also drag it, and rewire from a node's right edge.</p>
-      {onToggleAll && (locked > 0 || showAll) && (
-        <div className="palette-locked">
-          {!showAll && <span>{locked} more unlock as you play.</span>}
-          <button className="link-btn" onClick={onToggleAll}>
-            {showAll ? 'Only show unlocked' : 'Show all'}
-          </button>
-        </div>
-      )}
+      <p className="palette-help">Tap a component to add it: it connects itself where it belongs. You can also drag it, and rewire from a node's right edge. Locked ones open up as you clear levels.</p>
     </aside>
   );
 }

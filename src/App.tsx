@@ -29,7 +29,7 @@ import { Tour, type TourStep } from './ui/Tour';
 import { autoWire, removeAndHeal, tidyLayout } from './engine/autowire';
 import { scoreStars, type StarResult } from './engine/stars';
 import { COACH, hintLine, nudgeLine, pressureLine, showMeLine, winLine } from './content/guide';
-import { Complaints, Confetti, GuideCard, useVoice, WelcomeScreen } from './ui/Guide';
+import { Complaints, Confetti, GuideCard, useVoice, VoiceMenu, WelcomeScreen } from './ui/Guide';
 import { speak, stopVoice } from './ui/voice';
 import { onSfxChange, play, setSfx, sfxOn } from './ui/sfx';
 import { drawCard, improvements, shareText } from './ui/shareCard';
@@ -162,20 +162,15 @@ export default function App() {
   // coached first level: index into COACH, or null when not coaching
   const [coach, setCoach] = useState<number | null>(null);
   const [celebrate, setCelebrate] = useState(false);
-  const [voice, setVoiceOn] = useVoice();
+  const [voice] = useVoice();
+  const [voiceMenu, setVoiceMenu] = useState<DOMRect | null>(null);
   const [sfx, setSfxState] = useState(sfxOn());
   useEffect(() => onSfxChange(setSfxState), []);
   const goalsMetRef = useRef(0);
   // the numbers from the first run of a level, for the before → after share card
   const baselineRef = useRef<Metrics | null>(null);
   const ticksRef = useRef(0);
-  const [showAll, setShowAll] = useState(() => {
-    try {
-      return localStorage.getItem('aisim.showAll.v1') === '1';
-    } catch {
-      return false;
-    }
-  });
+
   const [toast, setToast] = useState<{ text: string; action?: { label: string; run: () => void } } | null>(null);
   const [picker, setPicker] = useState(false);
   const [hub, setHub] = useState<HubView | null>(null);
@@ -606,28 +601,26 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [won]);
 
-  // Components unlock level by level; Sandbox (or "show all") has everything
+  // Every component is listed; ones you haven't reached are locked until you clear the level that introduces them.
+  // Sandbox and "Unlock every level" open everything.
   const unlock = useMemo(() => {
     const idx = SCENARIOS.findIndex((x) => x.id === scenario.id);
-    if (showAll || idx < 0) return null;
-    const typesOf = (list: typeof SCENARIOS) => new Set(list.flatMap((x) => [...x.nodes, ...x.solution.nodes].map((n) => n.type)));
-    const set = typesOf(SCENARIOS.slice(0, idx + 1));
-    nodes.forEach((n) => set.add(n.data.kind));
-    const before = typesOf(SCENARIOS.slice(0, idx));
-    const startHere = new Set(scenario.nodes.map((n) => n.type));
-    const fresh = new Set([...set].filter((t) => !before.has(t) && !startHere.has(t)));
-    return { set, fresh };
-  }, [scenario, showAll, nodes]);
-  const toggleShowAll = useCallback(() => {
-    setShowAll((v) => {
-      try {
-        localStorage.setItem('aisim.showAll.v1', v ? '0' : '1');
-      } catch {
-        /* ignore */
-      }
-      return !v;
+    if (unlockAll || idx < 0) return null;
+    const firstLevel = new Map<ComponentType, number>();
+    SCENARIOS.forEach((x, i) =>
+      [...x.nodes, ...x.solution.nodes].forEach((n) => {
+        if (!firstLevel.has(n.type)) firstLevel.set(n.type, i + 1);
+      }),
+    );
+    // open: everything introduced up to this level, plus anything already on the canvas
+    const locks = new Map<ComponentType, number>();
+    firstLevel.forEach((lvl, t) => {
+      if (lvl > idx + 1 && !nodes.some((n) => n.data.kind === t)) locks.set(t, lvl);
     });
-  }, []);
+    const startHere = new Set(scenario.nodes.map((n) => n.type));
+    const fresh = new Set([...firstLevel].filter(([t, lvl]) => lvl === idx + 1 && !startHere.has(t)).map(([t]) => t));
+    return { locks, fresh };
+  }, [scenario, unlockAll, nodes]);
 
   const startPlaying = useCallback(() => {
     setIntro(null);
@@ -881,11 +874,11 @@ export default function App() {
           <Music2 size={15} aria-hidden />
         </button>
         <button
-          className="btn btn-ghost theme-toggle"
-          onClick={() => setVoiceOn(!voice)}
-          title={voice ? 'Mute the voice guide' : 'Turn the voice guide on'}
-          aria-label={voice ? 'Mute the voice guide' : 'Turn the voice guide on'}
-          aria-pressed={voice}
+          className={`btn btn-ghost theme-toggle${voice ? '' : ' is-off'}`}
+          onClick={(e) => setVoiceMenu(voiceMenu ? null : e.currentTarget.getBoundingClientRect())}
+          title="Voice guide: on/off, choose a voice, speed"
+          aria-label="Voice guide settings"
+          aria-expanded={!!voiceMenu}
         >
           {voice ? <Volume2 size={15} aria-hidden /> : <VolumeX size={15} aria-hidden />}
         </button>
@@ -905,7 +898,12 @@ export default function App() {
         </button>
       </header>
 
-      <Palette onAdd={(t) => addNode(t)} unlocked={unlock?.set ?? null} fresh={unlock?.fresh} showAll={showAll} onToggleAll={scenario.id === SANDBOX.id ? undefined : toggleShowAll} />
+      <Palette
+        onAdd={(t) => addNode(t)}
+        locks={unlock?.locks}
+        fresh={unlock?.fresh}
+        onLocked={(t, lvl) => showToast(`${COMPONENTS[t].name} unlocks in level ${lvl}. Clear the levels before it to use it.`)}
+      />
 
       <main
         className="canvas"
@@ -1055,6 +1053,7 @@ export default function App() {
         />
       )}
       {celebrate && <Confetti />}
+      {voiceMenu && <VoiceMenu anchor={voiceMenu} onClose={() => setVoiceMenu(null)} />}
       {touring && (
         <Tour
           steps={tourSteps}

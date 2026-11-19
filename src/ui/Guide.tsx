@@ -3,7 +3,7 @@ import { Blocks, Compass, Music2, Play, Volume2, VolumeX, X } from 'lucide-react
 import type { RequestSample } from '../engine/types';
 import { complaintFor, SLOW_COMPLAINT } from '../content/guide';
 import { measure, place } from './Tour';
-import { onVoiceChange, setVoice, voiceOn } from './voice';
+import { chosenVoice, listVoices, onVoiceChange, onVoicesChanged, previewVoice, setChosenVoice, setVoice, setVoiceRate, voiceOn, voiceRate } from './voice';
 import { onSfxChange, setSfx, sfxOn } from './sfx';
 
 /* ---------- voice toggle state ---------- */
@@ -17,16 +17,17 @@ export function useVoice(): [boolean, (on: boolean) => void] {
 /* ---------- welcome screen ---------- */
 
 export function WelcomeScreen({ onPlay, onBrowse, onFree, onClose }: { onPlay: () => void; onBrowse: () => void; onFree: () => void; onClose: () => void }) {
+  const [voiceMenu, setVoiceMenu] = useState<DOMRect | null>(null);
   const [voice, set] = useVoice();
   const [sounds, setSounds] = useState(sfxOn());
   useEffect(() => onSfxChange(setSounds), []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !voiceMenu) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, voiceMenu]);
   return (
     <div className="overlay welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
       <div className="welcome">
@@ -59,12 +60,16 @@ export function WelcomeScreen({ onPlay, onBrowse, onFree, onClose }: { onPlay: (
             {voice ? <Volume2 size={15} aria-hidden /> : <VolumeX size={15} aria-hidden />}
             Voice guide
           </label>
+          <button className="link-btn welcome-choose" onClick={(e) => setVoiceMenu(e.currentTarget.getBoundingClientRect())}>
+            Choose voice
+          </button>
           <label className="welcome-voice">
             <input type="checkbox" checked={sounds} onChange={(e) => setSfx(e.target.checked)} />
             <Music2 size={15} aria-hidden />
             Sound effects
           </label>
         </div>
+        {voiceMenu && <VoiceMenu anchor={voiceMenu} onClose={() => setVoiceMenu(null)} />}
         <div className="welcome-alt">
           <button className="btn btn-ghost" onClick={onBrowse}>
             <Compass size={15} aria-hidden /> Choose a level
@@ -254,6 +259,98 @@ export function Confetti() {
           }}
         />
       ))}
+    </div>
+  );
+}
+
+/* ---------- voice settings ---------- */
+
+/** A small panel to turn the guide on or off, pick one of the device's voices, set the speed and hear a sample. */
+export function VoiceMenu({ anchor, onClose }: { anchor: DOMRect | null; onClose: () => void }) {
+  const [on, setOn] = useVoice();
+  const [voices, setVoices] = useState(() => listVoices());
+  const [name, setName] = useState(() => chosenVoice() || listVoices()[0]?.name || '');
+  const [rate, setRate] = useState(() => voiceRate());
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(
+    () =>
+      onVoicesChanged(() => {
+        const v = listVoices();
+        setVoices(v);
+        setName((n) => n || v[0]?.name || '');
+      }),
+    [],
+  );
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onDown = (e: PointerEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('pointerdown', onDown, true);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerdown', onDown, true);
+    };
+  }, [onClose]);
+  const phone = window.innerWidth <= 900;
+  const style: CSSProperties | undefined =
+    anchor && !phone ? { top: anchor.bottom + 8, left: Math.min(Math.max(12, anchor.right - 300), window.innerWidth - 312) } : undefined;
+  return (
+    <div ref={box} className={`voice-menu${style ? '' : ' is-docked'}`} style={style} role="dialog" aria-label="Voice guide settings">
+      <div className="voice-menu-head">
+        <strong>Voice guide</strong>
+        <label className="switch">
+          <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
+          <span aria-hidden />
+          <span className="sr-only">Voice guide on</span>
+        </label>
+      </div>
+      {voices.length ? (
+        <>
+          <label className="voice-field">
+            <span>Voice</span>
+            <select
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setChosenVoice(e.target.value);
+                previewVoice(e.target.value);
+              }}
+            >
+              {voices.map((v, i) => (
+                <option key={v.name + v.lang} value={v.name}>
+                  {v.name.replace(/^(Microsoft|Google)\s/, '')} · {v.lang.replace('en-', '')}
+                  {i === 0 ? ' (recommended)' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="voice-field">
+            <span>
+              Speed <em>{rate.toFixed(1)}×</em>
+            </span>
+            <input
+              type="range"
+              min={0.8}
+              max={1.4}
+              step={0.1}
+              value={rate}
+              onChange={(e) => {
+                setRate(Number(e.target.value));
+                setVoiceRate(Number(e.target.value));
+              }}
+              onPointerUp={() => previewVoice(name)}
+            />
+          </label>
+          <button className="btn btn-ghost voice-sample" onClick={() => previewVoice(name)}>
+            <Volume2 size={14} aria-hidden /> Play a sample
+          </button>
+          <p className="voice-note">These are the voices your device offers, so the list differs between phones and computers.</p>
+        </>
+      ) : (
+        <p className="voice-note">This browser doesn't offer built-in voices. The guide's captions still show every message.</p>
+      )}
     </div>
   );
 }
