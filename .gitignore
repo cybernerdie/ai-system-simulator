@@ -3,3 +3,8 @@ dist
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# local env files (keys live in Vercel)
+.env
+.env.*
+!.env.example

@@ -116,7 +116,7 @@ New visitors land on a welcome screen with **Play level 1**. Level 1 is coached 
 
 ### Analytics
 
-Page views go to Vercel Web Analytics (free on the Hobby plan; enable it in the project's Analytics tab). Custom events (level started, first run, won, quiz answers, daily, incident runs, shares) go to [Umami](https://umami.is) when `VITE_UMAMI_WEBSITE_ID` is set; Umami Cloud's free plan supports custom events. No cookies and no personal data: events carry level ids and small numbers only.
+Page views go to Vercel Web Analytics (free on the Hobby plan). Custom events (level started, first run, won, quiz answers, daily, incident runs, shares, embeds) go to PostHog EU through its capture API: no SDK, no cookies, no person profiles, and nothing is sent when the browser asks not to be tracked. Events carry level ids and small numbers plus a random id kept in the browser so funnels work. Set `VITE_POSTHOG_KEY` (and optionally `VITE_POSTHOG_HOST`, default `https://eu.i.posthog.com`) in Vercel's environment variables; without a key no events are sent. Keys never go in the code.
 
 ### Natural voice clips
 
