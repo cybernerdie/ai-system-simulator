@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { readFlag } from './storage';
+import type { SharedDesign } from '../share/designLink';
 import { addFlag, loadCleared, loadDaily, loadDesign, loadIncidentBest, loadQuiz, loadStars, saveDaily, saveDesign, saveIncidentBest, saveQuiz } from './progress';
 
 /** A tiny in-memory localStorage, so these tests run in plain Node. */
@@ -57,11 +58,11 @@ describe('stored progress', () => {
   });
 
   it('round-trips a design per level', () => {
-    const d = {
+    const d: SharedDesign = {
       scenarioId: 'docs-bot',
       nodes: [
-        { id: 'users', type: 'users' as const, x: 0, y: 0, config: {} },
-        { id: 'llm', type: 'llm' as const, x: 270, y: 0, config: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false, fineTuned: false, version: 'pinned', temperature: 0.7 } },
+        { id: 'users', type: 'users', x: 0, y: 0, config: {} },
+        { id: 'llm', type: 'llm', x: 270, y: 0, config: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false, fineTuned: false, version: 'pinned', temperature: 0.7 } },
       ],
       edges: [{ source: 'users', target: 'llm' }],
     };

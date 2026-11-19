@@ -4,7 +4,7 @@
  */
 import type { Scenario } from '../engine/levels/scenarios';
 import type { GoalMetric, Metrics } from '../engine/types';
-import { METRIC_META } from '../ui/panels/Panels';
+import { METRIC_META } from '../ui/format';
 
 export interface Improvement {
   label: string;
