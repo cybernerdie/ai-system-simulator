@@ -1,8 +1,6 @@
 import { CalendarDays, Flame, Siren, Trophy } from 'lucide-react';
 import { formatDuration, type IncidentBest } from '../../engine/modes/incident';
 
-/* ---------- mode cards on the level map ---------- */
-
 export function ModeCards({
   dailyNumber,
   dailyDone,

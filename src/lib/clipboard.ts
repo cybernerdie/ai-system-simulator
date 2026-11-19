@@ -1,7 +1,9 @@
-/** On touch devices with a share sheet, share; elsewhere copy. Returns false if the player cancelled. */
+import { IS_TOUCH } from './device';
+
+/** On touch devices with a share sheet, share; elsewhere copy. Throws if neither works. */
 export async function shareOrCopy(text: string): Promise<'shared' | 'copied' | 'cancelled'> {
   try {
-    if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
+    if (navigator.share && IS_TOUCH) {
       await navigator.share({ text });
       return 'shared';
     }

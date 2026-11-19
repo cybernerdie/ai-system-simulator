@@ -190,8 +190,6 @@ export function incidentTick(s: IncidentState, missed: number, dt: number): Inci
   return { ...s, t, health, active, nextAt, count, started, over: health <= 0 };
 }
 
-/* ---------- best run ---------- */
-
 export interface IncidentBest {
   seconds: number;
   incidents: number;

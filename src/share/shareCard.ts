@@ -5,6 +5,7 @@
 import type { Scenario } from '../engine/levels/scenarios';
 import type { GoalMetric, Metrics } from '../engine/types';
 import { METRIC_META } from '../lib/format';
+import { displayTitle } from '../engine/levels/kit';
 
 export interface Improvement {
   label: string;
@@ -36,7 +37,7 @@ export function improvements(s: Scenario, before: Metrics | null, after: Metrics
 
 /** One sentence for the post text. */
 export function shareText(s: Scenario, label: string, stars: number, imps: Improvement[]): string {
-  const name = s.title.replace(/^(\d+|Boss|Daily #\d+) · /, '');
+  const name = displayTitle(s);
   const what = imps[0] ? ` ${imps[0].label}: ${imps[0].before} → ${imps[0].after}.` : '';
   return `I cleared ${label.toLowerCase().startsWith('level') ? label.toLowerCase() : `the ${label.toLowerCase()}`}, "${name}", on AISim with ${stars}/3 stars.${what} Learn how AI systems really work by fixing broken ones:`;
 }
@@ -126,7 +127,7 @@ export async function drawCard(opts: { s: Scenario; label: string; stars: number
   // title
   c.fillStyle = '#fafafa';
   c.font = `650 60px ${sans}`;
-  const title = opts.s.title.replace(/^(\d+|Boss|Daily #\d+) · /, '');
+  const title = displayTitle(opts.s);
   const tl = wrap(c, title, W - 144).slice(0, 2);
   tl.forEach((l, i) => c.fillText(l, 72, 250 + i * 68));
   let y = 250 + tl.length * 68 + 10;

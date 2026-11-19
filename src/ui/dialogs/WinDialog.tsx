@@ -5,8 +5,7 @@ import type { StarResult } from '../../engine/stars';
 import type { Scenario } from '../../engine/levels/scenarios';
 import type { QuizQuestion } from '../../content/quiz';
 import { QuizBlock } from './QuizBlock';
-
-/* ---------- dialogs ---------- */
+import { displayTitle } from '../../engine/levels/kit';
 
 export function WinDialog({
   s,
@@ -62,7 +61,7 @@ export function WinDialog({
           {result?.improved ? 'New best' : kicker}
           {best > n && ` · your best is ${best} stars`}
         </p>
-        <h2 id="win-title">{s.title.replace(/^\d+ · /, '')}</h2>
+        <h2 id="win-title">{displayTitle(s)}</h2>
         {result && (
           <ul className="win-criteria">
             <li className="is-met">

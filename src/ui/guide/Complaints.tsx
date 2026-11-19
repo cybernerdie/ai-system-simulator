@@ -2,8 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import type { RequestSample } from '../../engine/types';
 import { complaintFor, SLOW_COMPLAINT } from '../../content/guide';
 
-/* ---------- customer complaints ---------- */
-
 interface Bubble {
   key: number;
   text: string;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Copy, X } from 'lucide-react';
+import { COMPONENTS } from '../../engine/components';
 import { simulate } from '../../engine/simulate';
 import type { Goal, GoalMetric, TrafficProfile } from '../../engine/types';
 import type { SharedDesign } from '../../lib/designLink';
@@ -20,6 +21,16 @@ const MAKER_METRICS: { k: GoalMetric; op: '>=' | '<='; unit: '%' | '$' | 'ms' }[
   { k: 'p50', op: '<=', unit: 'ms' },
   { k: 'ttftP50', op: '<=', unit: 'ms' },
 ];
+
+/** Where a made level starts when nothing is pinned: users straight into a default model. */
+const BLANK: SharedDesign = {
+  scenarioId: 'sandbox',
+  nodes: [
+    { id: 'users', type: 'users', x: 0, y: 132, config: {} },
+    { id: 'llm', type: 'llm', x: 270, y: 132, config: { ...COMPONENTS.llm.defaults } },
+  ],
+  edges: [{ source: 'users', target: 'llm' }],
+};
 
 export function LevelMakerDialog({
   traffic,
@@ -58,31 +69,15 @@ export function LevelMakerDialog({
       return { k, op, unit, on, value: suggested };
     }),
   );
-  const blank: SharedDesign = {
-    scenarioId: 'sandbox',
-    nodes: [
-      { id: 'users', type: 'users', x: 0, y: 132, config: {} },
-      {
-        id: 'llm',
-        type: 'llm',
-        x: 270,
-        y: 132,
-        config: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false, fineTuned: false, version: 'pinned', temperature: 0.7 },
-      },
-    ],
-    edges: [{ source: 'users', target: 'llm' }],
-  };
-  const start = startFrom === 'pinned' && pinned ? pinned : blank;
-  const goals: Goal[] = rows.filter((r) => r.on).map((r) => ({ metric: r.k, op: r.op, value: r.unit === '%' ? r.value / 100 : r.value }));
+  const start = startFrom === 'pinned' && pinned ? pinned : BLANK;
+  const goals: Goal[] = useMemo(() => rows.filter((r) => r.on).map((r) => ({ metric: r.k, op: r.op, value: r.unit === '%' ? r.value / 100 : r.value })), [rows]);
   const [check, setCheck] = useState<{ startFails: boolean; solutionWins: boolean } | null>(null);
-  const goalsKey = JSON.stringify(goals) + startFrom;
   useEffect(() => {
     setCheck(null);
     if (!goals.length) return;
     const t = window.setTimeout(() => setCheck(verifyLevel({ traffic, goals, start, solution })), 250);
     return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goalsKey, traffic, solution]);
+  }, [goals, start, traffic, solution]);
   const ok = !!check && check.startFails && check.solutionWins && title.trim().length > 2;
   const [copied, setCopied] = useState(false);
   const publish = () => {

@@ -487,7 +487,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       if (text) step(n, text, tone, d);
     };
 
-    // 0. Auth: callers without valid credentials are turned away before anything costs money
+    // 1. Auth: callers without valid credentials are turned away before anything costs money
     if (auth) {
       if (req.unauth && rng() < 0.995) {
         touch(auth, 4, 0, 'Rejected: no valid credentials', 'ok');
@@ -497,7 +497,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       }
       touch(auth, 4, 0.000002);
     }
-    // 0a. Per-user limits: scripted accounts hit the cap, people don't.
+    // 2. Per-user limits: scripted accounts hit the cap, people don't.
     // Scrapers with a leaked key spread their calls over many accounts and addresses, so most slip under it.
     if (req.unauth) {
       if (limits && rng() < 0.25) {
@@ -519,7 +519,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       t.steps.push({ kind: 'users', text: 'Scripted account hammering the API with long prompts', tone: 'warn' });
     } else if (limits) touch(limits, 3, 0);
 
-    // 0b. Voice: audio has to become text first
+    // 3. Voice: audio has to become text first
     if (traffic.voice) {
       if (!stt) {
         t.steps.push({ kind: 'stt', text: 'Audio arrived, but nothing turns speech into text', tone: 'bad' });
@@ -538,7 +538,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       );
     }
 
-    // 0c. Personal data: redact before anything leaves your systems
+    // 4. Personal data: redact before anything leaves your systems
     let redacted = false;
     if (req.pii && redactor) {
       redacted = rng() < 0.985;
@@ -546,7 +546,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       touch(redactor, 25, 0.00003, redacted ? 'Swapped personal details for placeholders' : 'Missed a piece of personal data', redacted ? 'ok' : 'bad');
     } else if (redactor) touch(redactor, 25, 0.00003);
 
-    // 1. Input guardrail
+    // 5. Input guardrail
     if (inputGuard) {
       touch(inputGuard, 35, 0.00008);
       const catchP = 0.55 + 0.44 * strictness;
@@ -570,7 +570,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       }
     }
 
-    // 2. Semantic cache
+    // 6. Semantic cache
     if (cache) {
       touch(cache, 15, 0.00001);
       if (req.repeat && rng() < cacheHitP) {
@@ -589,7 +589,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       }
     }
 
-    // 3. Retrieval
+    // 7. Retrieval
     if (cache) step(cache, req.repeat ? 'Miss: not similar enough to a stored question' : 'Miss: new question', 'neutral', 15);
     let grounded = false;
     if (router) touch(router, 12, 0.00002);
@@ -644,7 +644,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       if (reranker) step(reranker, `Rescored ${topK} chunks, kept the best ${keep}`, 'neutral', 50 + topK * 6);
     }
 
-    // 4. Conversation memory: what of the chat so far goes into the prompt
+    // 8. Conversation memory: what of the chat so far goes into the prompt
     let historyTokens = 0;
     let remembered = true;
     if (req.turn > 0) {
@@ -697,7 +697,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     // long histories bury details too
     const historyPenalty = Math.max(0.6, 1 - 0.03 * Math.max(0, (historyTokens - 4000) / 1000));
 
-    // 5. LLM (+ agent loop)
+    // 9. The model, and the agent loop if there is one
     let llm = pickLLM(req, i);
     const size = P(llm).label;
     if (router)
@@ -948,7 +948,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       );
     }
 
-    // 5. Decide the answer
+    // 10. Decide the answer
     if (req.adversarial) {
       t.outcome = rng() < m.injectable ? 'injected' : 'blocked';
       if (t.outcome === 'injected') t.cause = 'injection';
@@ -1105,7 +1105,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       }
     }
 
-    // 6. Output judge
+    // 11. Output judge
     if (judge) {
       touch(judge, 380, 0.0004);
       t.ttft = t.latency; // has to see the whole answer before releasing it
@@ -1130,7 +1130,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       step(judge, note, tone, 380);
     }
 
-    // 7. Evals (observe only)
+    // 12. Evals (observe only)
     if (evals) {
       t.touched.push(evals.id);
       t.cost += evalRate * JUDGE_COST[evalJudge];
@@ -1287,8 +1287,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   const ttfts = waited.map((t) => t.ttft).sort((a, b) => a - b);
 
   const costByNode: Record<string, number> = {};
-  // attribute LLM cost to LLM nodes, the rest proportionally is small; keep it simple: LLM tokens
-  // GPUs are billed by the hour whether busy or idle: spread that over the traffic
+  // Cost per model node: its tokens, plus GPU hours spread over the traffic (GPUs bill whether busy or idle).
   let gpuPer1k = 0;
   for (const l of llms) {
     const p = P(l);

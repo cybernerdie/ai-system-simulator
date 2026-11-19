@@ -3,8 +3,6 @@ import type { Goal, GoalMetric, Metrics } from '../../engine/types';
 import { money, monthlyCost } from '../../engine/cost';
 import { METRIC_META, ms, pct, usd } from '../../lib/format';
 
-/* ---------- telemetry dock ---------- */
-
 function Spark({ values }: { values: number[] }) {
   if (values.length < 2) return <svg className="spark" viewBox="0 0 64 18" aria-hidden />;
   const lo = Math.min(...values);

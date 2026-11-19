@@ -1,8 +1,6 @@
 import { HeartPulse, Siren } from 'lucide-react';
 import { INCIDENTS, formatDuration, type IncidentState } from '../../engine/modes/incident';
 
-/* ---------- incident mode ---------- */
-
 export function IncidentHud({ s }: { s: IncidentState }) {
   const tone = s.health > 60 ? 'ok' : s.health > 30 ? 'warn' : 'hot';
   return (

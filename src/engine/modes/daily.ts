@@ -8,6 +8,7 @@ import { goalMet } from '../pressures';
 import { SCENARIOS, withDefaults } from '../levels/scenarios';
 import type { Scenario } from '../levels/kit';
 import type { Goal, Metrics, TrafficProfile } from '../types';
+import { displayTitle } from '../levels/kit';
 
 /** Daily #1 is this date. */
 const EPOCH = Date.UTC(2026, 10, 19);
@@ -104,7 +105,7 @@ export function dailyScenario(key: string): Scenario {
     [order[i], order[j]] = [order[j], order[i]];
   }
   const base = pool[order[(((n - 1) % pool.length) + pool.length) % pool.length]];
-  const name = base.title.replace(/^\d+ · /, '');
+  const name = displayTitle(base);
   for (let attempt = 0; attempt < 12; attempt++) {
     const rng = mulberry32(hash(`${key}#${attempt}`));
     const t: TrafficProfile = { ...base.traffic };

@@ -17,6 +17,7 @@ import { LESSONS, MODULES, TERMS, type Lesson } from '../src/content/learn';
 import { SCENARIOS, type Scenario } from '../src/engine/levels/scenarios';
 import { BOSSES } from '../src/engine/levels/bosses';
 import { CHAPTERS } from '../src/engine/levels/chapters';
+import { displayTitle } from '../src/engine/levels/kit';
 
 const SITE = 'https://ai-system-simulator.vercel.app';
 const REPO = 'https://github.com/cybernerdie/ai-system-simulator';
@@ -139,9 +140,9 @@ function staticBody(): string {
       `<section id="chapter-${i + 1}"><h3>Chapter ${i + 1}: ${esc(c.title)}</h3><p>${esc(c.blurb)}</p><ul>${c.ids
         .map((id) => {
           const sc = SCENARIOS.find((x) => x.id === id)!;
-          return `<li><a href="${SITE}/play/${id}">${esc(plainTitle(sc))}</a></li>`;
+          return `<li><a href="${SITE}/play/${id}">${esc(displayTitle(sc))}</a></li>`;
         })
-        .join('')}<li><a href="${SITE}/play/${c.boss}">Boss: ${esc(plainTitle(BOSSES.find((b) => b.id === c.boss)!))}</a></li></ul></section>`,
+        .join('')}<li><a href="${SITE}/play/${c.boss}">Boss: ${esc(displayTitle(BOSSES.find((b) => b.id === c.boss)!))}</a></li></ul></section>`,
   ).join('')}</section>
 <section><h2>Learn AI system design: ${MODULES.length} modules, ${LESSONS.length} lessons</h2>${modules}</section>
 <section><h2>AI glossary in plain English (${TERMS.length} terms)</h2><dl>${glossary}</dl></section>
@@ -357,7 +358,6 @@ const PAGES: { s: Scenario; label: string }[] = [
   ...SCENARIOS.map((s, i) => ({ s, label: `Level ${i + 1}` })),
   ...BOSSES.map((s) => ({ s, label: `Chapter ${(s.chapter ?? 0) + 1} boss` })),
 ];
-const plainTitle = (s: Scenario) => s.title.replace(/^(\d+|Boss) · /, '');
 const METRIC_WORDS: Record<string, string> = {
   accuracy: 'accuracy',
   hallucination: 'hallucination rate',
@@ -386,11 +386,11 @@ const goalText = (g: Scenario['goals'][number]) => {
   return `${METRIC_WORDS[g.metric]} ${g.op === '>=' ? 'at least' : 'at most'} ${v}`;
 };
 const embedHtml = (s: Scenario) =>
-  `<iframe src="${SITE}/play/${s.id}?embed=1" title="AISim: ${esc(plainTitle(s))}" width="100%" height="720" style="border:0;border-radius:12px" loading="lazy"></iframe>`;
+  `<iframe src="${SITE}/play/${s.id}?embed=1" title="AISim: ${esc(displayTitle(s))}" width="100%" height="720" style="border:0;border-radius:12px" loading="lazy"></iframe>`;
 
 function levelPage(base: string, s: Scenario, label: string): string {
   const url = `${SITE}/play/${s.id}`;
-  const title = `${plainTitle(s)}: ${label} of the AI system design simulator | AISim`;
+  const title = `${displayTitle(s)}: ${label} of the AI system design simulator | AISim`;
   const desc = `${s.tagline} ${s.brief}`.replace(/\s+/g, ' ');
   const short = desc.length > 158 ? `${desc.slice(0, 155).replace(/\s\S*$/, '')}…` : desc;
   const chapter = CHAPTERS.findIndex((c) => c.ids.includes(s.id) || c.boss === s.id);
@@ -402,7 +402,7 @@ function levelPage(base: string, s: Scenario, label: string): string {
       {
         '@type': 'LearningResource',
         '@id': `${url}#level`,
-        name: plainTitle(s),
+        name: displayTitle(s),
         description: desc,
         url,
         learningResourceType: 'Interactive simulation',
@@ -420,21 +420,21 @@ function levelPage(base: string, s: Scenario, label: string): string {
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'AISim', item: `${SITE}/` },
           ...(chapter >= 0 ? [{ '@type': 'ListItem', position: 2, name: `Chapter ${chapter + 1}: ${CHAPTERS[chapter].title}`, item: `${SITE}/#chapter-${chapter + 1}` }] : []),
-          { '@type': 'ListItem', position: chapter >= 0 ? 3 : 2, name: plainTitle(s), item: url },
+          { '@type': 'ListItem', position: chapter >= 0 ? 3 : 2, name: displayTitle(s), item: url },
         ],
       },
     ],
   }).replace(/</g, '\\u003c');
   const body = `<main class="seo-static">
 <p><a href="${SITE}/">AISim</a>${chapter >= 0 ? ` › Chapter ${chapter + 1}: ${esc(CHAPTERS[chapter].title)}` : ''}</p>
-<h1>${esc(plainTitle(s))}</h1>
+<h1>${esc(displayTitle(s))}</h1>
 <p><strong>${esc(label)}.</strong> ${esc(s.tagline)}</p>
 <p>${esc(s.brief)}</p>
 <h2>Goals</h2><ul>${s.goals.map((g) => `<li>${esc(goalText(g))}</li>`).join('')}</ul>
 <p>Concepts: ${esc(s.skills.join(', '))}.</p>
 <h2>Hint</h2><p>${esc(s.hint)}</p>
 <h2>What you learn</h2><p>${esc(s.lesson)}</p>
-${others.length ? `<h2>More in this chapter</h2><ul>${others.map((o) => `<li><a href="${SITE}/play/${o.s.id}">${esc(plainTitle(o.s))}</a> (${esc(o.label)})</li>`).join('')}</ul>` : ''}
+${others.length ? `<h2>More in this chapter</h2><ul>${others.map((o) => `<li><a href="${SITE}/play/${o.s.id}">${esc(displayTitle(o.s))}</a> (${esc(o.label)})</li>`).join('')}</ul>` : ''}
 <p>This interactive level needs JavaScript. ${AUTHOR_HTML}</p>
 </main>`;
   return base
@@ -442,12 +442,12 @@ ${others.length ? `<h2>More in this chapter</h2><ul>${others.map((o) => `<li><a 
     .replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${esc(short)}" />`)
     .replace(
       /<link rel="canonical"[^>]*>/,
-      `<link rel="canonical" href="${url}" />\n    <link rel="alternate" type="application/json+oembed" href="${SITE}/oembed/${s.id}.json" title="${esc(plainTitle(s))}" />`,
+      `<link rel="canonical" href="${url}" />\n    <link rel="alternate" type="application/json+oembed" href="${SITE}/oembed/${s.id}.json" title="${esc(displayTitle(s))}" />`,
     )
     .replace(/<meta property="og:type"[^>]*>/, `<meta property="og:type" content="article" />\n    <meta property="og:url" content="${url}" />`)
-    .replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${esc(plainTitle(s))} | AISim" />`)
+    .replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${esc(displayTitle(s))} | AISim" />`)
     .replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${esc(short)}" />`)
-    .replace(/<meta name="twitter:title"[^>]*>/, `<meta name="twitter:title" content="${esc(plainTitle(s))} | AISim" />`)
+    .replace(/<meta name="twitter:title"[^>]*>/, `<meta name="twitter:title" content="${esc(displayTitle(s))} | AISim" />`)
     .replace(/<meta name="twitter:description"[^>]*>/, `<meta name="twitter:description" content="${esc(short)}" />`)
     .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, `<script type="application/ld+json">${ld}</script>`)
     .replace(/<main class="seo-static">[\s\S]*?<\/main>/, body);
@@ -459,7 +459,7 @@ function oembed(s: Scenario): string {
     type: 'rich',
     provider_name: NAME,
     provider_url: `${SITE}/`,
-    title: `${plainTitle(s)} | AISim`,
+    title: `${displayTitle(s)} | AISim`,
     author_name: 'Joshua Paul',
     author_url: 'https://joshuapaul.me',
     html: embedHtml(s),

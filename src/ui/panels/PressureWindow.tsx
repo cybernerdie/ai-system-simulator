@@ -1,8 +1,6 @@
 import { Lightbulb } from 'lucide-react';
 import { type Pressure } from '../../engine/pressures';
 
-/* ---------- binding pressure (floating window) ---------- */
-
 export function PressureWindow({ p, running, hasRun, hud }: { p: Pressure | null; running: boolean; hasRun: boolean; hud?: React.ReactNode }) {
   const state = !hasRun || !p ? 'idle' : p.key === 'stable' ? 'stable' : 'binding';
   return (

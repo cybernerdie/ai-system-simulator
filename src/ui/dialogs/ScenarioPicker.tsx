@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Blocks, Code, Crown, Lock, Play, Search, Shapes, Star, X } from 'lucide-react';
 import { CHAPTERS } from '../../engine/levels/chapters';
 import type { Scenario } from '../../engine/levels/scenarios';
-
-// Phones: don't pop the keyboard up the moment a sheet opens
-const TOUCH = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+import { displayTitle } from '../../engine/levels/kit';
+import { IS_TOUCH } from '../../lib/device';
 
 const LEVEL: Record<Scenario['difficulty'], string> = { 0: 'Open', 1: 'Intro', 2: 'Core', 3: 'Advanced' };
 
@@ -148,7 +147,7 @@ export function ScenarioPicker({
           <label className="search">
             <Search size={15} aria-hidden />
             <span className="sr-only">Search scenarios</span>
-            <input autoFocus={!TOUCH} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search levels by topic: memory, GPUs, agents…" />
+            <input autoFocus={!IS_TOUCH} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search levels by topic: memory, GPUs, agents…" />
           </label>
           <div className="chips" role="group" aria-label="Filter scenarios">
             {(
@@ -204,7 +203,7 @@ export function ScenarioPicker({
                             className="stop-dot"
                             onClick={() => setSel(id)}
                             onDoubleClick={() => open && onPick(id)}
-                            aria-label={`Level ${i + 1}: ${sc.title.replace(/^\d+ · /, '')}${open ? '' : ' (locked)'}${isDone ? `, ${stars[id] ?? 1} stars` : ''}`}
+                            aria-label={`Level ${i + 1}: ${displayTitle(sc)}${open ? '' : ' (locked)'}${isDone ? `, ${stars[id] ?? 1} stars` : ''}`}
                             aria-pressed={id === sel}
                           >
                             {open ? i + 1 : <Lock size={15} aria-hidden />}
@@ -246,7 +245,7 @@ export function ScenarioPicker({
                       </div>
                       <div className="stop-detail-actions">
                         {isOpen(selS.id) ? (
-                          <button className="btn btn-primary" onClick={() => onPick(selS.id)} autoFocus={!TOUCH}>
+                          <button className="btn btn-primary" onClick={() => onPick(selS.id)} autoFocus={!IS_TOUCH}>
                             <Play size={14} fill="currentColor" aria-hidden />
                             {selS.id === currentId ? 'Continue' : cleared.has(selS.id) ? 'Play again' : 'Play'}
                           </button>

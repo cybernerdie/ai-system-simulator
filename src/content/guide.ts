@@ -8,7 +8,7 @@ import { SCENARIOS, type Scenario } from '../engine/levels/scenarios';
 import type { ComponentType, Cause, Outcome } from '../engine/types';
 
 /** Stable ids for lines, shared with the clip generator. */
-export const lineId = (...parts: string[]) =>
+const lineId = (...parts: string[]) =>
   parts
     .join('-')
     .toLowerCase()

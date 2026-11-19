@@ -23,12 +23,12 @@ export function edgeOf(source: string, target: string): FlowEdgeType {
   };
 }
 
-/** A level's starting design. Levels are authored on a loose grid, so columns are snapped to stop cards overlapping. */
 /** Turn source→target pairs back into edges, keeping the existing edge objects where they survive. */
 export function reuseEdges(pairs: { source: string; target: string }[], existing: FlowEdgeType[]): FlowEdgeType[] {
   return pairs.map((p) => existing.find((e) => e.source === p.source && e.target === p.target) ?? edgeOf(p.source, p.target));
 }
 
+/** A level's starting design. Levels are authored on a loose grid, so columns are snapped to stop cards overlapping. */
 export function buildFlow(s: Scenario): Flow {
   const cols = [...new Set(s.nodes.map((n) => n.x))].sort((a, b) => a - b);
   return {

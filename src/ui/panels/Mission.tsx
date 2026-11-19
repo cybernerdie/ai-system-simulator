@@ -5,6 +5,7 @@ import type { Scenario } from '../../engine/levels/scenarios';
 import type { Metrics, TrafficProfile } from '../../engine/types';
 import { METRIC_META } from '../../lib/format';
 import { Group } from './Group';
+import { displayTitle } from '../../engine/levels/kit';
 
 const MIX_FIELDS: { key: keyof TrafficProfile; label: string; help: string; max?: number; step?: number; unit?: 'pct' | 'turns' }[] = [
   { key: 'kbShare', label: 'Questions about your docs', help: 'Need your private knowledge base to answer.' },
@@ -66,7 +67,7 @@ export function Mission({
   const met = m ? s.goals.filter((g) => goalMet(m, g)).length : 0;
   return (
     <div className="mission">
-      <h2 className="mission-title">{s.title.replace(/^\d+ · /, '')}</h2>
+      <h2 className="mission-title">{displayTitle(s)}</h2>
       <p className="mission-tagline">{s.tagline}</p>
       <p className="mission-brief">{s.brief}</p>
 

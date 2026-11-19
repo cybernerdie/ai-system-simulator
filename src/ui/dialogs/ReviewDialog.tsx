@@ -2,8 +2,6 @@ import { Check, X } from 'lucide-react';
 import { useEscape } from '../hooks/useEscape';
 import type { Review } from '../../engine/review';
 
-/* ---------- design review ---------- */
-
 export function ReviewDialog({ review, onFocusNode, onClose }: { review: Review | null; onFocusNode: (id: string) => void; onClose: () => void }) {
   useEscape(onClose);
   return (

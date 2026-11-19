@@ -43,5 +43,5 @@ export const base: TrafficProfile = {
 
 export const chain = (...ids: string[]): SimEdge[] => ids.slice(1).map((id, i) => ({ source: ids[i], target: id }));
 
-/** "7 · The docs chatbot" → "The docs chatbot" */
-export const stripScenarioNumbers = (title: string) => title.replace(/^\d+ · /, '');
+/** A level's name without its prefix: "07 · The docs chatbot", "Boss · The launch", "Daily #3 · …" → the name alone. */
+export const displayTitle = (s: { title: string }) => s.title.replace(/^(\d+|Boss|Daily #\d+) · /, '');

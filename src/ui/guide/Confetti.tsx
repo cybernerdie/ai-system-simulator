@@ -1,5 +1,3 @@
-/* ---------- celebration ---------- */
-
 export function Confetti() {
   const bits = Array.from({ length: 36 }, (_, i) => i);
   return (

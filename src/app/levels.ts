@@ -24,11 +24,8 @@ export function lookup(id: string): Scenario | undefined {
 }
 
 /** Numbered levels and bosses have their own page (/play/<id>); everything else lives at the root. */
-export const hasPage = (s: Scenario) => levelNumber(s) !== null || s.kind === 'boss';
+const hasPage = (s: Scenario) => levelNumber(s) !== null || s.kind === 'boss';
 export const pathFor = (s: Scenario) => (hasPage(s) ? `/play/${s.id}` : '/');
-
-/** "07 · The docs chatbot" → "The docs chatbot" */
-export const displayTitle = (s: Scenario) => s.title.replace(/^(\d+|Boss|Daily #\d+) · /, '');
 
 /** Where a visit starts: the page's own level, else the level you were last on (with your work), else level 1. */
 export function startingPoint(): { id: string; restored: boolean; flow: Flow } {

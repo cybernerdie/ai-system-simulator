@@ -6,8 +6,6 @@ import type { Goal, GoalMetric, Metrics, SimGraph, TrafficProfile } from '../../
 import { METRIC_META } from '../../lib/format';
 import { useEscape } from '../hooks/useEscape';
 
-/* ---------- compare two designs ---------- */
-
 const ROWS: GoalMetric[] = ['accuracy', 'hallucination', 'errorRate', 'injection', 'p50', 'ttftP50', 'costPer1k'];
 const HIGHER_BETTER = new Set<GoalMetric>(['accuracy']);
 

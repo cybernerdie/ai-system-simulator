@@ -7,7 +7,7 @@ import { fromBase64Url, toBase64Url } from '../lib/base64url';
 import { recallLevelCode } from '../lib/progress';
 import { simulate } from '../engine/simulate';
 import { goalMet } from '../engine/pressures';
-import { stripScenarioNumbers } from '../engine/levels/kit';
+import { displayTitle } from '../engine/levels/kit';
 import type { Scenario, ScenarioNode } from '../engine/levels/kit';
 import type { Goal, GoalMetric, SimGraph, TrafficProfile } from '../engine/types';
 
@@ -113,7 +113,7 @@ export function customScenario(code: string, l: CustomLevel): Scenario {
     kind: 'custom',
     difficulty: 2,
     skills: ['Made by a player'],
-    title: stripScenarioNumbers(l.title),
+    title: displayTitle(l),
     tagline: 'A level someone built and shared.',
     brief: l.brief || 'Someone built this level in the sandbox and shared it. Hit every goal.',
     traffic: l.traffic,

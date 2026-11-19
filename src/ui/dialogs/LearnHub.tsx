@@ -5,9 +5,8 @@ import { loadRead, saveRead } from '../../lib/progress';
 import { SCENARIOS } from '../../engine/levels/scenarios';
 import { KindIcon } from '../canvas/icons';
 import { COMPONENTS } from '../../engine/components';
-
-// Phones: don't pop the keyboard up the moment a sheet opens
-const TOUCH = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+import { displayTitle } from '../../engine/levels/kit';
+import { IS_TOUCH } from '../../lib/device';
 
 export type HubView = { tab: 'lessons'; lessonId: string } | { tab: 'glossary'; termId?: string };
 
@@ -230,7 +229,7 @@ function Lessons({ lesson, onPick, onTerm, onTry }: { lesson: Lesson; onPick: (i
                   onTry(scenario.id);
                 }}
               >
-                <Play size={13} fill="currentColor" aria-hidden /> Try it: {scenario.title.replace(/^\d+ · /, '')}
+                <Play size={13} fill="currentColor" aria-hidden /> Try it: {displayTitle(scenario)}
               </button>
             ) : (
               <span />
@@ -292,7 +291,7 @@ function Glossary({ focusId, onTerm, onLesson }: { focusId?: string; onTerm: (id
         <label className="search">
           <Search size={15} aria-hidden />
           <span className="sr-only">Search terms</span>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${TERMS.length} terms…`} autoFocus={!focusId && !TOUCH} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${TERMS.length} terms…`} autoFocus={!focusId && !IS_TOUCH} />
         </label>
         <div className="chips" role="group" aria-label="Category">
           {(['All', ...CATEGORIES] as const).map((c) => (

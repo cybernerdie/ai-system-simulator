@@ -3,7 +3,7 @@ import type { SimFlowNode, ZoneFlowNode } from './SimNodeView';
 
 export type ZoneKey = 'entry' | 'guard' | 'context' | 'model' | 'check' | 'output' | 'observe';
 
-export const ZONE_OF: Partial<Record<ComponentType, ZoneKey>> = {
+const ZONE_OF: Partial<Record<ComponentType, ZoneKey>> = {
   auth: 'entry',
   user_limits: 'entry',
   stt: 'entry',
@@ -32,7 +32,7 @@ export const ZONE_OF: Partial<Record<ComponentType, ZoneKey>> = {
   fairness_eval: 'observe',
 };
 
-export const ZONE_LABEL: Record<ZoneKey, string> = {
+const ZONE_LABEL: Record<ZoneKey, string> = {
   entry: 'Entry',
   guard: 'Safety, before the model',
   context: 'Retrieval and memory',

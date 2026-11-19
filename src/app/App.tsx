@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Background, BackgroundVariant, Controls, MarkerType, NodeChangeset, ReactFlow, addEdge, useEdgesState, useNodesState, useReactFlow, type Connection } from '@xyflow/react';
 import { COMPONENTS } from '../engine/components';
 import { SANDBOX, SCENARIOS } from '../engine/levels/scenarios';
+import { displayTitle } from '../engine/levels/kit';
 import { BOSSES } from '../engine/levels/bosses';
 import { findBuiltIn, levelNumber, levelTag, nextAfter } from '../engine/catalog';
 import { dailyNumber, dailyShareText, dailyStreak, todayKey } from '../engine/modes/daily';
@@ -70,7 +71,7 @@ import { AchievementsDialog, CommandPalette, CompareDialog, IncidentOverDialog, 
 import { buildCommands } from './commands';
 import { EMBED, HOLD_TICKS, PHONE_QUERY, PLAY_ID, SITE } from './config';
 import { buildFlow, designGraph, designSignature, designToFlow, edgeOf, flowGraph, packDesign, reuseEdges } from './flow';
-import { analyticsLevel, displayTitle, lookup, pathFor, registerCustomLevel, startingPoint } from './levels';
+import { analyticsLevel, lookup, pathFor, registerCustomLevel, startingPoint } from './levels';
 import { useAchievements } from './hooks/useAchievements';
 import { useAutoClear } from './hooks/useAutoClear';
 import { fitOptions, useCanvasFit } from './hooks/useCanvasFit';
@@ -223,8 +224,6 @@ export default function App() {
   );
   const achievements = useAchievements(progress);
 
-  /* ---------- levels ---------- */
-
   const loadScenario = useCallback(
     (id: string, { fresh = false } = {}) => {
       const s = lookup(id) ?? SCENARIOS[0];
@@ -371,8 +370,6 @@ export default function App() {
     } else loadScenario(SANDBOX.id);
   };
 
-  /* ---------- sharing ---------- */
-
   const copyText = useCallback(
     async (text: string, done: string) => {
       try {
@@ -476,8 +473,6 @@ export default function App() {
     [stars, cleared, showToast],
   );
 
-  /* ---------- editing the design ---------- */
-
   const onConnect = useCallback(
     ({ source, target }: Connection) => {
       if (!source || !target || source === target) return;
@@ -563,8 +558,6 @@ export default function App() {
     [flow, setNodes, setTab],
   );
 
-  /* ---------- review, compare, quiz ---------- */
-
   const openReview = useCallback(() => {
     setReview('loading');
     setRunning(false);
@@ -601,8 +594,6 @@ export default function App() {
     },
     [scenario.id],
   );
-
-  /* ---------- canvas view ---------- */
 
   const unlock = useMemo(() => paletteLocks(scenario, new Set(nodes.map((n) => n.data.kind)), unlockAll), [scenario, nodes, unlockAll]);
 
@@ -647,8 +638,6 @@ export default function App() {
       }),
     [edges, running, active, metrics, traced, arrow],
   );
-
-  /* ---------- keyboard, tour, commands ---------- */
 
   const anyDialog = intro !== null || touring || won || picker || !!hub || cmdk || compareOpen || makerOpen || achOpen || !!incidentOver || !!review;
   useShortcuts({ blocked: anyDialog, onToggleRun: toggleRun, onCommands: EMBED ? undefined : () => setCmdk(true) });
