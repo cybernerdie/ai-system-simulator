@@ -238,4 +238,45 @@ export const BOSSES: Scenario[] = [
       edges: [...chain('users', 'sc', 'emb', 'vdb', 'rr', 'llm'), { source: 'sc', target: 'kw' }, { source: 'kw', target: 'rr' }],
     },
   }),
+  boss({
+    id: 'boss-ship',
+    chapter: 6,
+    difficulty: 3,
+    skills: ['Authentication', 'Tracing', 'Privacy', 'Fairness'],
+    title: 'Boss · Launch review',
+    tagline: 'Security, compliance and the support lead all have to sign off.',
+    brief:
+      'Your assistant is going from beta to general availability, and three teams must sign off. Security found the app key is being abused. Compliance wants personal data kept out of third-party systems, including your logs. Support wants every complaint traceable within hours, and the Spanish-speaking customers served as well as everyone else.',
+    traffic: { ...base, rps: 15, kbShare: 0.7, exactTermShare: 0.1, unauthShare: 0.3, piiShare: 0.3, cohortShare: 0.25, cohortHidden: true },
+    goals: [
+      { metric: 'costPer1k', op: '<=', value: 12 },
+      { metric: 'piiLeak', op: '<=', value: 0.02 },
+      { metric: 'diagnoseHours', op: '<=', value: 4 },
+      { metric: 'fairnessGap', op: '<=', value: 0.07 },
+      { metric: 'accuracy', op: '>=', value: 0.7 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'emb', type: 'embedding', x: 170, y: 120 },
+      { id: 'vdb', type: 'vector_db', x: 340, y: 120, config: { topK: 5, chunk: 'medium' } },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'emb', 'vdb', 'llm'),
+    hint: 'Four sign-offs, four separate problems: who is calling, what leaves your systems, what you record, and who gets worse answers.',
+    lesson:
+      'Production readiness is mostly controls around the model: auth at the door, personal data redacted before it leaves (for the model and for your logs), traces of every failure, and quality measured per group. None of them makes a demo better. All of them decide whether you can run it for real.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'auth', type: 'auth', x: 100, y: 120 },
+        { id: 'pii', type: 'pii_redactor', x: 200, y: 120 },
+        { id: 'emb', type: 'embedding', x: 300, y: 120, config: { multilingual: true } },
+        { id: 'vdb', type: 'vector_db', x: 400, y: 120, config: { topK: 5, chunk: 'medium' } },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+        { id: 'fair', type: 'fairness_eval', x: 640, y: 120 },
+        { id: 'tr', type: 'tracing', x: 760, y: 120, config: { sampling: 'errors', capturePrompts: true } },
+      ],
+      edges: chain('users', 'auth', 'pii', 'emb', 'vdb', 'llm', 'fair', 'tr'),
+    },
+  }),
 ];

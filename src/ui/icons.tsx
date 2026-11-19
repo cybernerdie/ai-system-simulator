@@ -21,7 +21,7 @@ import {
   TextSearch,
   Users,
   Zap,
-  type LucideIcon, FileCheck, Hand } from 'lucide-react';
+  type LucideIcon, FileCheck, Hand, KeyRound, Footprints, Scale } from 'lucide-react';
 import { COMPONENTS } from '../engine/components';
 import type { ComponentType } from '../engine/types';
 
@@ -50,6 +50,9 @@ export const ICONS: Record<ComponentType, LucideIcon> = {
   stt: Mic,
   tts: Volume2,
   user_limits: Gauge,
+  auth: KeyRound,
+  tracing: Footprints,
+  fairness_eval: Scale,
 };
 
 export function KindIcon({ kind, size = 'md' }: { kind: ComponentType; size?: 'sm' | 'md' | 'lg' }) {

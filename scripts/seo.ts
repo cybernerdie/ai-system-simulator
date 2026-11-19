@@ -356,9 +356,11 @@ const METRIC_WORDS: Record<string, string> = {
   piiLeak: 'personal data leaked',
   evalGap: 'eval error',
   harmfulActions: 'hijacked actions',
+  diagnoseHours: 'time to find the cause of a bad answer',
+  fairnessGap: 'quality gap between user groups',
 };
 const goalText = (g: Scenario['goals'][number]) => {
-  const v = g.metric === 'costPer1k' ? `$${g.value}` : g.metric === 'p50' || g.metric === 'ttftP50' ? `${(g.value / 1000).toFixed(1)}s` : `${+(g.value * 100).toFixed(2)}%`;
+  const v = g.metric === 'costPer1k' ? `$${g.value}` : g.metric === 'p50' || g.metric === 'ttftP50' ? `${(g.value / 1000).toFixed(1)}s` : g.metric === 'diagnoseHours' ? `${g.value} hours` : g.metric === 'fairnessGap' ? `${Math.round(g.value * 100)} points` : `${+(g.value * 100).toFixed(2)}%`;
   return `${METRIC_WORDS[g.metric]} ${g.op === '>=' ? 'at least' : 'at most'} ${v}`;
 };
 const embedHtml = (s: Scenario) => `<iframe src="${SITE}/play/${s.id}?embed=1" title="AISim: ${esc(plainTitle(s))}" width="100%" height="720" style="border:0;border-radius:12px" loading="lazy"></iframe>`;

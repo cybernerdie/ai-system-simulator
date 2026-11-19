@@ -62,6 +62,9 @@ describe('scenarios', () => {
       'bug-guard': 'guard_false_positive',
       'bug-reranker': 'retrieval_miss',
       'bug-thinking': 'cost',
+      'leaked-key': 'unauthenticated',
+      'why-did-it-say': 'no_traces',
+      'average-looks-fine': 'blind_cohort',
     };
     for (const s of SCENARIOS) {
       const m = run(s.nodes, s.edges, s.traffic);

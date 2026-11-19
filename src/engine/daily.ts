@@ -49,7 +49,7 @@ const graphOf = (g: Scenario['solution']) => ({
   edges: g.edges.map((e) => ({ source: e.source, target: e.target })),
 });
 
-const RATE = new Set(['accuracy', 'hallucination', 'injection', 'errorRate', 'piiLeak', 'evalGap', 'harmfulActions']);
+const RATE = new Set(['accuracy', 'hallucination', 'injection', 'errorRate', 'piiLeak', 'evalGap', 'harmfulActions', 'fairnessGap']);
 
 /** Loosen each goal just enough that the reference solution meets it on today's traffic. */
 function goalsFor(base: Goal[], m: Metrics): Goal[] {

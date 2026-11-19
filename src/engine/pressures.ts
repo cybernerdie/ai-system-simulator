@@ -1,6 +1,6 @@
 import type { Cause, Goal, GoalMetric, Metrics } from './types';
 
-export type PressureKey = Cause | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent' | 'background_jobs' | 'uncached_prompt' | 'pii_leak' | 'abuse' | 'slow_voice' | 'no_model' | 'eval_blindspot';
+export type PressureKey = Cause | 'blind_cohort' | 'unauthenticated' | 'no_traces' | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent' | 'background_jobs' | 'uncached_prompt' | 'pii_leak' | 'abuse' | 'slow_voice' | 'no_model' | 'eval_blindspot';
 
 export interface Pressure {
   key: PressureKey;
@@ -125,6 +125,26 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     why: 'Requests contain names, emails and health or card details, and they\'re sent as-is to a third-party model provider. That\'s a compliance problem, whatever the provider promises.',
     try: 'Add a PII Redactor before the model to swap personal details for placeholders, or keep sensitive traffic on a self-hosted model.',
   },
+  language_gap: {
+    title: 'One group gets worse answers',
+    why: 'People asking in another language get far worse answers than everyone else. English-only embeddings put their questions nowhere near the English docs that answer them, so retrieval comes back empty.',
+    try: 'Open the Embedding Model and switch on the multilingual model. Measure the gap per group to be sure it closed.',
+  },
+  blind_cohort: {
+    title: 'A gap hiding inside the average',
+    why: 'Overall quality looks fine, but some users keep complaining. Your evals score everyone together, so if one group is served much worse, the average hides it.',
+    try: 'Add a Fairness Evaluator after the model. It scores each group separately, so you can see who is being served worse and why.',
+  },
+  unauthenticated: {
+    title: 'Strangers using your API',
+    why: 'Your key shipped inside the app, and scripts are calling your endpoint with it. They rotate accounts and addresses, so per-user limits barely slow them, and you pay for every call.',
+    try: 'Add Auth in front of everything else, so calls without valid credentials are rejected before they cost anything. Then move the provider key to your server.',
+  },
+  no_traces: {
+    title: 'You can\'t see why it failed',
+    why: 'A customer reports a wrong answer and nobody can tell what the model was sent or what retrieval found. Without traces of failed requests, every bug report takes days of guessing.',
+    try: 'Add a Trace Collector after the model. Keep every failure (and a small sample of the rest), and store the prompts, with personal data redacted first.',
+  },
   abuse: {
     title: 'A few accounts eating your capacity',
     why: 'A handful of scripted accounts send hundreds of long requests a minute. They burn your rate limit and your budget, and real users pay for it with errors.',
@@ -236,6 +256,7 @@ export function goalMet(m: Metrics, g: Goal) {
   if (!m.qualityVisible && QUALITY_METRICS.includes(g.metric)) return false;
   // nothing real was answered, so answer quality can't be judged either way
   if (m.answered === 0 && (g.metric === 'accuracy' || g.metric === 'hallucination')) return false;
+  if (!m.fairnessVisible && g.metric === 'fairnessGap') return false;
   const v = metricValue(m, g.metric);
   return g.op === '>=' ? v >= g.value : v <= g.value;
 }
@@ -252,6 +273,7 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
 
   const errorCause = causes.find(([c]) => ['rate_limit', 'context_overflow', 'provider_down', 'gpu_saturated', 'invalid_output'].includes(c));
   const bloated = m.avgHistoryTokens > 4000;
+  if (m.unauthUnchecked && unmet.some((u) => u === 'errorRate' || u === 'costPer1k')) return pick('unauthenticated');
   if (m.abuseUnchecked && unmet.some((u) => u === 'errorRate' || u === 'costPer1k')) return pick('abuse');
   if (unmet.includes('errorRate') && errorCause) {
     if (errorCause[0] === 'rate_limit' && m.offlineInRealtime) return pick('background_jobs');
@@ -259,6 +281,8 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
   }
   if (unmet.length && (m.causes.model_drift ?? 0) > 0) return pick('model_drift');
   if (unmet.includes('piiLeak')) return pick('pii_leak');
+  if (unmet.includes('fairnessGap')) return pick(m.fairnessVisible ? 'language_gap' : 'blind_cohort');
+  if (unmet.includes('diagnoseHours')) return pick('no_traces');
   if (unmet.includes('harmfulActions') || (m.harmfulActions > 0.005 && unmet.length)) return pick('indirect_injection');
   if ((m.causes.voice_pipeline ?? 0) > 0) return pick('voice_pipeline');
   if (unmet.includes('injection')) return pick('injection');

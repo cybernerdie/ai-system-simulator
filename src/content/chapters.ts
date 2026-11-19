@@ -44,4 +44,10 @@ export const CHAPTERS: Chapter[] = [
     ids: ['bug-cache', 'bug-memory', 'bug-guard', 'bug-reranker', 'bug-thinking'],
     boss: 'boss-bugs',
   },
+  {
+    title: 'Production readiness',
+    blurb: 'What a demo never needs: who may call you, seeing why an answer went wrong, and serving every group of users well.',
+    ids: ['leaked-key', 'why-did-it-say', 'average-looks-fine'],
+    boss: 'boss-ship',
+  },
 ];

@@ -18,6 +18,7 @@ export interface WEdge {
 /** Rough order of stages from the user to the answer. */
 const RANK: Record<ComponentType, number> = {
   users: 0,
+  auth: 1,
   user_limits: 1,
   stt: 2,
   pii_redactor: 3,
@@ -41,6 +42,8 @@ const RANK: Record<ComponentType, number> = {
   action_approval: 23,
   tts: 24,
   eval_harness: 25,
+  fairness_eval: 25,
+  tracing: 26,
 };
 
 const isModel = (t: ComponentType) => t === 'llm' || t === 'gpu_llm';

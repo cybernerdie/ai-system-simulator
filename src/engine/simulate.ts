@@ -54,6 +54,10 @@ interface Req {
   creative: boolean;
   pii: boolean;
   abuser: boolean;
+  /** no valid credentials (a leaked key, a scraper) */
+  unauth?: boolean;
+  /** in the group the system serves worse (another language) */
+  cohort?: boolean;
   stale: boolean;
   table: boolean;
   offline: boolean;
@@ -85,6 +89,8 @@ interface Trace {
   staleHit?: boolean;
   question: string;
   piiLeak?: boolean;
+  redacted?: boolean;
+  langMiss?: boolean;
   /** hidden instructions in the content were followed */
   indirect?: boolean;
   /** ...and they made the system do something harmful (send, change, leak) */
@@ -189,6 +195,7 @@ export const CAUSE_TEXT: Record<Cause, string> = {
   too_repetitive: 'Temperature is so low that every piece of writing comes out with the same phrasing.',
   voice_pipeline: 'A voice request needs speech-to-text in and text-to-speech out; part of that chain is missing.',
   forgot_context: 'The user referred back to something said earlier, but that part of the conversation was no longer in the prompt.',
+  language_gap: 'The question was in another language, and the English-only embeddings couldn\'t match it to the docs that answer it.',
 };
 
 const fmtMs = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${Math.round(v)}ms`);
@@ -287,6 +294,9 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   const stt = first('stt');
   const tts = first('tts');
   const limits = first('user_limits');
+  const auth = first('auth');
+  const tracing = first('tracing');
+  const fairEval = first('fairness_eval');
   const perUserRpm = limits ? cfgNum(limits, 'perUserRpm', 60) : Infinity;
   /** An abusive account fires roughly this many requests per minute. */
   const ABUSER_RPM = 600;
@@ -438,6 +448,15 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       req.repeat = false;
       req.pii = false;
     }
+    if ((traffic.unauthShare ?? 0) > 0 && !req.adversarial && !req.abuser && rng() < traffic.unauthShare!) {
+      // someone calling with a leaked key from scripts, rotating accounts and IPs
+      req.abuser = true;
+      req.unauth = true;
+      req.kb = false;
+      req.repeat = false;
+      req.pii = false;
+    }
+    if ((traffic.cohortShare ?? 0) > 0 && !req.adversarial && !req.abuser) req.cohort = rng() < traffic.cohortShare!;
     if (req.kb && (traffic.staleShare ?? 0) > 0) req.stale = rng() < traffic.staleShare!;
     if (req.kb && (traffic.tableShare ?? 0) > 0) req.table = rng() < traffic.tableShare!;
     if ((traffic.batchShare ?? 0) > 0 && !req.adversarial) {
@@ -505,8 +524,28 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       if (text) step(n, text, tone, d);
     };
 
-    // 0a. Per-user limits: scripted accounts hit the cap, people don't
-    if (req.abuser) {
+    // 0. Auth: callers without valid credentials are turned away before anything costs money
+    if (auth) {
+      if (req.unauth && rng() < 0.995) {
+        touch(auth, 4, 0, 'Rejected: no valid credentials', 'ok');
+        t.outcome = 'blocked';
+        t.ttft = t.latency;
+        continue;
+      }
+      touch(auth, 4, 0.000002);
+    }
+    // 0a. Per-user limits: scripted accounts hit the cap, people don't.
+    // Scrapers with a leaked key spread their calls over many accounts and addresses, so most slip under it.
+    if (req.unauth) {
+      if (limits && rng() < 0.25) {
+        touch(limits, 3, 0, 'Blocked one burst, but the scraper rotates accounts', 'ok');
+        t.outcome = 'blocked';
+        t.ttft = t.latency;
+        continue;
+      }
+      if (limits) touch(limits, 3, 0, 'Spread across many accounts, so each one stays under the limit', 'warn');
+      t.steps.push({ kind: 'users', text: 'Someone using your leaked API key from a script', tone: 'warn' });
+    } else if (req.abuser) {
       if (limits && rng() >= perUserRpm / ABUSER_RPM) {
         touch(limits, 3, 0, `Blocked: this account sent ${ABUSER_RPM} requests/min (limit ${perUserRpm})`, 'ok');
         t.outcome = 'blocked';
@@ -534,6 +573,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     let redacted = false;
     if (req.pii && redactor) {
       redacted = rng() < 0.985;
+      t.redacted = redacted;
       touch(redactor, 25, 0.00003, redacted ? 'Swapped personal details for placeholders' : 'Missed a piece of personal data', redacted ? 'ok' : 'bad');
     } else if (redactor) touch(redactor, 25, 0.00003);
 
@@ -586,7 +626,8 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     if (router) touch(router, 12, 0.00002);
     if (retrievalOn) {
       if (vectorOn) {
-        touch(embedding!, 25, 0.00002, 'Turned the question into a vector');
+        const multi = embedding!.config.multilingual === true;
+        touch(embedding!, multi ? 32 : 25, multi ? 0.00004 : 0.00002, req.cohort ? (multi ? 'Turned the question into a vector (multilingual model)' : 'Turned a non-English question into an English-only vector') : 'Turned the question into a vector');
         touch(vdb!, 30, 0.00001);
       }
       if (kw) touch(kw, 15, 0.000005);
@@ -594,6 +635,11 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       t.cost += ingestCost;
       if (req.kb) {
         grounded = rng() < recallFor(req.exact);
+        // English-only embeddings and keyword search barely match questions written in another language
+        if (grounded && req.cohort && !(vectorOn && embedding!.config.multilingual === true) && rng() < 0.55) {
+          grounded = false;
+          t.langMiss = true;
+        }
         // plain text extraction scrambles tables, so their answers can't be found
         if (grounded && req.table && parser === 'plain' && rng() < 0.55) {
           grounded = false;
@@ -982,6 +1028,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       t.cause = 'stale_index';
     }
     if (t.parseMiss && t.cause === 'retrieval_miss') t.cause = 'parse_miss';
+    if (t.langMiss && t.cause === 'retrieval_miss') t.cause = 'language_gap';
 
     // Tool permissions: least privilege means some real tasks can't be finished by the agent
     if (agent && req.send && toolOk && perms !== 'send' && t.outcome === 'correct') {
@@ -1160,6 +1207,33 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     }
   }
 
+  // Traces: what gets kept, what it costs to store, and what personal data ends up in the trace store
+  const sampling = tracing ? String(tracing.config.sampling ?? 'errors') : 'none';
+  const capture = !!tracing && tracing.config.capturePrompts !== false;
+  if (tracing && active.has(tracing.id)) {
+    const per = capture ? 0.0006 : 0.0001;
+    for (const t of traces) {
+      if (t.req.abuser && t.outcome === 'blocked') continue;
+      const failed = t.outcome !== 'correct' && t.outcome !== 'blocked';
+      const keepP = sampling === 'all' ? 1 : sampling === 'errors' ? (failed ? 1 : 0.05) : Number(sampling) / 100;
+      t.touched.push(tracing.id);
+      t.cost += 0.000004;
+      if (rng() < keepP) {
+        t.cost += per;
+        t.steps.push({ nodeId: tracing.id, kind: 'tracing', text: capture ? 'Trace stored with the prompt and answer' : 'Trace stored (timings only)', tone: 'neutral' });
+        if (capture && t.req.pii && !t.redacted && !t.piiLeak) {
+          t.piiLeak = true;
+          t.steps.push({ nodeId: tracing.id, kind: 'tracing', text: 'Personal data written to the trace store unredacted', tone: 'bad' });
+        }
+      }
+    }
+  }
+  const diagnoseHours = !tracing || !active.has(tracing.id) ? 48 : ({ '1': 30, '10': 14, errors: 1.5, all: 1 }[sampling] ?? 14) * (capture ? 1 : 3);
+  if (fairEval && active.has(fairEval.id)) for (const t of traces) if (!(t.req.abuser && t.outcome === 'blocked')) {
+    t.touched.push(fairEval.id);
+    t.cost += 0.00012;
+  }
+
   // Aggregate
   const outcomes: Record<Outcome, number> = {
     correct: 0, hallucinated: 0, declined: 0, blocked: 0, injected: 0, rate_limited: 0, overflow: 0, failed: 0, unhelpful: 0,
@@ -1315,6 +1389,16 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     harmfulActions: realReqs.length ? realReqs.filter((t) => t.harmful).length / realReqs.length : 0,
     indirectFollowed: realReqs.length ? realReqs.filter((t) => t.indirect).length / realReqs.length : 0,
     abuseUnchecked: (traffic.abuseShare ?? 0) > 0 && !limits,
+    unauthUnchecked: (traffic.unauthShare ?? 0) > 0 && !auth,
+    diagnoseHours,
+    fairnessGap: (() => {
+      const c = legit.filter((t) => t.req.cohort);
+      const o = legit.filter((t) => !t.req.cohort);
+      if (!c.length || !o.length) return 0;
+      const acc = (xs: Trace[]) => xs.filter((t) => t.outcome === 'correct').length / xs.length;
+      return Math.max(0, acc(o) - acc(c));
+    })(),
+    fairnessVisible: !traffic.cohortHidden || (!!fairEval && active.has(fairEval.id)),
     noModel: !users || !llms.length,
     answered: legit.length,
     measuredAccuracy,
@@ -1354,7 +1438,7 @@ function labelOf(n: SimNode) {
   const names: Record<ComponentType, string> = {
     users: 'Users', input_guard: 'Input Guardrail', semantic_cache: 'Semantic Cache', router: 'Model Router',
     embedding: 'Embedding Model', vector_db: 'Vector DB', keyword_search: 'Keyword Search', reranker: 'Reranker',
-    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory', eval_harness: 'Eval Harness', gpu_llm: 'Self-hosted Model', fallback: 'Retry & Fallback', agent_team: 'Agent Team', validator: 'Output Validator', batch_queue: 'Batch Queue', pii_redactor: 'PII Redactor', content_sanitizer: 'Content Sanitiser', action_approval: 'Action Approval', stt: 'Speech-to-Text', tts: 'Text-to-Speech', user_limits: 'Per-user Limits',
+    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory', eval_harness: 'Eval Harness', gpu_llm: 'Self-hosted Model', fallback: 'Retry & Fallback', agent_team: 'Agent Team', validator: 'Output Validator', batch_queue: 'Batch Queue', pii_redactor: 'PII Redactor', content_sanitizer: 'Content Sanitiser', action_approval: 'Action Approval', stt: 'Speech-to-Text', tts: 'Text-to-Speech', user_limits: 'Per-user Limits', auth: 'Auth', tracing: 'Trace Collector', fairness_eval: 'Fairness Evaluator',
   };
   return names[n.type];
 }

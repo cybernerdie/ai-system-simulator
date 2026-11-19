@@ -191,6 +191,24 @@ export const QUIZ: Record<string, QuizQuestion> = {
     answer: 1,
     why: 'Reasoning tokens are billed and waited for. On simple questions they add almost nothing. Use them where the problem is hard.',
   },
+  'leaked-key': {
+    q: 'Per-user limits were on. Why didn\'t they stop the leaked key?',
+    options: ['They were set too high', 'The scripts spread calls over many accounts, and limits only cap each known account', 'Limits only work on paid plans'],
+    answer: 1,
+    why: 'Limits answer "how much may this user do?". Auth answers "may you call at all?". A leaked key needs auth, and provider keys belong on your server.',
+  },
+  'why-did-it-say': {
+    q: 'Which traces should you keep to debug wrong answers without a huge bill?',
+    options: ['A random 1% of requests', 'Every failure plus a small sample of the rest, with the prompt text', 'Only timings, never the text'],
+    answer: 1,
+    why: 'The failures are what you debug, so keep them all. Random samples usually miss them, and without the text you can\'t see why an answer was wrong.',
+  },
+  'average-looks-fine': {
+    q: 'Overall accuracy was good. How did one group still get much worse answers?',
+    options: ['They asked harder questions', 'English-only embeddings matched their questions poorly, and the average hid it', 'The model refuses other languages'],
+    answer: 1,
+    why: 'Measure quality per group, not just overall. Here retrieval failed for questions in other languages, and a multilingual embedding model closed the gap.',
+  },
   'boss-launch': {
     q: 'With six problems at once, what\'s the best way to work?',
     options: ['Add every component, then tune', 'Fix the binding pressure, rerun, and see what\'s binding next', 'Start with the cheapest fix'],
@@ -220,6 +238,12 @@ export const QUIZ: Record<string, QuizQuestion> = {
     options: ['Per-user limits', 'Approval before external actions', 'Low temperature'],
     answer: 1,
     why: 'You assume some injected instructions will get through. Requiring approval for send, pay and delete limits what they can do.',
+  },
+  'boss-ship': {
+    q: 'Your traces store prompts. What else must be true before that\'s safe?',
+    options: ['Traces must be sampled at 1%', 'Personal data is redacted before it reaches the trace store', 'Traces are kept for under a day'],
+    answer: 1,
+    why: 'Your logs are a third-party system too. Redact personal data before anything leaves, including on its way to tracing.',
   },
   'boss-bugs': {
     q: 'Wrong, slow and expensive at once. What\'s the fastest way to find the causes?',

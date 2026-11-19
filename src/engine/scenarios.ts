@@ -2,6 +2,7 @@ import { COMPONENTS } from './components';
 
 import { base, chain, type Scenario, type ScenarioNode } from './scenarioKit';
 import { BUG_LEVELS } from './bugLevels';
+import { PROD_LEVELS } from './prodLevels';
 
 export type { Scenario, ScenarioNode } from './scenarioKit';
 export { base, chain } from './scenarioKit';
@@ -860,8 +861,8 @@ const CORE: Scenario[] = [
   },
 ];
 
-/** Every level in journey order: the 25 core levels, then the find-the-bug chapter. */
-export const SCENARIOS: Scenario[] = [...CORE, ...BUG_LEVELS];
+/** Every level in journey order: the 25 core levels, the find-the-bug chapter, then production readiness. */
+export const SCENARIOS: Scenario[] = [...CORE, ...BUG_LEVELS, ...PROD_LEVELS];
 
 export const SANDBOX: Scenario = {
   id: 'sandbox',

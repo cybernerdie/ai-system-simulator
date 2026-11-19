@@ -13,6 +13,18 @@ import { COMPONENTS } from './components';
 import { withDefaults, type Scenario } from './scenarios';
 import type { Cause, ComponentType, Goal, GoalMetric, Metrics, SimGraph, SimNode, TrafficProfile } from './types';
 
+/** What a month of this traffic costs: cost per 1k requests × requests in 30 days. */
+export function monthlyCost(m: Pick<Metrics, 'costPer1k' | 'offered'>): number {
+  return (m.costPer1k / 1000) * m.offered * 86400 * 30;
+}
+
+/** "$1.4k", "$38k", "$1.2M" */
+export function money(v: number): string {
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(v >= 1e7 ? 0 : 1)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(v >= 1e4 ? 0 : 1)}k`;
+  return `$${Math.round(v)}`;
+}
+
 export type NoteTone = 'good' | 'warn' | 'bad';
 
 export interface ReviewNote {
@@ -96,6 +108,8 @@ function describeLoss(base: Metrics, w: Metrics, broken: Goal[]): string {
     piiLeak: (m) => pct(m.piiLeak),
     harmfulActions: (m) => `${(m.harmfulActions * 100).toFixed(2)}%`,
     evalGap: (m) => pts(m.evalGap),
+    diagnoseHours: (m) => `${m.diagnoseHours}h`,
+    fairnessGap: (m) => (m.fairnessVisible ? pts(m.fairnessGap) : 'unmeasured'),
   };
   const label: Partial<Record<GoalMetric, string>> = {
     accuracy: 'accuracy',
@@ -108,6 +122,8 @@ function describeLoss(base: Metrics, w: Metrics, broken: Goal[]): string {
     piiLeak: 'personal data leaked',
     harmfulActions: 'hijacked actions',
     evalGap: 'eval error',
+    diagnoseHours: 'time to find a bug',
+    fairnessGap: 'the gap between user groups',
   };
   const plural = new Set<GoalMetric>(['hallucination', 'injection', 'errorRate', 'harmfulActions']);
   if (g && show[g.metric]) return `without it, ${label[g.metric]} ${plural.has(g.metric) ? 'go' : 'goes'} from ${show[g.metric]!(base)} to ${show[g.metric]!(w)}`;
@@ -204,6 +220,8 @@ export function reviewDesign(s: Scenario, graph: SimGraph, traffic: TrafficProfi
     p50: 'latency',
     ttftP50: 'ttft',
     evalGap: 'eval_blindspot',
+    diagnoseHours: 'no_traces',
+    fairnessGap: m.fairnessVisible ? 'language_gap' : 'blind_cohort',
   };
   const noted = new Set(notes.map((n) => n.title));
   for (const g of missed) {
@@ -225,7 +243,7 @@ export function reviewDesign(s: Scenario, graph: SimGraph, traffic: TrafficProfi
   const base = run(graph, traffic);
   const worth = abl.map((a) => ({ a, h: harmWithout(base, a.without, goals) }));
   // models and evals are judged elsewhere: a model's worth shows in cost notes, evals' worth is visibility, not numbers
-  const KEEP: ComponentType[] = ['llm', 'gpu_llm', 'eval_harness'];
+  const KEEP: ComponentType[] = ['llm', 'gpu_llm', 'eval_harness', 'tracing', 'fairness_eval'];
   const useless = worth.filter(
     // removing it must not hurt anything, including the bill and the wait
     ({ a, h }) => !KEEP.includes(a.node.type) && h.brokenGoals.length === 0 && h.quality < 0.015 && h.safety < 0.01 && h.errors < 0.003 && h.costSaved > -base.costPer1k * 0.03 && h.timeSaved > -base.p50 * 0.05,
@@ -265,7 +283,7 @@ export function reviewDesign(s: Scenario, graph: SimGraph, traffic: TrafficProfi
   /* ---- against the reference design ---- */
   if (ref) {
     const ratio = m.costPer1k / Math.max(0.01, ref.costPer1k);
-    if (ratio >= 1.5) notes.push({ tone: 'warn', title: `${ratio.toFixed(1)}× the reference cost`, text: `You spend ${usd(m.costPer1k)} per 1k requests; the reference design spends ${usd(ref.costPer1k)} with ${refParts} component${refParts === 1 ? '' : 's'}.` });
+    if (ratio >= 1.5) notes.push({ tone: 'warn', title: `${ratio.toFixed(1)}× the reference cost`, text: `You spend ${usd(m.costPer1k)} per 1k requests (about ${money(monthlyCost(m))} a month at this traffic); the reference design spends ${usd(ref.costPer1k)} (${money(monthlyCost(ref))} a month) with ${refParts} component${refParts === 1 ? '' : 's'}.` });
     else if (ratio <= 0.9 && missed.length === 0) notes.push({ tone: 'good', title: 'Cheaper than the reference', text: `${usd(m.costPer1k)} per 1k requests against the reference design's ${usd(ref.costPer1k)}.` });
     if (parts < refParts && missed.length === 0) notes.push({ tone: 'good', title: 'Leaner than the reference', text: `${parts} components where the reference uses ${refParts}.` });
   }
@@ -282,7 +300,7 @@ export function reviewDesign(s: Scenario, graph: SimGraph, traffic: TrafficProfi
     scores.push({ key: 'quality', label: 'Quality', score: clamp(q), note: `${pct(m.accuracy)} right, ${pct(m.hallucination)} made up${m.qualityVisible ? '' : ', and you can\'t see it without evals'}` });
   }
   const costTarget = ref ? ref.costPer1k * 1.15 : costGoal?.value;
-  if (costTarget) scores.push({ key: 'cost', label: 'Cost', score: clamp((100 * costTarget) / Math.max(0.01, m.costPer1k)), note: `${usd(m.costPer1k)} per 1k requests${ref ? `, reference ${usd(ref.costPer1k)}` : ''}` });
+  if (costTarget) scores.push({ key: 'cost', label: 'Cost', score: clamp((100 * costTarget) / Math.max(0.01, m.costPer1k)), note: `${usd(m.costPer1k)} per 1k requests, about ${money(monthlyCost(m))} a month at this traffic${ref ? `; reference ${usd(ref.costPer1k)}` : ''}` });
   const p50Target = goals.find((g) => g.metric === 'p50')?.value ?? (ref ? ref.p50 * 1.25 : 6000);
   const ttftTarget = goals.find((g) => g.metric === 'ttftP50')?.value ?? (ref ? ref.ttftP50 * 1.25 : p50Target);
   const speed = Math.min((100 * p50Target) / Math.max(1, m.p50), (100 * ttftTarget) / Math.max(1, m.ttftP50)) - Math.min(60, m.errorRate * 600);

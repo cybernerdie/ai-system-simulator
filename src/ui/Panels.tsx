@@ -7,6 +7,8 @@ import { QUALITY_METRICS, goalMet, type Pressure } from '../engine/pressures';
 import type { Scenario } from '../engine/scenarios';
 import type { ComponentType, ConfigValue, Goal, GoalMetric, Metrics, NodeConfig, TrafficProfile } from '../engine/types';
 import type { QuizQuestion } from '../content/quiz';
+import { WHY } from '../content/why';
+import { money, monthlyCost } from '../engine/review';
 import { QuizBlock } from './Modes';
 import { KindIcon } from './icons';
 import { profileOf } from '../engine/models';
@@ -19,6 +21,8 @@ export const ms = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${M
 export const usd = (v: number) => `$${v < 10 ? v.toFixed(2) : v.toFixed(0)}`;
 
 export const METRIC_META: Record<GoalMetric, { label: string; fmt: (v: number) => string }> = {
+  diagnoseHours: { label: 'Time to find a bug', fmt: (v) => (v >= 10 ? `${Math.round(v)}h` : `${+v.toFixed(1)}h`) },
+  fairnessGap: { label: 'Gap between user groups', fmt: (v) => `${Math.round(v * 100)} pts` },
   piiLeak: { label: 'Personal data leaked', fmt: pct },
   harmfulActions: { label: 'Hijacked actions', fmt: (v) => (v > 0 && v < 0.001 ? '<0.1%' : `${(v * 100).toFixed(1)}%`) },
   evalGap: { label: 'Evals off from reality by', fmt: (v) => `${Math.round(v * 100)} pts` },
@@ -166,7 +170,11 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
           series: history.map((h) => h.avgHistoryTokens),
         }
       : { key: 'rec', label: 'Recall', value: m.recall == null ? '—' : pct(m.recall), series: history.map((h) => h.recall ?? 0) },
-    goals.some((g) => g.metric === 'harmfulActions')
+    goals.some((g) => g.metric === 'fairnessGap')
+      ? { key: 'fair', label: 'Group gap', value: m.fairnessVisible ? METRIC_META.fairnessGap.fmt(m.fairnessGap) : '?', series: history.map((h) => (h.fairnessVisible ? h.fairnessGap : 0)), metric: 'fairnessGap' as const, title: m.fairnessVisible ? undefined : 'Nothing measures quality per group yet' }
+      : goals.some((g) => g.metric === 'diagnoseHours')
+      ? { key: 'diag', label: 'Find a bug', value: METRIC_META.diagnoseHours.fmt(m.diagnoseHours), series: history.map((h) => h.diagnoseHours), metric: 'diagnoseHours' as const }
+      : goals.some((g) => g.metric === 'harmfulActions')
       ? { key: 'harm', label: 'Hijacked', value: METRIC_META.harmfulActions.fmt(m.harmfulActions), series: history.map((h) => h.harmfulActions), metric: 'harmfulActions' as const }
       : goals.some((g) => g.metric === 'piiLeak')
       ? { key: 'pii', label: 'PII leaked', value: pct(m.piiLeak), series: history.map((h) => h.piiLeak), metric: 'piiLeak' as const }
@@ -207,6 +215,11 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
                 </span>
               )}
             </div>
+            {c.key === 'cost' && (
+              <div className="tele-sub" title="What a month of this traffic would cost">
+                ≈ {money(monthlyCost(m))}/mo
+              </div>
+            )}
             <Spark values={c.series} />
           </div>
         );
@@ -333,8 +346,8 @@ export function SidePanel({
   );
 }
 
-function Group({ title, count, children }: { title: string; count?: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(true);
+function Group({ title, count, children, defaultOpen = true }: { title: string; count?: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <section className="group">
       <button className="group-head" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -423,7 +436,7 @@ function Mission({
           <ul className="goals">
             {s.goals.map((g) => {
               const meta = METRIC_META[g.metric];
-              const unknown = !!m && !m.qualityVisible && QUALITY_METRICS.includes(g.metric);
+              const unknown = !!m && ((!m.qualityVisible && QUALITY_METRICS.includes(g.metric)) || (!m.fairnessVisible && g.metric === 'fairnessGap'));
               const ok = m && !unknown ? goalMet(m, g) : null;
               return (
                 <li key={g.metric} className={unknown ? 'unknown' : ok === null ? '' : ok ? 'met' : 'unmet'}>
@@ -550,6 +563,18 @@ function Inspector({
               <span className="field-help">{f.help}</span>
             </label>
           ))}
+        </Group>
+      )}
+      {WHY[kind] && (
+        <Group title="Why you need it">
+          <dl className="why">
+            <dt>What it decides</dt>
+            <dd>{WHY[kind]!.decides}</dd>
+            <dt>Without it</dt>
+            <dd>{WHY[kind]!.without}</dd>
+            <dt>How you'd notice</dt>
+            <dd>{WHY[kind]!.notice}</dd>
+          </dl>
         </Group>
       )}
       {kind === 'llm' && size && (

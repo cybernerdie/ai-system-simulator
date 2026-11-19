@@ -49,9 +49,12 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 | 28 | Safe and useless | *Find the bug:* blocked customers | Guardrail false positives |
 | 29 | It found it, then threw it away | *Find the bug:* retrieval misses | Reranker keep count |
 | 30 | Overthinking "hello" | *Find the bug:* cost and latency | Reasoning budgets on easy traffic |
+| 31 | The key was in the app | Strangers using your API | Authentication vs per-user limits, keeping keys server-side |
+| 32 | Why did it say that? | No traces of failures | Tracing, sampling (keep every failure), storing prompts safely |
+| 33 | The average looks fine | A gap hiding in the average | Fairness / per-group evals, multilingual embeddings |
 | — | Sandbox | Whatever you hit | Free build; set your own traffic mix, then turn it into a level to share |
 
-Every chapter ends with a **boss level** that mixes everything the chapter taught: *Launch week*, *The enterprise pilot*, *The 9am board report*, *Finance wants a word*, *The agent goes public* and *Three bugs, one system*. Bosses unlock when their chapter is cleared.
+Every chapter ends with a **boss level** that mixes everything the chapter taught: *Launch week*, *The enterprise pilot*, *The 9am board report*, *Finance wants a word*, *The agent goes public*, *Three bugs, one system* and *Launch review*. Bosses unlock when their chapter is cleared.
 
 ## Features
 
@@ -101,10 +104,15 @@ New visitors land on a welcome screen with **Play level 1**. Level 1 is coached 
 - **Components unlock as you play.** Every component is listed; ones you haven't reached are greyed out with a lock and the level that unlocks them. New ones are marked *New*. Sandbox and "Unlock every level" open everything.
 - **Customer complaints** pop up over the canvas while things are failing ("Same invoice, two different totals?!"), so problems read as people, not just numbers.
 - **Hints when you're stuck:** after 25 seconds without progress the guide points at the binding pressure, then shows the level's hint, then highlights a component to try.
-- **Level map and stars:** the 30 levels sit in six chapters, each closed by a boss; clearing one unlocks the next (or tick "Unlock every level"). Each level awards up to three stars: clear it, keep it within budget (par is the reference solution's cost, plus a little slack), and build it lean (no more components than the reference). Improving your best celebrates again.
+- **Level map and stars:** the 33 levels sit in seven chapters, each closed by a boss; clearing one unlocks the next (or tick "Unlock every level"). Each level awards up to three stars: clear it, keep it within budget (par is the reference solution's cost, plus a little slack), and build it lean (no more components than the reference). Improving your best celebrates again.
 - **Quick check, then what you just learned:** the win card shows your stars and why, asks one question about the idea behind the fix (first answers count toward achievements), then shows the level's key takeaway and a link to the full lesson.
 - **Daily challenge:** one remixed level a day, the same for everyone. The date picks the level (every level comes up once per cycle) and reshapes its traffic; goals are set from what the reference solution achieves on that traffic, so every daily is winnable. Share a spoiler-free score (stars, cost, parts, streak).
 - **Incident mode:** an endless on-call run. A working system serves steady traffic while incidents stack up (traffic spikes, provider outages, jailbreak waves, poisoned emails, budget cuts, personal data, stale docs, a JSON integration, scripted abuse). Missing a goal drains health; holding them all heals. Your best run is saved.
+- **Design review:** "Review my design" (Mission tab, win card, command palette) grades a design A–F on quality, cost, speed, safety and simplicity, with written notes: why requests failed, which components earn their place and which do nothing (it reruns the design without each one), settings that work against the traffic, and how it compares with the reference design. Every note comes from the simulation; no model is called.
+- **Why you need it:** every component explains what it decides, what breaks without it, and how you'd notice in production.
+- **Zones on the canvas:** components sit in labelled bands (entry, safety before the model, retrieval and memory, model, safety after the model, measure and observe). Toggle them from the command palette.
+- **Follow a request:** pick one in the Requests tab and a dot travels its path, hop by hop.
+- **Monthly cost:** the cost per 1k requests also shows what a month of the current traffic would cost.
 - **Compare designs:** *Pin* a design, change it, then *Compare* runs both on identical traffic and random draws and shows them side by side.
 - **Make a level:** in the sandbox, *Make a level* turns your design into a challenge: name it, pick goals (suggested from your numbers), choose where players start. It checks the level is fair (your design wins, the start doesn't) and copies a link anyone can play.
 - **Achievements and a certificate:** 19 achievements (penny pincher, bug hunter, firefighter, week on call...) and a downloadable certificate with your name once every level is cleared.

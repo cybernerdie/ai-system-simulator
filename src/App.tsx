@@ -28,7 +28,7 @@ import { customScenario, readHashLevel, recallLevel, rememberLevel, type CustomL
 import { AchievementToast, AchievementsDialog, ReviewDialog, CommandPalette, CompareDialog, IncidentBanner, IncidentHud, IncidentOverDialog, LevelMakerDialog, ModeCards, type Command } from './ui/Modes';
 import { track } from './ui/track';
 import type { ComponentType, ConfigValue, Metrics, SimGraph, TrafficProfile } from './engine/types';
-import { SimNodeView, type SimFlowNode } from './ui/SimNodeView';
+import { SimNodeView, ZONE_LABEL, ZONE_OF, ZoneView, type SimFlowNode, type ZoneFlowNode, type ZoneKey } from './ui/SimNodeView';
 import type { Shown } from './ui/Requests';
 import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
 import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
@@ -82,7 +82,7 @@ function fitOptions(): FitViewOptions {
   const px = (n: number) => `${Math.round(n)}px` as `${number}px`;
   return { padding: { top: px(padTop), bottom: px(padBottom), left: px(48), right: px(48) }, maxZoom: 1.05, minZoom: 0.35 };
 }
-const nodeTypes = { sim: SimNodeView };
+const nodeTypes = { sim: SimNodeView, zone: ZoneView };
 const edgeTypes = { flow: FlowEdge };
 
 function edgeOf(source: string, target: string): FlowEdgeType {
@@ -798,15 +798,69 @@ export default function App() {
 
   // Push live stats into nodes, light up active edges
   const active = useMemo(() => new Set(metrics?.activeNodeIds ?? []), [metrics]);
-  const traced = useMemo(() => (picked ? picked.steps.map((s) => s.nodeId).filter(Boolean) as string[] : null), [picked]);
+  // the path a picked request took: Users first, then each component once, in order
+  const traced = useMemo(() => {
+    if (!picked) return null;
+    const users = nodes.find((n) => n.data.kind === 'users')?.id;
+    const ids = [users, ...picked.steps.map((s) => s.nodeId)].filter(Boolean) as string[];
+    return ids.filter((id, i) => ids.indexOf(id) === i);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked]);
+  // labelled bands behind the components, grouped by what they do (entry, safety, retrieval, model...)
+  const [showZones, setShowZones] = useState(() => {
+    try {
+      return localStorage.getItem('aisim.zones.v1') !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const toggleZones = useCallback(() => {
+    setShowZones((v) => {
+      try {
+        localStorage.setItem('aisim.zones.v1', v ? '0' : '1');
+      } catch {
+        /* ignore */
+      }
+      return !v;
+    });
+  }, []);
+  const zones: ZoneFlowNode[] = useMemo(() => {
+    if (!showZones) return [];
+    const boxes = new Map<ZoneKey, { x0: number; y0: number; x1: number; y1: number }>();
+    for (const n of nodes) {
+      const z = ZONE_OF[n.data.kind];
+      if (!z) continue;
+      const w = n.measured?.width ?? 230;
+      const h = n.measured?.height ?? 110;
+      const b = boxes.get(z);
+      const x0 = n.position.x, y0 = n.position.y, x1 = x0 + w, y1 = y0 + h;
+      boxes.set(z, b ? { x0: Math.min(b.x0, x0), y0: Math.min(b.y0, y0), x1: Math.max(b.x1, x1), y1: Math.max(b.y1, y1) } : { x0, y0, x1, y1 });
+    }
+    return [...boxes].map(([zone, b]) => ({
+      id: `zone-${zone}`,
+      type: 'zone' as const,
+      position: { x: b.x0 - 16, y: b.y0 - 38 },
+      style: { width: b.x1 - b.x0 + 32, height: b.y1 - b.y0 + 54 },
+      data: { zone, label: ZONE_LABEL[zone] },
+      selectable: false,
+      draggable: false,
+      deletable: false,
+      focusable: false,
+      connectable: false,
+      zIndex: -1,
+    }));
+  }, [nodes, showZones]);
   const viewNodes = useMemo(
     () =>
-      nodes.map((n) => ({
-        ...n,
-        className: traced ? (traced.includes(n.id) ? 'is-traced' : 'is-dimmed') : undefined,
-        data: { ...n.data, running, stat: metrics?.nodeStats[n.id] },
-      })),
-    [nodes, metrics, running, traced],
+      [
+        ...zones,
+        ...nodes.map((n) => ({
+          ...n,
+          className: traced ? (traced.includes(n.id) ? 'is-traced' : 'is-dimmed') : undefined,
+          data: { ...n.data, running, stat: metrics?.nodeStats[n.id] },
+        })),
+      ] as unknown as SimFlowNode[],
+    [zones, nodes, metrics, running, traced],
   );
   const viewEdges = useMemo(
     () =>
@@ -817,8 +871,9 @@ export default function App() {
           markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: theme === 'dark' ? '#71717a' : '#a1a1aa' },
           className: traced ? (onTrace ? 'is-traced' : 'is-dimmed') : undefined,
           data: {
-            live: (running && active.has(e.source) && active.has(e.target) && !traced) || onTrace,
+            live: running && active.has(e.source) && active.has(e.target) && !traced,
             rate: metrics?.nodeStats[e.target]?.rps ?? 0,
+            trace: onTrace && traced ? { index: traced.indexOf(e.source), count: Math.max(1, traced.length - 1) } : undefined,
           },
         };
       }),
@@ -1093,7 +1148,7 @@ export default function App() {
         onEnter: () => setTab('mission'),
       },
       {
-        target: '.react-flow__node',
+        target: '.react-flow__node-sim',
         title: 'The system you\'re fixing',
         body: 'Requests flow left to right, from your users to the model. Click a component to tune its settings, drag from a node\'s right dot to connect it to the next one, and press Delete to remove it.',
       },
@@ -1165,12 +1220,13 @@ export default function App() {
       { id: 'sandbox', group: 'Go to', label: 'Sandbox', run: () => loadScenario(SANDBOX.id) },
       { id: 'learn', group: 'Go to', label: 'Lessons and glossary', run: () => setHub({ tab: 'lessons', lessonId: firstUnreadLesson() }) },
       { id: 'ach', group: 'Go to', label: 'Achievements', run: () => setAchOpen(true) },
+      { id: 'zones', group: 'Settings', label: showZones ? 'Hide the zone labels on the canvas' : 'Show zone labels on the canvas', run: toggleZones },
       { id: 'theme', group: 'Settings', label: theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode', run: toggleTheme },
       { id: 'sfx', group: 'Settings', label: sfx ? 'Turn sound effects off' : 'Turn sound effects on', run: () => setSfx(!sfx) },
       { id: 'tour', group: 'Help', label: 'Take the tour', run: () => setTouring(true) },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unlock, running, pinHere, scenario.id, theme, sfx, compare, share, resetScenario, loadScenario, addNode, openReview]);
+  }, [unlock, running, pinHere, scenario.id, theme, sfx, compare, share, resetScenario, loadScenario, addNode, openReview, showZones, toggleZones]);
 
   const selected = nodes.find((n) => n.id === selectedId);
   const next = nextAfter(scenario, new Set([...cleared, scenario.id]));

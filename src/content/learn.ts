@@ -939,6 +939,9 @@ export const TERMS: Term[] = [
   { id: 'eval', term: 'Eval', aka: 'Evaluation', category: 'Quality', simple: 'A repeatable way to score answer quality: run a test set with known good answers, and have a judge score a sample of live traffic.', analogy: 'Unit tests, but for answer quality.', why: 'Without evals, every change is a guess.', related: ['golden-dataset', 'llm-as-judge', 'regression'], lesson: 'evals' },
   { id: 'golden-dataset', term: 'Golden dataset', aka: 'Test set', category: 'Quality', simple: 'A fixed collection of real questions with answers you\'ve checked are correct, used to score every version of your system.', analogy: 'The answer key for a practice exam you give every new version.', why: 'Lets you compare versions on the same questions, so improvements are real.', related: ['eval', 'regression'], lesson: 'evals' },
   { id: 'regression', term: 'Regression', category: 'Quality', simple: 'When a change makes something that used to work worse, often without anyone noticing at first.', why: 'Cost and speed optimisations are the classic source of silent quality regressions.', related: ['eval', 'golden-dataset'], lesson: 'evals' },
+  { id: 'authentication', term: 'Authentication', aka: 'Auth, API keys', category: 'Production', simple: 'Checking who is calling before doing any work: a valid key, token or login. Calls without one are turned away at the door.', analogy: 'The ticket check at the entrance, before anyone reaches the show.', why: 'A key shipped inside an app or a web page is public. Without auth on your own endpoint, anyone who finds it uses your models on your bill.', related: ['per-user-limits', 'rate-limit'] },
+  { id: 'tracing', term: 'Tracing', aka: 'Request traces', category: 'Production', simple: 'Recording each step a request went through (prompt, retrieved chunks, model calls, timings) so you can replay why an answer came out wrong.', analogy: 'A flight recorder you can play back after something goes wrong.', why: 'Wrong answers don\'t throw errors. Without traces, debugging a complaint means guessing. Keep every failure, sample the rest, and redact personal data before storing prompts.', related: ['observability', 'eval', 'redaction'] },
+  { id: 'fairness', term: 'Fairness evaluation', aka: 'Cohort evals', category: 'Quality', simple: 'Measuring answer quality separately for different groups of users (by language, region, device, account type) instead of only on average.', analogy: 'Checking every classroom\'s results, not just the school average.', why: 'A good average can hide one group getting much worse answers, often because the data, embeddings or prompts were built for the majority.', related: ['eval', 'embedding'] },
   { id: 'binding-pressure', term: 'Binding pressure', category: 'Quality', simple: 'The single limit hurting your system the most right now. Fixing anything else barely helps.', analogy: 'The weakest link in a chain.', related: ['eval', 'observability'], lesson: 'binding-pressure' },
 ];
 
@@ -972,4 +975,7 @@ export const COMPONENT_TERM: Partial<Record<ComponentType, string>> = {
   stt: 'speech-to-text',
   tts: 'text-to-speech',
   user_limits: 'per-user-limits',
+  auth: 'authentication',
+  tracing: 'tracing',
+  fairness_eval: 'fairness',
 };

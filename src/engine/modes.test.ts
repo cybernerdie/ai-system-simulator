@@ -140,7 +140,8 @@ describe('catalog', () => {
     expect(nextAfter(SCENARIOS[4], new Set(ch1))?.id).toBe('boss-launch');
     expect(nextAfter(SCENARIOS[4], new Set(ch1.slice(1)))?.id).toBe(SCENARIOS[5].id);
     expect(nextAfter(BOSSES[0], new Set())?.id).toBe(SCENARIOS[5].id);
-    expect(nextAfter(BOSSES[5], new Set())).toBeUndefined();
+    expect(nextAfter(BOSSES[5], new Set())?.id).toBe('leaked-key');
+    expect(nextAfter(BOSSES[6], new Set())).toBeUndefined();
   });
 });
 

@@ -58,6 +58,10 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
       return [config.streaming ? 'streaming' : 'waits for the whole thing'];
     case 'user_limits':
       return [`${config.perUserRpm} req/min per user`];
+    case 'tracing':
+      return [{ '1': '1% sampled', '10': '10% sampled', errors: 'failures + 5%', all: 'every request' }[String(config.sampling)] ?? '', config.capturePrompts ? 'with prompts' : 'timings only'];
+    case 'embedding':
+      return config.multilingual ? ['multilingual'] : [];
     case 'input_guard':
       return [`strict ${Number(config.strictness).toFixed(2)}`];
     default:
@@ -88,6 +92,59 @@ export function SimNodeView({ data, selected }: NodeProps<SimFlowNode>) {
         <span>{data.running ? data.stat?.label ?? 'idle' : 'idle'}</span>
       </div>
       <Handle type="source" position={Position.Right} />
+    </div>
+  );
+}
+
+/* ---------- zones: labelled bands behind the components, by what they do ---------- */
+
+export type ZoneKey = 'entry' | 'guard' | 'context' | 'model' | 'check' | 'output' | 'observe';
+
+export const ZONE_OF: Partial<Record<ComponentType, ZoneKey>> = {
+  auth: 'entry',
+  user_limits: 'entry',
+  stt: 'entry',
+  pii_redactor: 'guard',
+  input_guard: 'guard',
+  content_sanitizer: 'guard',
+  semantic_cache: 'context',
+  memory: 'context',
+  embedding: 'context',
+  vector_db: 'context',
+  keyword_search: 'context',
+  reranker: 'context',
+  router: 'model',
+  fallback: 'model',
+  batch_queue: 'model',
+  agent: 'model',
+  agent_team: 'model',
+  llm: 'model',
+  gpu_llm: 'model',
+  validator: 'check',
+  output_guard: 'check',
+  action_approval: 'check',
+  tts: 'output',
+  eval_harness: 'observe',
+  tracing: 'observe',
+  fairness_eval: 'observe',
+};
+
+export const ZONE_LABEL: Record<ZoneKey, string> = {
+  entry: 'Entry',
+  guard: 'Safety, before the model',
+  context: 'Retrieval and memory',
+  model: 'Model',
+  check: 'Safety, after the model',
+  output: 'Output',
+  observe: 'Measure and observe',
+};
+
+export type ZoneFlowNode = Node<{ zone: ZoneKey; label: string }, 'zone'>;
+
+export function ZoneView({ data }: NodeProps<ZoneFlowNode>) {
+  return (
+    <div className={`zone zone-${data.zone}`} aria-hidden>
+      <span className="zone-label">{data.label}</span>
     </div>
   );
 }

@@ -22,7 +22,10 @@ export type ComponentType =
   | 'action_approval'
   | 'stt'
   | 'tts'
-  | 'user_limits';
+  | 'user_limits'
+  | 'auth'
+  | 'tracing'
+  | 'fairness_eval';
 
 export type ConfigValue = number | string | boolean;
 export type NodeConfig = Record<string, ConfigValue>;
@@ -96,6 +99,12 @@ export interface TrafficProfile {
   poisonShare?: number;
   /** Share of tool requests that end in sending something outside (an email, a message, a payment). */
   sendShare?: number;
+  /** Share of traffic from callers with no valid credentials (a leaked key, scrapers rotating accounts). */
+  unauthShare?: number;
+  /** Share of real users in a group the system serves worse (here: people writing in another language). */
+  cohortShare?: number;
+  /** The gap between groups is invisible unless something measures it per group. */
+  cohortHidden?: boolean;
 }
 
 export type Outcome =
@@ -135,7 +144,8 @@ export type Cause =
   | 'sampling_noise'
   | 'too_repetitive'
   | 'indirect_injection'
-  | 'no_permission';
+  | 'no_permission'
+  | 'language_gap';
 
 export type StepTone = 'ok' | 'bad' | 'warn' | 'neutral';
 
@@ -219,6 +229,14 @@ export interface Metrics {
   evalSetup: { testSet: 'representative' | 'easy'; judge: 'calibrated' | 'llm' | 'exact' } | null;
   /** Abusive accounts are running unchecked. */
   abuseUnchecked: boolean;
+  /** How long it takes to find the cause of a reported bad answer (hours). Without traces you're guessing. */
+  diagnoseHours: number;
+  /** Accuracy for most users minus accuracy for the underserved group (0 = equal). */
+  fairnessGap: number;
+  /** False when nothing measures quality per group. */
+  fairnessVisible: boolean;
+  /** Callers without credentials are reaching the model. */
+  unauthUnchecked: boolean;
   /** No path from Users to any model: nothing can be answered. */
   noModel: boolean;
   /** Real (non-attack, non-abuse) user requests that got an answer. Quality is unmeasurable when this is 0. */
@@ -230,6 +248,8 @@ export interface Metrics {
 }
 
 export type GoalMetric =
+  | 'diagnoseHours'
+  | 'fairnessGap'
   | 'piiLeak'
   | 'evalGap'
   | 'harmfulActions'
