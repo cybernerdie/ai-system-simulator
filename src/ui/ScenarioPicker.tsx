@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Search, Shapes, X } from 'lucide-react';
+import { Blocks, Lock, Play, Search, Shapes, Star, X } from 'lucide-react';
+import { CHAPTERS } from '../content/chapters';
 import type { Scenario } from '../engine/scenarios';
 
 // Phones: don't pop the keyboard up the moment a sheet opens
@@ -23,6 +24,9 @@ export function ScenarioPicker({
   sandbox,
   currentId,
   cleared,
+  stars,
+  unlockAll,
+  onUnlockAll,
   onPick,
   onClose,
 }: {
@@ -30,6 +34,9 @@ export function ScenarioPicker({
   sandbox: Scenario;
   currentId: string;
   cleared: Set<string>;
+  stars: Record<string, number>;
+  unlockAll: boolean;
+  onUnlockAll: (on: boolean) => void;
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
@@ -40,6 +47,15 @@ export function ScenarioPicker({
   }, [onClose]);
 
   const done = scenarios.filter((s) => cleared.has(s.id)).length;
+  const totalStars = scenarios.reduce((a, s) => a + (stars[s.id] ?? 0), 0);
+  const indexOf = (id: string) => scenarios.findIndex((x) => x.id === id);
+  // a level opens once the one before it is cleared
+  const isOpen = (id: string) => {
+    const i = indexOf(id);
+    return unlockAll || i <= 0 || id === currentId || cleared.has(id) || cleared.has(scenarios[i - 1].id);
+  };
+  const firstOpenUncleared = scenarios.find((x) => isOpen(x.id) && !cleared.has(x.id));
+  const [sel, setSel] = useState<string>(() => (scenarios.some((x) => x.id === currentId) ? currentId : (firstOpenUncleared ?? scenarios[0]).id));
   const [q, setQ] = useState('');
   const [level, setLevel] = useState<'all' | 1 | 2 | 3 | 'todo'>('all');
   const matches = useMemo(() => {
@@ -53,11 +69,14 @@ export function ScenarioPicker({
 
   const card = (s: Scenario, i?: number) => {
     const isDone = cleared.has(s.id);
+    const open = i === undefined || isOpen(s.id);
     return (
       <button
         key={s.id}
-        className={`scard${s.id === currentId ? ' is-current' : ''}${isDone ? ' is-done' : ''}`}
-        onClick={() => onPick(s.id)}
+        className={`scard${s.id === currentId ? ' is-current' : ''}${isDone ? ' is-done' : ''}${open ? '' : ' is-locked'}`}
+        onClick={() => (open ? onPick(s.id) : undefined)}
+        aria-disabled={!open}
+        title={open ? undefined : 'Clear the level before this one to unlock it'}
       >
         <div className="scard-top">
           <span className="scard-num">{i === undefined ? '∞' : String(i + 1).padStart(2, '0')}</span>
@@ -71,10 +90,14 @@ export function ScenarioPicker({
               <span key={k}>{k}</span>
             ))}
           </span>
-          {isDone && (
-            <span className="scard-done">
-              <Check size={12} strokeWidth={3} aria-hidden /> Cleared
-            </span>
+          {isDone ? (
+            <StarRow n={stars[s.id] ?? 1} />
+          ) : (
+            !open && (
+              <span className="scard-done">
+                <Lock size={12} aria-hidden /> Locked
+              </span>
+            )
           )}
         </div>
       </button>
@@ -86,16 +109,16 @@ export function ScenarioPicker({
       <div className="picker">
         <header className="picker-head">
           <div>
-            <h2 id="picker-title">Scenarios</h2>
-            <p>
-              Each one hands you a broken AI system and real-shaped traffic. Fix whatever binds first, then the next thing.
-            </p>
+            <h2 id="picker-title">Levels</h2>
+            <p>Each level hands you a broken AI app. Clear it to unlock the next. Earn up to three stars: clear it, keep it within budget, build it lean.</p>
           </div>
           <div className="picker-progress">
             <span className="picker-count">
               {done}/{scenarios.length}
             </span>
-            <span>cleared</span>
+            <span>
+              cleared · <Star size={11} className="star-inline" aria-hidden /> {totalStars}/{scenarios.length * 3}
+            </span>
             <div className="picker-bar">
               <div style={{ width: `${(done / scenarios.length) * 100}%` }} />
             </div>
@@ -108,12 +131,12 @@ export function ScenarioPicker({
           <label className="search">
             <Search size={15} aria-hidden />
             <span className="sr-only">Search scenarios</span>
-            <input autoFocus={!TOUCH} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by topic: memory, GPUs, agents, JSON…" />
+            <input autoFocus={!TOUCH} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search levels by topic: memory, GPUs, agents…" />
           </label>
           <div className="chips" role="group" aria-label="Filter scenarios">
             {(
               [
-                ['all', 'All'],
+                ['all', 'Map'],
                 [1, 'Intro'],
                 [2, 'Core'],
                 [3, 'Advanced'],
@@ -126,11 +149,92 @@ export function ScenarioPicker({
             ))}
           </div>
         </div>
+        {!q.trim() && level === 'all' ? (
+          <div className="level-map">
+            {CHAPTERS.map((ch, ci) => {
+              const ids = ch.ids.filter((id) => indexOf(id) >= 0);
+              const got = ids.reduce((a, id) => a + (stars[id] ?? 0), 0);
+              const selHere = ids.includes(sel);
+              const selS = scenarios.find((x) => x.id === sel);
+              return (
+                <section key={ch.title} className="chapter">
+                  <header className="chapter-head">
+                    <div>
+                      <span className="chapter-num">Chapter {ci + 1}</span>
+                      <h3>{ch.title}</h3>
+                      <p>{ch.blurb}</p>
+                    </div>
+                    <span className="chapter-stars" aria-label={`${got} of ${ids.length * 3} stars`}>
+                      <Star size={13} aria-hidden /> {got}/{ids.length * 3}
+                    </span>
+                  </header>
+                  <ol className="path">
+                    {ids.map((id) => {
+                      const i = indexOf(id);
+                      const sc = scenarios[i];
+                      const open = isOpen(id);
+                      const isDone = cleared.has(id);
+                      return (
+                        <li key={id} className={`stop${isDone ? ' is-done' : ''}${open ? '' : ' is-locked'}${id === currentId ? ' is-current' : ''}${id === sel ? ' is-selected' : ''}`}>
+                          <button
+                            className="stop-dot"
+                            onClick={() => setSel(id)}
+                            onDoubleClick={() => open && onPick(id)}
+                            aria-label={`Level ${i + 1}: ${sc.title.replace(/^\d+ · /, '')}${open ? '' : ' (locked)'}${isDone ? `, ${stars[id] ?? 1} stars` : ''}`}
+                            aria-pressed={id === sel}
+                          >
+                            {open ? i + 1 : <Lock size={15} aria-hidden />}
+                          </button>
+                          <StarRow n={isDone ? (stars[id] ?? 1) : 0} />
+                          <span className="stop-title">{sc.title.replace(/^\d+ · /, '')}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                  {selHere && selS && (
+                    <div className="stop-detail">
+                      <div>
+                        <span className="stop-detail-num">Level {indexOf(selS.id) + 1}</span>
+                        <h4>{selS.title.replace(/^\d+ · /, '')}</h4>
+                        <p>{selS.tagline}</p>
+                        <span className="scard-skills">
+                          {selS.skills.map((k) => (
+                            <span key={k}>{k}</span>
+                          ))}
+                        </span>
+                      </div>
+                      {isOpen(selS.id) ? (
+                        <button className="btn btn-primary" onClick={() => onPick(selS.id)} autoFocus={!TOUCH}>
+                          <Play size={14} fill="currentColor" aria-hidden />
+                          {selS.id === currentId ? 'Continue' : cleared.has(selS.id) ? 'Play again' : 'Play'}
+                        </button>
+                      ) : (
+                        <span className="stop-locked-note">
+                          <Lock size={13} aria-hidden /> Clear level {indexOf(selS.id)} to unlock
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+            <div className="map-foot">
+              <button className="btn btn-ghost" onClick={() => onPick(sandbox.id)}>
+                <Blocks size={15} aria-hidden /> Free build (sandbox)
+              </button>
+              <label className="map-unlock">
+                <input type="checkbox" checked={unlockAll} onChange={(e) => onUnlockAll(e.target.checked)} />
+                Unlock every level
+              </label>
+            </div>
+          </div>
+        ) : (
         <div className="picker-grid">
           {shown.map(({ s, i }) => card(s, i))}
           {showSandbox && card(sandbox)}
-          {!shown.length && !showSandbox && <p className="side-empty picker-empty">No scenarios match "{q}". Try a broader word, like "cost" or "retrieval".</p>}
+          {!shown.length && !showSandbox && <p className="side-empty picker-empty">No levels match "{q}". Try a broader word, like "cost" or "retrieval".</p>}
         </div>
+        )}
       </div>
     </div>
   );
@@ -138,11 +242,21 @@ export function ScenarioPicker({
 
 export function ScenarioTrigger({ scenario, index, onOpen }: { scenario: Scenario; index: number; onOpen: () => void }) {
   return (
-    <button className="scenario-trigger" onClick={onOpen} title="Choose a scenario">
+    <button className="scenario-trigger" onClick={onOpen} title="Choose a level">
       <Shapes size={15} aria-hidden />
       <span className="scenario-trigger-num">{index >= 0 ? String(index + 1).padStart(2, '0') : '∞'}</span>
       <span className="scenario-trigger-title">{scenario.title.replace(/^\d+ · /, '')}</span>
-      <span className="scenario-trigger-all">All scenarios</span>
+      <span className="scenario-trigger-all">All levels</span>
     </button>
+  );
+}
+
+export function StarRow({ n, size = 12 }: { n: number; size?: number }) {
+  return (
+    <span className="star-row" aria-label={n ? `${n} of 3 stars` : undefined} aria-hidden={!n || undefined}>
+      {[1, 2, 3].map((i) => (
+        <Star key={i} size={size} className={i <= n ? 'on' : ''} aria-hidden />
+      ))}
+    </span>
   );
 }

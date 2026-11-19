@@ -24,9 +24,10 @@ import type { Shown } from './ui/Requests';
 import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
 import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
 import { LearnHub, firstUnreadLesson, type HubView } from './ui/LearnHub';
-import { clearDesign, encodeDesign, introSeen, loadCleared, loadDesign, loadLastScenario, markIntroSeen, readHashDesign, saveCleared, saveDesign, saveLastScenario, savedTheme, saveTheme, systemTheme, type SharedDesign, type Theme } from './ui/persist';
+import { loadStars, loadUnlockAll, saveStars, saveUnlockAll, clearDesign, encodeDesign, introSeen, loadCleared, loadDesign, loadLastScenario, markIntroSeen, readHashDesign, saveCleared, saveDesign, saveLastScenario, savedTheme, saveTheme, systemTheme, type SharedDesign, type Theme } from './ui/persist';
 import { Tour, type TourStep } from './ui/Tour';
 import { autoWire, removeAndHeal, tidyLayout } from './engine/autowire';
+import { scoreStars, type StarResult } from './engine/stars';
 import { COACH, hintLine, nudgeLine, pressureLine, showMeLine, winLine } from './content/guide';
 import { Complaints, Confetti, GuideCard, useVoice, WelcomeScreen } from './ui/Guide';
 import { speak, stopVoice } from './ui/voice';
@@ -149,6 +150,11 @@ export default function App() {
   const [streak, setStreak] = useState(0);
   const [won, setWon] = useState(false);
   const [cleared, setCleared] = useState<Set<string>>(() => loadCleared());
+  const [stars, setStars] = useState<Record<string, number>>(() => loadStars());
+  const [unlockAll, setUnlockAll] = useState(() => loadUnlockAll());
+  const [result, setResult] = useState<StarResult | null>(null);
+  // stars already celebrated this session per level, so improving a level celebrates again
+  const awarded = useRef(new Map<string, number>());
   const [intro, setIntro] = useState<number | null>(() => (introSeen() || readHashDesign() ? null : 0));
   const [touring, setTouring] = useState(false);
   // coached first level: index into COACH, or null when not coaching
@@ -411,10 +417,23 @@ export default function App() {
         const ok = scenario.goals.every((g) => goalMet(m, g));
         streakRef.current = ok ? Math.min(streakRef.current + 1, HOLD_TICKS) : 0;
         setStreak(streakRef.current);
-        if (streakRef.current >= HOLD_TICKS && !cleared.has(scenario.id)) {
-          setWon(true);
-          setRunning(false);
-          setCleared((c) => new Set(c).add(scenario.id));
+        if (streakRef.current >= HOLD_TICKS && scenario.id !== SANDBOX.id) {
+          const parts = nodesRef.current.filter((n) => n.data.kind !== 'users').length;
+          const r = scoreStars(scenario, m, parts);
+          const before = awarded.current.get(scenario.id) ?? 0;
+          if (!cleared.has(scenario.id) || r.stars > before) {
+            awarded.current.set(scenario.id, r.stars);
+            setResult({ ...r, improved: before > 0 });
+            setWon(true);
+            setRunning(false);
+            setCleared((c) => new Set(c).add(scenario.id));
+            setStars((st) => {
+              if ((st[scenario.id] ?? 0) >= r.stars) return st;
+              const nextStars = { ...st, [scenario.id]: r.stars };
+              saveStars(nextStars);
+              return nextStars;
+            });
+          }
         }
       }
     };
@@ -971,6 +990,12 @@ export default function App() {
           sandbox={SANDBOX}
           currentId={scenario.id}
           cleared={cleared}
+          stars={stars}
+          unlockAll={unlockAll}
+          onUnlockAll={(on) => {
+            setUnlockAll(on);
+            saveUnlockAll(on);
+          }}
           onClose={() => setPicker(false)}
           onPick={(id) => {
             setPicker(false);
@@ -1010,7 +1035,22 @@ export default function App() {
           )}
         </div>
       )}
-      {won && <WinDialog s={scenario} next={next} onStay={() => setWon(false)} onNext={() => loadScenario(next ? next.id : SANDBOX.id)} />}
+      {won && (
+        <WinDialog
+          s={scenario}
+          index={SCENARIOS.findIndex((x) => x.id === scenario.id)}
+          result={result}
+          best={stars[scenario.id] ?? 0}
+          next={next}
+          lesson={LESSONS.find((l) => l.scenarioId === scenario.id)}
+          onLesson={(id) => {
+            setWon(false);
+            setHub({ tab: 'lessons', lessonId: id });
+          }}
+          onStay={() => setWon(false)}
+          onNext={() => loadScenario(next ? next.id : SANDBOX.id)}
+        />
+      )}
     </div>
   );
 }

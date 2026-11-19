@@ -310,3 +310,19 @@ describe('tap-to-add auto-wiring', () => {
     });
   }
 });
+
+describe('stars and chapters', () => {
+  it('every level is in exactly one chapter, in journey order', async () => {
+    const { CHAPTERS } = await import('../content/chapters');
+    const ids = CHAPTERS.flatMap((c) => c.ids);
+    expect(ids).toEqual(SCENARIOS.map((s) => s.id));
+  });
+  it('the reference solution earns 3 stars on every level', async () => {
+    const { scoreStars } = await import('./stars');
+    for (const s of SCENARIOS) {
+      const m = run(s.solution.nodes, s.solution.edges, s.traffic);
+      const r = scoreStars(s, m, s.solution.nodes.filter((n) => n.type !== 'users').length);
+      expect({ id: s.id, stars: r.stars }).toEqual({ id: s.id, stars: 3 });
+    }
+  });
+});

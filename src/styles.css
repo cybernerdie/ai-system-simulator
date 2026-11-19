@@ -1370,6 +1370,89 @@ body, .topbar, .palette, .side, .canvas, .simnode, .telemetry, .pressure-window 
   .palette .palette-locked, .palette .palette-help { display: none; }
 }
 
+
+/* =========================================================
+   Level map, stars, win card
+   ========================================================= */
+.star-row { display: inline-flex; gap: 2px; color: var(--track); }
+.star-row .on { color: #f59e0b; fill: #f59e0b; }
+.star-inline { vertical-align: -1px; color: #f59e0b; fill: #f59e0b; }
+
+.level-map { flex: 1; min-height: 0; overflow-y: auto; padding: var(--sp-2) var(--sp-6) var(--sp-6); }
+.chapter { padding: var(--sp-5) 0 var(--sp-4); border-bottom: 1px solid var(--line); }
+.chapter:last-of-type { border-bottom: 0; }
+.chapter-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-4); }
+.chapter-num { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.chapter-head h3 { margin: 2px 0 4px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.chapter-head p { margin: 0; max-width: 60ch; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.chapter-stars { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 4px 10px; border-radius: 99px; background: var(--subtle); font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.chapter-stars svg { color: #f59e0b; fill: #f59e0b; }
+
+/* the path: numbered stops joined by a line */
+.path { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); margin: 0; padding: 0; list-style: none; }
+.path::before { content: ''; position: absolute; top: 26px; left: 10%; right: 10%; height: 3px; border-radius: 3px; background: var(--track); }
+.stop { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.stop-dot {
+  display: grid; place-items: center; width: 52px; height: 52px;
+  border: 0; border-radius: 50%; background: var(--surface); color: var(--ink);
+  box-shadow: 0 0 0 2px var(--line), var(--lift);
+  font: 600 17px/1 var(--sans); font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.stop-dot:hover { transform: translateY(-2px); }
+.stop.is-done .stop-dot { background: var(--ink); color: var(--on-ink); box-shadow: var(--lift); }
+.stop.is-locked .stop-dot { background: var(--subtle); color: var(--ink-3); box-shadow: 0 0 0 2px var(--line); }
+.stop.is-current .stop-dot { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px #3b82f6; }
+.stop.is-selected .stop-dot { transform: scale(1.08); }
+.stop.is-selected:not(.is-current) .stop-dot { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink-3); }
+
+.stop-detail {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4);
+  margin-top: var(--sp-4); padding: var(--sp-4) var(--sp-5);
+  border-radius: 14px; background: var(--subtle);
+  animation: guide-in 0.2s ease-out;
+}
+.stop-detail-num { font-size: 12px; color: var(--ink-3); }
+.stop-detail h4 { margin: 2px 0 4px; font-size: 16px; font-weight: 600; }
+.stop-detail p { margin: 0 0 var(--sp-2); font-size: 13.5px; color: var(--ink-2); }
+.stop-detail .btn { flex-shrink: 0; gap: 6px; }
+.stop-locked-note { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 13px; color: var(--ink-3); }
+.map-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3); padding-top: var(--sp-5); }
+.map-foot .btn { gap: 6px; }
+.map-unlock { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); cursor: pointer; }
+.map-unlock input { accent-color: var(--ink); }
+.scard.is-locked { opacity: 0.55; cursor: not-allowed; }
+
+/* win card */
+.dialog.win { text-align: left; }
+.win-stars { display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin: 0 0 var(--sp-4); color: var(--track); }
+.win-stars svg { fill: currentColor; }
+.win-stars .on { color: #f59e0b; animation: star-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+@keyframes star-pop { from { transform: scale(0.2) rotate(-30deg); opacity: 0; } }
+.dialog.win .dialog-kicker, .dialog.win h2 { text-align: center; }
+.win-criteria { margin: var(--sp-4) 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13.5px; color: var(--ink-3); }
+.win-criteria li { display: flex; align-items: baseline; gap: 8px; }
+.win-criteria li svg { flex-shrink: 0; position: relative; top: 2px; }
+.win-criteria li.is-met { color: var(--ink); }
+.win-criteria li.is-met svg { color: var(--ok); }
+
+.win-learned { margin: 0 0 var(--sp-2); padding: var(--sp-4); border-radius: 12px; background: var(--subtle); }
+.win-learned-label { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.win-learned p { margin: 0; font-size: 15px; font-weight: 500; line-height: 1.45; color: var(--ink); }
+.win-learned .win-learned-more { margin-top: var(--sp-2); font-size: 13px; font-weight: 400; line-height: 1.55; color: var(--ink-2); }
+.win-learned .link-btn { margin-top: var(--sp-3); font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce) { .win-stars .on, .stop-detail { animation: none; } }
+@media (max-width: 900px) {
+  .level-map { padding: 0 var(--sp-4) var(--sp-4); }
+  .path::before { top: 22px; }
+  .stop-dot { width: 44px; height: 44px; font-size: 15px; }
+  .stop-detail { flex-direction: column; align-items: stretch; }
+  .stop-detail .btn { justify-content: center; height: 44px; }
+  .chapter-head p { display: none; }
+  .win-learned .win-learned-more { display: none; }
+}
+
 /* =========================================================
    Phones — final pass (must stay at the end of the file)
    ========================================================= */
@@ -1472,3 +1555,8 @@ html, body { background: var(--bg); }
   }
   .picker-tools .chips::-webkit-scrollbar, .glossary-tools .chips::-webkit-scrollbar { display: none; }
 }
+
+.win-criteria em { font-style: normal; color: var(--ink-3); }
+.stop-title { max-width: 120px; font-size: 12px; line-height: 1.3; text-align: center; color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.stop.is-locked .stop-title { color: var(--ink-3); }
+@media (max-width: 900px) { .stop-title { display: none; } }

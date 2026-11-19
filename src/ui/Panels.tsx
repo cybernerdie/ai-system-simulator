@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Check, ChevronDown, Lightbulb, Trash2, TriangleAlert, X } from 'lucide-react';
-import { COMPONENT_TERM, TERM_BY_ID } from '../content/learn';
+import { BookOpen, Check, ChevronDown, Circle, Lightbulb, Star, Trash2, TriangleAlert, X } from 'lucide-react';
+import { COMPONENT_TERM, TERM_BY_ID, type Lesson } from '../content/learn';
+import type { StarResult } from '../engine/stars';
 import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../engine/components';
 import { QUALITY_METRICS, goalMet, type Pressure } from '../engine/pressures';
 import type { Scenario } from '../engine/scenarios';
@@ -634,7 +635,27 @@ export function IntroDialog({ step, setStep, onClose, onTour }: { step: number; 
   );
 }
 
-export function WinDialog({ s, next, onNext, onStay }: { s: Scenario; next?: Scenario; onNext: () => void; onStay: () => void }) {
+export function WinDialog({
+  s,
+  index,
+  result,
+  best,
+  next,
+  lesson,
+  onLesson,
+  onNext,
+  onStay,
+}: {
+  s: Scenario;
+  index: number;
+  result: StarResult | null;
+  best: number;
+  next?: Scenario;
+  lesson?: Lesson;
+  onLesson: (id: string) => void;
+  onNext: () => void;
+  onStay: () => void;
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onStay();
@@ -642,21 +663,57 @@ export function WinDialog({ s, next, onNext, onStay }: { s: Scenario; next?: Sce
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onStay]);
+  const n = result?.stars ?? 1;
+  const takeaway = lesson?.blocks.find((b) => b.kind === 'takeaway');
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="win-title">
-      <div className="dialog">
-        <div className="win-badge" aria-hidden>
-          <Check size={18} strokeWidth={3} />
+      <div className="dialog win">
+        <div className="win-stars" aria-label={`${n} of 3 stars`}>
+          {[1, 2, 3].map((i) => (
+            <Star key={i} size={i === 2 ? 40 : 32} className={i <= n ? 'on' : ''} style={{ animationDelay: `${0.15 + i * 0.18}s` }} aria-hidden />
+          ))}
         </div>
-        <p className="dialog-kicker">Scenario cleared</p>
+        <p className="dialog-kicker">
+          {result?.improved ? 'New best' : `Level ${index + 1} cleared`}
+          {best > n && ` · your best is ${best} stars`}
+        </p>
         <h2 id="win-title">{s.title.replace(/^\d+ · /, '')}</h2>
-        <p>{s.lesson}</p>
+        {result && (
+          <ul className="win-criteria">
+            <li className="is-met">
+              <Check size={14} strokeWidth={3} aria-hidden />
+              <span>Cleared every goal</span>
+            </li>
+            <li className={result.underBudget ? 'is-met' : ''}>
+              {result.underBudget ? <Check size={14} strokeWidth={3} aria-hidden /> : <Circle size={14} aria-hidden />}
+              <span>
+                Within budget: ${result.cost.toFixed(2)} per 1k requests <em>(par ${result.par.cost.toFixed(2)})</em>
+              </span>
+            </li>
+            <li className={result.lean ? 'is-met' : ''}>
+              {result.lean ? <Check size={14} strokeWidth={3} aria-hidden /> : <Circle size={14} aria-hidden />}
+              <span>
+                Lean build: {result.parts} component{result.parts === 1 ? '' : 's'} <em>(par {result.par.parts})</em>
+              </span>
+            </li>
+          </ul>
+        )}
+        <div className="win-learned">
+          <span className="win-learned-label">What you just learned</span>
+          <p>{takeaway?.kind === 'takeaway' ? takeaway.text : s.lesson.split(/(?<=[.!?])\s/)[0]}</p>
+          <p className="win-learned-more">{s.lesson}</p>
+          {lesson && (
+            <button className="link-btn" onClick={() => onLesson(lesson.id)}>
+              Read the lesson: {lesson.title}
+            </button>
+          )}
+        </div>
         <div className="dialog-actions">
           <button className="btn btn-ghost" onClick={onStay}>
-            Keep experimenting
+            {n < 3 ? 'Go for 3 stars' : 'Keep experimenting'}
           </button>
           <button className="btn btn-primary" autoFocus onClick={onNext}>
-            {next ? `Next: ${next.title.replace(/^\d+ · /, '')}` : 'Open the sandbox'}
+            {next ? `Next level` : 'Open the sandbox'}
           </button>
         </div>
       </div>

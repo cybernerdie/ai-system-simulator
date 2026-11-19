@@ -198,3 +198,39 @@ export function clearDesign(scenarioId: string) {
 export function savedScenarioIds(): Set<string> {
   return new Set(Object.keys(readDesigns()));
 }
+
+/* ---------- stars and level unlocks ---------- */
+
+const KEY_STARS = 'aisim.stars.v1';
+const KEY_UNLOCK_ALL = 'aisim.unlockAll.v1';
+
+export function loadStars(): Record<string, number> {
+  try {
+    const v = JSON.parse(localStorage.getItem(KEY_STARS) ?? '{}');
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+    return Object.fromEntries(Object.entries(v).filter(([, n]) => typeof n === 'number' && n >= 1 && n <= 3)) as Record<string, number>;
+  } catch {
+    return {};
+  }
+}
+export function saveStars(s: Record<string, number>) {
+  try {
+    localStorage.setItem(KEY_STARS, JSON.stringify(s));
+  } catch {
+    /* ignore */
+  }
+}
+export function loadUnlockAll(): boolean {
+  try {
+    return localStorage.getItem(KEY_UNLOCK_ALL) === '1';
+  } catch {
+    return false;
+  }
+}
+export function saveUnlockAll(on: boolean) {
+  try {
+    localStorage.setItem(KEY_UNLOCK_ALL, on ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
+}
