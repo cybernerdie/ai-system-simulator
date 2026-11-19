@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Check, ChevronDown, Circle, Lightbulb, Lock, Share2, Star, Trash2, TriangleAlert, X } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, Circle, Lightbulb, Lock, PanelLeftClose, PanelLeftOpen, Share2, Star, Trash2, TriangleAlert, X } from 'lucide-react';
 import { COMPONENT_TERM, TERM_BY_ID, type Lesson } from '../content/learn';
 import type { StarResult } from '../engine/stars';
 import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../engine/components';
@@ -38,7 +38,11 @@ export function Palette({
   locks,
   fresh,
   onLocked,
+  collapsed,
+  onToggleCollapsed,
 }: {
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
   onAdd: (t: ComponentType) => void;
   /** components not reached yet → the level that unlocks them */
   locks?: Map<ComponentType, number>;
@@ -48,6 +52,20 @@ export function Palette({
 }) {
   return (
     <aside className="palette" aria-label="Components">
+      {onToggleCollapsed && (
+        <div className="palette-head">
+          <span>Components</span>
+          <button
+            className="palette-collapse"
+            onClick={onToggleCollapsed}
+            aria-label={collapsed ? 'Expand the component list' : 'Collapse the component list'}
+            title={collapsed ? 'Expand' : 'Collapse'}
+            aria-expanded={!collapsed}
+          >
+            {collapsed ? <PanelLeftOpen size={16} aria-hidden /> : <PanelLeftClose size={16} aria-hidden />}
+          </button>
+        </div>
+      )}
       {GROUPS.map((g) => {
         const items = PALETTE_ORDER.filter((t) => COMPONENTS[t].group === g);
         if (!items.length) return null;
@@ -68,10 +86,11 @@ export function Palette({
                     e.dataTransfer.effectAllowed = 'move';
                   }}
                   onClick={() => (lockedAt ? onLocked?.(t, lockedAt) : onAdd(t))}
-                  title={lockedAt ? `Unlocks in level ${lockedAt}` : COMPONENTS[t].blurb}
+                  title={lockedAt ? `${COMPONENTS[t].name}: unlocks in level ${lockedAt}` : `${COMPONENTS[t].name}: ${COMPONENTS[t].blurb}`}
+                  aria-label={lockedAt ? `${COMPONENTS[t].name}, unlocks in level ${lockedAt}` : COMPONENTS[t].name}
                 >
                   <KindIcon kind={t} size="sm" />
-                  <span>{COMPONENTS[t].name}</span>
+                  <span className="palette-name">{COMPONENTS[t].name}</span>
                   {lockedAt ? (
                     <em className="palette-lock" aria-label={`Unlocks in level ${lockedAt}`}>
                       <Lock size={11} aria-hidden /> {lockedAt}

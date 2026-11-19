@@ -164,6 +164,26 @@ export default function App() {
   const [celebrate, setCelebrate] = useState(false);
   const [voice] = useVoice();
   const [voiceMenu, setVoiceMenu] = useState<DOMRect | null>(null);
+  // the component list can collapse to a narrow rail of icons
+  const [palCollapsed, setPalCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('aisim.palCollapsed.v1') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const togglePal = useCallback(() => {
+    setPalCollapsed((v) => {
+      try {
+        localStorage.setItem('aisim.palCollapsed.v1', v ? '0' : '1');
+      } catch {
+        /* ignore */
+      }
+      return !v;
+    });
+    // the canvas width changes; let the diagram refit once the column has animated
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 220);
+  }, []);
   const [sfx, setSfxState] = useState(sfxOn());
   useEffect(() => onSfxChange(setSfxState), []);
   const goalsMetRef = useRef(0);
@@ -815,7 +835,7 @@ export default function App() {
   const next = idx >= 0 ? SCENARIOS[idx + 1] : undefined;
 
   return (
-    <div className="app">
+    <div className={`app${palCollapsed ? ' pal-collapsed' : ''}`}>
       <header className="topbar">
         <div className="brand">
           <BrandMark />
@@ -903,6 +923,8 @@ export default function App() {
         locks={unlock?.locks}
         fresh={unlock?.fresh}
         onLocked={(t, lvl) => showToast(`${COMPONENTS[t].name} unlocks in level ${lvl}. Clear the levels before it to use it.`)}
+        collapsed={palCollapsed}
+        onToggleCollapsed={togglePal}
       />
 
       <main
