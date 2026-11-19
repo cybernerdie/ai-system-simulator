@@ -301,9 +301,8 @@ export function VoiceMenu({ anchor, onClose }: { anchor: DOMRect | null; onClose
       <div className="voice-menu-head">
         <strong>Voice guide</strong>
         <label className="switch">
-          <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
-          <span aria-hidden />
-          <span className="sr-only">Voice guide on</span>
+          <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} aria-label="Voice guide on" />
+          <span className="switch-track" aria-hidden />
         </label>
       </div>
       {voices.length ? (
@@ -320,7 +319,7 @@ export function VoiceMenu({ anchor, onClose }: { anchor: DOMRect | null; onClose
             >
               {voices.map((v, i) => (
                 <option key={v.name + v.lang} value={v.name}>
-                  {v.name.replace(/^(Microsoft|Google)\s/, '')} · {v.lang.replace('en-', '')}
+                  {v.name.replace(/^(Microsoft|Google)\s/, '').replace(/\s*[-–]\s*English.*$/i, '').replace(/\s*Online\s*/, ' ')} · {v.lang.replace('en-', '')}
                   {i === 0 ? ' (recommended)' : ''}
                 </option>
               ))}
