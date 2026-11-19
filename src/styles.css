@@ -1453,6 +1453,35 @@ body, .topbar, .palette, .side, .canvas, .simnode, .telemetry, .pressure-window 
   .win-learned .win-learned-more { display: none; }
 }
 
+
+/* welcome demo loop */
+.demo { position: relative; padding-top: 34px; }
+.demo-row { display: flex; align-items: center; justify-content: center; }
+.demo-slot { position: relative; display: grid; place-items: center; width: 92px; height: 36px; }
+.demo-q, .demo-part { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 10px; font-size: 13px; font-weight: 600; }
+.demo-q { margin: 0 24px; color: var(--hot); background: var(--hot-bg); box-shadow: 0 0 0 1.5px var(--hot); animation: demo-q 6s infinite; }
+.demo-part { color: #fff; background: linear-gradient(135deg, #818cf8, #6366f1); box-shadow: var(--lift); animation: demo-part 6s infinite; }
+.demo-wire2 { animation: demo-wire 6s infinite; }
+.demo-bubble {
+  position: absolute; top: 0; left: 50%; translate: -50% 0;
+  padding: 5px 10px; border-radius: 10px 10px 10px 3px; background: var(--surface); box-shadow: var(--float);
+  font-size: 12.5px; font-weight: 500; white-space: nowrap; animation: demo-bubble 6s infinite;
+}
+.demo-metric { position: relative; height: 26px; margin-top: 14px; }
+.demo-bad, .demo-good { position: absolute; left: 50%; translate: -50% 0; padding: 4px 10px; border-radius: 99px; font: 500 12.5px/1.2 var(--mono); white-space: nowrap; }
+.demo-bad { color: var(--hot); background: var(--hot-bg); animation: demo-bad 6s infinite; }
+.demo-good { color: var(--ok); background: var(--ok-bg); animation: demo-good 6s infinite; }
+@keyframes demo-q { 0%, 38% { opacity: 1; transform: scale(1); } 44%, 100% { opacity: 0; transform: scale(0.6); } }
+@keyframes demo-part { 0%, 40% { opacity: 0; transform: translateY(-26px) scale(0.9); } 50% { opacity: 1; transform: translateY(2px); } 55%, 92% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes demo-wire { 0%, 48% { opacity: 0.35; } 55%, 100% { opacity: 1; } }
+@keyframes demo-bubble { 0%, 6% { opacity: 0; transform: translateY(6px); } 12%, 36% { opacity: 1; transform: none; } 42%, 100% { opacity: 0; } }
+@keyframes demo-bad { 0%, 55% { opacity: 1; } 62%, 100% { opacity: 0; } }
+@keyframes demo-good { 0%, 58% { opacity: 0; transform: scale(0.9); } 66%, 94% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .demo-q, .demo-bubble, .demo-bad { animation: none; opacity: 0; }
+  .demo-part, .demo-good, .demo-wire2 { animation: none; opacity: 1; }
+}
+
 /* =========================================================
    Phones — final pass (must stay at the end of the file)
    ========================================================= */
@@ -1560,3 +1589,8 @@ html, body { background: var(--bg); }
 .stop-title { max-width: 120px; font-size: 12px; line-height: 1.3; text-align: center; color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .stop.is-locked .stop-title { color: var(--ink-3); }
 @media (max-width: 900px) { .stop-title { display: none; } }
+
+.welcome-toggles { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px var(--sp-5); }
+.theme-toggle.is-off svg { opacity: 0.45; }
+
+.win-actions .win-share { margin-right: auto; gap: 6px; }

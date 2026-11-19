@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Check, ChevronDown, Circle, Lightbulb, Star, Trash2, TriangleAlert, X } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, Circle, Lightbulb, Share2, Star, Trash2, TriangleAlert, X } from 'lucide-react';
 import { COMPONENT_TERM, TERM_BY_ID, type Lesson } from '../content/learn';
 import type { StarResult } from '../engine/stars';
 import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../engine/components';
@@ -645,6 +645,7 @@ export function WinDialog({
   onLesson,
   onNext,
   onStay,
+  onShare,
 }: {
   s: Scenario;
   index: number;
@@ -655,6 +656,7 @@ export function WinDialog({
   onLesson: (id: string) => void;
   onNext: () => void;
   onStay: () => void;
+  onShare: () => void;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -708,7 +710,10 @@ export function WinDialog({
             </button>
           )}
         </div>
-        <div className="dialog-actions">
+        <div className="dialog-actions win-actions">
+          <button className="btn btn-ghost win-share" onClick={onShare}>
+            <Share2 size={14} aria-hidden /> Share result
+          </button>
           <button className="btn btn-ghost" onClick={onStay}>
             {n < 3 ? 'Go for 3 stars' : 'Keep experimenting'}
           </button>

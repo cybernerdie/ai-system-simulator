@@ -12,7 +12,7 @@ import {
   useReactFlow,
   type Connection,
 } from '@xyflow/react';
-import { BookOpen, Check, CircleQuestionMark, Code, Link2, Moon, Pause, Play, RotateCcw, Sun, Volume2, VolumeX } from 'lucide-react';
+import { BookOpen, Check, CircleQuestionMark, Code, Link2, Moon, Music2, Pause, Play, RotateCcw, Sun, Volume2, VolumeX } from 'lucide-react';
 import { COMPONENTS } from './engine/components';
 import { simulate } from './engine/simulate';
 import { PATTERNS, TICK_SECONDS, trafficMultiplier, type Pattern } from './engine/patterns';
@@ -31,6 +31,8 @@ import { scoreStars, type StarResult } from './engine/stars';
 import { COACH, hintLine, nudgeLine, pressureLine, showMeLine, winLine } from './content/guide';
 import { Complaints, Confetti, GuideCard, useVoice, WelcomeScreen } from './ui/Guide';
 import { speak, stopVoice } from './ui/voice';
+import { onSfxChange, play, setSfx, sfxOn } from './ui/sfx';
+import { drawCard, improvements, shareText } from './ui/shareCard';
 import { LESSONS, TERMS } from './content/learn';
 import { Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from './ui/Panels';
 
@@ -161,6 +163,12 @@ export default function App() {
   const [coach, setCoach] = useState<number | null>(null);
   const [celebrate, setCelebrate] = useState(false);
   const [voice, setVoiceOn] = useVoice();
+  const [sfx, setSfxState] = useState(sfxOn());
+  useEffect(() => onSfxChange(setSfxState), []);
+  const goalsMetRef = useRef(0);
+  // the numbers from the first run of a level, for the before → after share card
+  const baselineRef = useRef<Metrics | null>(null);
+  const ticksRef = useRef(0);
   const [showAll, setShowAll] = useState(() => {
     try {
       return localStorage.getItem('aisim.showAll.v1') === '1';
@@ -408,13 +416,18 @@ export default function App() {
       setSimTime(simTimeRef.current);
       const effRps = Math.max(0.5, Math.round(rps * trafficMultiplier(pattern, simTimeRef.current) * 10) / 10);
       const raw = simulate(graphRef.current, { ...trafficRef.current, rps: effRps }, { seed: seed.current++, samples: 1500 });
+      ticksRef.current = metricsRef.current ? ticksRef.current + 1 : 0;
       const m = smooth(metricsRef.current, raw);
+      if (ticksRef.current === 3 && !baselineRef.current) baselineRef.current = m;
       metricsRef.current = m;
       setMetrics(m);
       setHistory((h) => [...h.slice(-(HISTORY - 1)), m]);
       setPressure(bindingPressure(m, scenario.goals));
       if (scenario.goals.length) {
         const ok = scenario.goals.every((g) => goalMet(m, g));
+        const metNow = scenario.goals.filter((g) => goalMet(m, g)).length;
+        if (metNow > goalsMetRef.current && metricsRef.current) play('goal');
+        goalsMetRef.current = metNow;
         streakRef.current = ok ? Math.min(streakRef.current + 1, HOLD_TICKS) : 0;
         setStreak(streakRef.current);
         if (streakRef.current >= HOLD_TICKS && scenario.id !== SANDBOX.id) {
@@ -525,9 +538,66 @@ export default function App() {
     return () => window.clearTimeout(t);
   }, [pressure, running, coach, stuck]);
 
+  // Sounds for running, new problems and coaching steps
+  const firstRunSound = useRef(true);
+  useEffect(() => {
+    if (firstRunSound.current) {
+      firstRunSound.current = false;
+      return;
+    }
+    play(running ? 'run' : 'pause');
+  }, [running]);
+  const lastProblem = useRef('');
+  useEffect(() => {
+    if (!running || !pressure || pressure.key === 'stable' || pressure.key === lastProblem.current) return;
+    lastProblem.current = pressure.key;
+    play('problem');
+  }, [pressure, running]);
+  useEffect(() => {
+    lastProblem.current = '';
+    goalsMetRef.current = 0;
+    baselineRef.current = null;
+  }, [scenario.id]);
+
+  const shareResult = useCallback(async () => {
+    const after = metricsRef.current;
+    if (!after) return;
+    const level = SCENARIOS.findIndex((x) => x.id === scenario.id) + 1;
+    const n = result?.stars ?? 1;
+    const imps = improvements(scenario, baselineRef.current, after);
+    const site = 'https://ai-system-simulator.vercel.app/';
+    const text = shareText(scenario, level, n, imps);
+    try {
+      const blob = await drawCard({ s: scenario, level, stars: n, imps, site });
+      const file = new File([blob], `aisim-level-${level}.png`, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], text, url: site });
+        return;
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = file.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      try {
+        await navigator.clipboard.writeText(`${text} ${site}`);
+        showToast('Card downloaded. Post text copied, ready to paste.');
+      } catch {
+        showToast('Card downloaded.');
+      }
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') showToast('Couldn\'t create the card on this device.');
+    }
+  }, [scenario, result, showToast]);
+  useEffect(() => {
+    if (coach !== null && coach > 0) play('step');
+  }, [coach]);
+
   // Level cleared: celebrate
   useEffect(() => {
     if (!won) return;
+    play('win');
+    for (let i = 0; i < (result?.stars ?? 1); i++) play('star', 0.5 + i * 0.18);
     const l = winLine(scenario);
     speak(l.id, l.text);
     setCelebrate(true);
@@ -628,6 +698,7 @@ export default function App() {
         userMoved.current = false;
         setTimeout(() => flow.fitView({ ...fitOptions(), duration: 300 }), 30);
       }
+      play('add');
       setNodes(next);
       setEdges(wired.map((e) => es.find((x) => x.source === e.source && x.target === e.target) ?? edgeOf(e.source, e.target)));
       if (phone) {
@@ -799,6 +870,15 @@ export default function App() {
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {theme === 'dark' ? <Sun size={15} aria-hidden /> : <Moon size={15} aria-hidden />}
+        </button>
+        <button
+          className={`btn btn-ghost theme-toggle${sfx ? '' : ' is-off'}`}
+          onClick={() => setSfx(!sfx)}
+          title={sfx ? 'Turn sound effects off' : 'Turn sound effects on'}
+          aria-label={sfx ? 'Turn sound effects off' : 'Turn sound effects on'}
+          aria-pressed={sfx}
+        >
+          <Music2 size={15} aria-hidden />
         </button>
         <button
           className="btn btn-ghost theme-toggle"
@@ -1048,6 +1128,7 @@ export default function App() {
             setHub({ tab: 'lessons', lessonId: id });
           }}
           onStay={() => setWon(false)}
+          onShare={shareResult}
           onNext={() => loadScenario(next ? next.id : SANDBOX.id)}
         />
       )}

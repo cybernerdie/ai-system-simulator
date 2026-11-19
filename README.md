@@ -96,6 +96,8 @@ New visitors land on a welcome screen with **Play level 1**. Level 1 is coached 
 - **Hints when you're stuck:** after 25 seconds without progress the guide points at the binding pressure, then shows the level's hint, then highlights a component to try.
 - **Level map and stars:** the 25 levels sit in five chapters; clearing one unlocks the next (or tick "Unlock every level"). Each level awards up to three stars: clear it, keep it within budget (par is the reference solution's cost, plus a little slack), and build it lean (no more components than the reference). Improving your best celebrates again.
 - **What you just learned:** the win card shows your stars, why you got them, the level's key takeaway and a link to the full lesson.
+- **Share your result:** the win card's "Share result" draws a 1200×630 image of your before → after numbers (e.g. accuracy 23% → 77%) and stars. Phones open the share sheet; desktops download it and copy a post to paste.
+- **Sound effects:** small synthesised sounds for adding parts, running, new problems, goals met and level clears. Off by default (toggle in the top bar or on the welcome screen).
 - **Voice guide:** the guide reads its messages aloud (mute in the top bar). Captions are always shown.
 
 ### Natural voice clips
