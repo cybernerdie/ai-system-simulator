@@ -28,6 +28,7 @@ import { loadStars, loadUnlockAll, saveStars, saveUnlockAll, clearDesign, encode
 import { Tour, type TourStep } from './ui/Tour';
 import { autoWire, removeAndHeal, tidyLayout } from './engine/autowire';
 import { scoreStars, type StarResult } from './engine/stars';
+import { unlockLevels } from './engine/unlocks';
 import { COACH, hintLine, nudgeLine, pressureLine, showMeLine, winLine } from './content/guide';
 import { Complaints, Confetti, GuideCard, useVoice, VoiceMenu, WelcomeScreen } from './ui/Guide';
 import { speak, stopVoice } from './ui/voice';
@@ -626,12 +627,7 @@ export default function App() {
   const unlock = useMemo(() => {
     const idx = SCENARIOS.findIndex((x) => x.id === scenario.id);
     if (unlockAll || idx < 0) return null;
-    const firstLevel = new Map<ComponentType, number>();
-    SCENARIOS.forEach((x, i) =>
-      [...x.nodes, ...x.solution.nodes].forEach((n) => {
-        if (!firstLevel.has(n.type)) firstLevel.set(n.type, i + 1);
-      }),
-    );
+    const firstLevel = unlockLevels();
     // open: everything introduced up to this level, plus anything already on the canvas
     const locks = new Map<ComponentType, number>();
     firstLevel.forEach((lvl, t) => {

@@ -326,3 +326,12 @@ describe('stars and chapters', () => {
     }
   });
 });
+
+describe('component unlocks', () => {
+  it('every component in the list unlocks at some level', async () => {
+    const { unlockLevels } = await import('./unlocks');
+    const { PALETTE_ORDER } = await import('./components');
+    const levels = unlockLevels();
+    expect(PALETTE_ORDER.filter((t) => !levels.has(t))).toEqual([]);
+  });
+});
