@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { activeNodes, simulate } from './simulate';
 import { SCENARIOS, withDefaults, type ScenarioNode } from './scenarios';
+import { BOSSES } from './bosses';
+
+const PLAYABLE = [...SCENARIOS, ...BOSSES];
 import { bindingPressure, goalMet } from './pressures';
 import { autoWire, removeAndHeal } from './autowire';
 import type { SimEdge } from './types';
@@ -15,7 +18,7 @@ const run = (nodes: ScenarioNode[], edges: SimEdge[], traffic: (typeof SCENARIOS
   simulate(toGraph(nodes, edges), traffic, { seed: 42, samples: 6000 });
 
 describe('scenarios', () => {
-  for (const s of SCENARIOS) {
+  for (const s of PLAYABLE) {
     it(`${s.id}: starting design fails at least one goal`, () => {
       const m = run(s.nodes, s.edges, s.traffic);
       expect(s.goals.every((g) => goalMet(m, g))).toBe(false);
@@ -54,6 +57,11 @@ describe('scenarios', () => {
       temperature: 'sampling_noise',
       'eval-trust': 'eval_blindspot',
       'indirect-injection': 'indirect_injection',
+      'bug-cache': 'cache_false_hit',
+      'bug-memory': 'forgot_context',
+      'bug-guard': 'guard_false_positive',
+      'bug-reranker': 'retrieval_miss',
+      'bug-thinking': 'cost',
     };
     for (const s of SCENARIOS) {
       const m = run(s.nodes, s.edges, s.traffic);
@@ -285,7 +293,7 @@ describe('indirect prompt injection', () => {
 describe('tap-to-add auto-wiring', () => {
   // A beginner taps the solution's missing components in the palette, in order, and tunes settings.
   // Auto-wiring alone should produce a design that clears the scenario.
-  for (const s of SCENARIOS) {
+  for (const s of PLAYABLE) {
     it(`${s.id}: tapping in the solution's components wins`, () => {
       let nodes: ScenarioNode[] = s.nodes.map((n) => ({ ...n }));
       let edges: SimEdge[] = s.edges.map((e) => ({ ...e }));
@@ -316,10 +324,12 @@ describe('stars and chapters', () => {
     const { CHAPTERS } = await import('../content/chapters');
     const ids = CHAPTERS.flatMap((c) => c.ids);
     expect(ids).toEqual(SCENARIOS.map((s) => s.id));
+    expect(CHAPTERS.map((c) => c.boss)).toEqual(BOSSES.map((b) => b.id));
+    BOSSES.forEach((b, i) => expect(b.chapter).toBe(i));
   });
   it('the reference solution earns 3 stars on every level', async () => {
     const { scoreStars } = await import('./stars');
-    for (const s of SCENARIOS) {
+    for (const s of PLAYABLE) {
       const m = run(s.solution.nodes, s.solution.edges, s.traffic);
       const r = scoreStars(s, m, s.solution.nodes.filter((n) => n.type !== 'users').length);
       expect({ id: s.id, stars: r.stars }).toEqual({ id: s.id, stars: 3 });

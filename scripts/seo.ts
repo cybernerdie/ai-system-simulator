@@ -10,9 +10,13 @@
  *    (WebApplication, Course, FAQPage, DefinedTermSet).
  *  - emit robots.txt, sitemap.xml, llms.txt and llms-full.txt.
  */
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Plugin } from 'vite';
 import { LESSONS, MODULES, TERMS, type Lesson } from '../src/content/learn';
-import { SCENARIOS } from '../src/engine/scenarios';
+import { SCENARIOS, type Scenario } from '../src/engine/scenarios';
+import { BOSSES } from '../src/engine/bosses';
+import { CHAPTERS } from '../src/content/chapters';
 
 export const SITE = 'https://ai-system-simulator.vercel.app';
 const REPO = 'https://github.com/cybernerdie/ai-system-simulator';
@@ -57,6 +61,10 @@ const FAQ: { q: string; a: string }[] = [
   {
     q: 'Why does my RAG chatbot give confidently wrong answers?',
     a: 'Usually retrieval is returning the wrong chunks: chunks that are too large or small, too few results (top-K), or pure vector search missing exact identifiers like product codes. Hybrid search (vector plus keyword/BM25), a reranker and better chunking fix most of it. AISim scenario 2, "Confidently wrong RAG", lets you try each fix.',
+  },
+  {
+    q: 'How does the game work?',
+    a: `There are ${SCENARIOS.length} levels in six chapters, and each chapter ends with a boss level that mixes everything it taught. Every level hands you a broken AI system; clear it to unlock the next and earn up to three stars for staying within budget and building lean. There is also a daily challenge (the same remixed level for everyone, every day), an endless incident mode where outages, traffic spikes and attacks hit your system, a sandbox where you can build anything and turn it into a level to share, and achievements with a certificate for clearing every level.`,
   },
   {
     q: 'Is AISim free and open source?',
@@ -126,6 +134,7 @@ function staticBody(): string {
 <p>This interactive simulator needs JavaScript. <a href="${REPO}">Source code on GitHub</a>.</p><p>${AUTHOR_HTML}</p></header>
 <section><h2>Frequently asked questions</h2>${faq}</section>
 <section><h2>Scenarios (${playable.length})</h2><ol>${scenarios}</ol></section>
+<section><h2>Chapters and boss levels</h2>${CHAPTERS.map((c, i) => `<section id="chapter-${i + 1}"><h3>Chapter ${i + 1}: ${esc(c.title)}</h3><p>${esc(c.blurb)}</p><ul>${c.ids.map((id) => { const sc = SCENARIOS.find((x) => x.id === id)!; return `<li><a href="${SITE}/play/${id}">${esc(plainTitle(sc))}</a></li>`; }).join('')}<li><a href="${SITE}/play/${c.boss}">Boss: ${esc(plainTitle(BOSSES.find((b) => b.id === c.boss)!))}</a></li></ul></section>`).join('')}</section>
 <section><h2>Learn AI system design: ${MODULES.length} modules, ${LESSONS.length} lessons</h2>${modules}</section>
 <section><h2>AI glossary in plain English (${TERMS.length} terms)</h2><dl>${glossary}</dl></section>
 </main>`;
@@ -321,12 +330,117 @@ Sitemap: ${SITE}/sitemap.xml
 
 function sitemap(): string {
   const today = new Date().toISOString().slice(0, 10);
-  const urls = ['/', '/llms.txt', '/llms-full.txt'];
+  const urls = ['/', ...PAGES.map((p) => `/play/${p.s.id}`), '/llms.txt', '/llms-full.txt'];
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url><loc>${SITE}${u}</loc><lastmod>${today}</lastmod></url>`).join('\n')}
 </urlset>
 `;
+}
+
+/* ---------------- a page per level: /play/<id> ---------------- */
+
+const PAGES: { s: Scenario; label: string }[] = [
+  ...SCENARIOS.map((s, i) => ({ s, label: `Level ${i + 1}` })),
+  ...BOSSES.map((s) => ({ s, label: `Chapter ${(s.chapter ?? 0) + 1} boss` })),
+];
+const plainTitle = (s: Scenario) => s.title.replace(/^(\d+|Boss) · /, '');
+const METRIC_WORDS: Record<string, string> = {
+  accuracy: 'accuracy',
+  hallucination: 'hallucination rate',
+  injection: 'prompt-injection success',
+  errorRate: 'error rate',
+  costPer1k: 'cost per 1,000 requests',
+  p50: 'median latency',
+  ttftP50: 'time to first token',
+  piiLeak: 'personal data leaked',
+  evalGap: 'eval error',
+  harmfulActions: 'hijacked actions',
+};
+const goalText = (g: Scenario['goals'][number]) => {
+  const v = g.metric === 'costPer1k' ? `$${g.value}` : g.metric === 'p50' || g.metric === 'ttftP50' ? `${(g.value / 1000).toFixed(1)}s` : `${+(g.value * 100).toFixed(2)}%`;
+  return `${METRIC_WORDS[g.metric]} ${g.op === '>=' ? 'at least' : 'at most'} ${v}`;
+};
+const embedHtml = (s: Scenario) => `<iframe src="${SITE}/play/${s.id}?embed=1" title="AISim: ${esc(plainTitle(s))}" width="100%" height="720" style="border:0;border-radius:12px" loading="lazy"></iframe>`;
+
+function levelPage(base: string, s: Scenario, label: string): string {
+  const url = `${SITE}/play/${s.id}`;
+  const title = `${plainTitle(s)}: ${label} of the AI system design simulator | AISim`;
+  const desc = `${s.tagline} ${s.brief}`.replace(/\s+/g, ' ');
+  const short = desc.length > 158 ? `${desc.slice(0, 155).replace(/\s\S*$/, '')}…` : desc;
+  const chapter = CHAPTERS.findIndex((c) => c.ids.includes(s.id) || c.boss === s.id);
+  const siblings = chapter >= 0 ? [...CHAPTERS[chapter].ids, CHAPTERS[chapter].boss] : [];
+  const others = PAGES.filter((p) => siblings.includes(p.s.id) && p.s.id !== s.id);
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'LearningResource',
+        '@id': `${url}#level`,
+        name: plainTitle(s),
+        description: desc,
+        url,
+        learningResourceType: 'Interactive simulation',
+        interactivityType: 'active',
+        educationalLevel: LEVEL[s.difficulty] || 'Advanced',
+        teaches: s.skills,
+        isAccessibleForFree: true,
+        inLanguage: 'en',
+        isPartOf: { '@id': `${SITE}/#course` },
+        author: AUTHOR,
+        image: OG_IMAGE,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'AISim', item: `${SITE}/` },
+          ...(chapter >= 0 ? [{ '@type': 'ListItem', position: 2, name: `Chapter ${chapter + 1}: ${CHAPTERS[chapter].title}`, item: `${SITE}/#chapter-${chapter + 1}` }] : []),
+          { '@type': 'ListItem', position: chapter >= 0 ? 3 : 2, name: plainTitle(s), item: url },
+        ],
+      },
+    ],
+  }).replace(/</g, '\\u003c');
+  const body = `<main class="seo-static">
+<p><a href="${SITE}/">AISim</a>${chapter >= 0 ? ` › Chapter ${chapter + 1}: ${esc(CHAPTERS[chapter].title)}` : ''}</p>
+<h1>${esc(plainTitle(s))}</h1>
+<p><strong>${esc(label)}.</strong> ${esc(s.tagline)}</p>
+<p>${esc(s.brief)}</p>
+<h2>Goals</h2><ul>${s.goals.map((g) => `<li>${esc(goalText(g))}</li>`).join('')}</ul>
+<p>Concepts: ${esc(s.skills.join(', '))}.</p>
+<h2>Hint</h2><p>${esc(s.hint)}</p>
+<h2>What you learn</h2><p>${esc(s.lesson)}</p>
+${others.length ? `<h2>More in this chapter</h2><ul>${others.map((o) => `<li><a href="${SITE}/play/${o.s.id}">${esc(plainTitle(o.s))}</a> (${esc(o.label)})</li>`).join('')}</ul>` : ''}
+<p>This interactive level needs JavaScript. ${AUTHOR_HTML}</p>
+</main>`;
+  return base
+    .replace(/<title>.*?<\/title>/, `<title>${esc(title)}</title>`)
+    .replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${esc(short)}" />`)
+    .replace(/<link rel="canonical"[^>]*>/, `<link rel="canonical" href="${url}" />\n    <link rel="alternate" type="application/json+oembed" href="${SITE}/oembed/${s.id}.json" title="${esc(plainTitle(s))}" />`)
+    .replace(/<meta property="og:type"[^>]*>/, `<meta property="og:type" content="article" />\n    <meta property="og:url" content="${url}" />`)
+    .replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${esc(plainTitle(s))} | AISim" />`)
+    .replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${esc(short)}" />`)
+    .replace(/<meta name="twitter:title"[^>]*>/, `<meta name="twitter:title" content="${esc(plainTitle(s))} | AISim" />`)
+    .replace(/<meta name="twitter:description"[^>]*>/, `<meta name="twitter:description" content="${esc(short)}" />`)
+    .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, `<script type="application/ld+json">${ld}</script>`)
+    .replace(/<main class="seo-static">[\s\S]*?<\/main>/, body);
+}
+
+function oembed(s: Scenario): string {
+  return JSON.stringify({
+    version: '1.0',
+    type: 'rich',
+    provider_name: NAME,
+    provider_url: `${SITE}/`,
+    title: `${plainTitle(s)} | AISim`,
+    author_name: 'Joshua Paul',
+    author_url: 'https://joshuapaul.me',
+    html: embedHtml(s),
+    width: 800,
+    height: 720,
+    thumbnail_url: OG_IMAGE,
+    thumbnail_width: 1200,
+    thumbnail_height: 630,
+  });
 }
 
 /* ---------------- plugin ---------------- */
@@ -349,6 +463,17 @@ export function seo(): Plugin {
         'llms-full.txt': llmsFullTxt(),
       };
       for (const [fileName, source] of Object.entries(files)) this.emitFile({ type: 'asset', fileName, source });
+      for (const p of PAGES) this.emitFile({ type: 'asset', fileName: `oembed/${p.s.id}.json`, source: oembed(p.s) });
+    },
+    // once index.html is written, copy it into a page per level with that level's title, description and content
+    writeBundle(options) {
+      const dir = options.dir ?? 'dist';
+      const base = readFileSync(join(dir, 'index.html'), 'utf8');
+      for (const p of PAGES) {
+        const out = join(dir, 'play', p.s.id);
+        mkdirSync(out, { recursive: true });
+        writeFileSync(join(out, 'index.html'), levelPage(base, p.s, p.label));
+      }
     },
   };
 }

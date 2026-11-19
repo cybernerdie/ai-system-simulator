@@ -32,10 +32,10 @@ export function improvements(s: Scenario, before: Metrics | null, after: Metrics
 }
 
 /** One sentence for the post text. */
-export function shareText(s: Scenario, level: number, stars: number, imps: Improvement[]): string {
-  const name = s.title.replace(/^\d+ · /, '');
+export function shareText(s: Scenario, label: string, stars: number, imps: Improvement[]): string {
+  const name = s.title.replace(/^(\d+|Boss|Daily #\d+) · /, '');
   const what = imps[0] ? ` ${imps[0].label}: ${imps[0].before} → ${imps[0].after}.` : '';
-  return `I cleared level ${level}, "${name}", on AISim with ${stars}/3 stars.${what} Learn how AI systems really work by fixing broken ones:`;
+  return `I cleared ${label.toLowerCase().startsWith('level') ? label.toLowerCase() : `the ${label.toLowerCase()}`}, "${name}", on AISim with ${stars}/3 stars.${what} Learn how AI systems really work by fixing broken ones:`;
 }
 
 function star(c: CanvasRenderingContext2D, cx: number, cy: number, r: number, fill: string) {
@@ -75,7 +75,7 @@ function wrap(c: CanvasRenderingContext2D, text: string, maxW: number): string[]
   return lines;
 }
 
-export async function drawCard(opts: { s: Scenario; level: number; stars: number; imps: Improvement[]; site: string }): Promise<Blob> {
+export async function drawCard(opts: { s: Scenario; label: string; stars: number; imps: Improvement[]; site: string }): Promise<Blob> {
   const W = 1200;
   const H = 630;
   const cv = document.createElement('canvas');
@@ -117,13 +117,13 @@ export async function drawCard(opts: { s: Scenario; level: number; stars: number
   // level + stars
   c.fillStyle = '#a1a1aa';
   c.font = `500 26px ${sans}`;
-  c.fillText(`Level ${opts.level} cleared`, 72, 176);
+  c.fillText(`${opts.label} cleared`, 72, 176);
   for (let i = 0; i < 3; i++) star(c, W - 210 + i * 64, 165, 26, i < opts.stars ? '#f59e0b' : '#3f3f46');
 
   // title
   c.fillStyle = '#fafafa';
   c.font = `650 60px ${sans}`;
-  const title = opts.s.title.replace(/^\d+ · /, '');
+  const title = opts.s.title.replace(/^(\d+|Boss|Daily #\d+) · /, '');
   const tl = wrap(c, title, W - 144).slice(0, 2);
   tl.forEach((l, i) => c.fillText(l, 72, 250 + i * 68));
   let y = 250 + tl.length * 68 + 10;
@@ -167,4 +167,83 @@ export async function drawCard(opts: { s: Scenario; level: number; stars: number
   c.fillText(site, W - 72 - c.measureText(site).width, H - 56);
 
   return new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('Could not draw the card'))), 'image/png'));
+}
+
+/** Completion certificate, 1600×1131 (A4 landscape ratio). */
+export async function drawCertificate(opts: { name: string; levels: number; stars: number; maxStars: number; bosses: number; date: Date; site: string }): Promise<Blob> {
+  const W = 1600;
+  const H = 1131;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  const c = cv.getContext('2d')!;
+  try {
+    await document.fonts?.ready;
+  } catch {
+    /* fall back to system fonts */
+  }
+  const sans = "'Geist Variable', ui-sans-serif, system-ui, sans-serif";
+  const mono = "'Geist Mono Variable', ui-monospace, monospace";
+  c.fillStyle = '#fafafa';
+  c.fillRect(0, 0, W, H);
+  // frame
+  c.strokeStyle = '#18181b';
+  c.lineWidth = 3;
+  roundRect(c, 48, 48, W - 96, H - 96, 28);
+  c.stroke();
+  c.strokeStyle = '#d4d4d8';
+  c.lineWidth = 1.5;
+  roundRect(c, 64, 64, W - 128, H - 128, 20);
+  c.stroke();
+  // brand
+  c.fillStyle = '#6366f1';
+  roundRect(c, W / 2 - 62, 130, 22, 22, 6);
+  c.fill();
+  c.fillStyle = '#0ea5e9';
+  c.beginPath();
+  c.arc(W / 2 - 28, 132, 10, 0, Math.PI * 2);
+  c.fill();
+  c.fillStyle = '#f97316';
+  roundRect(c, W / 2 - 40, 144, 20, 20, 5);
+  c.fill();
+  c.fillStyle = '#18181b';
+  c.font = `600 34px ${sans}`;
+  c.fillText('AISim', W / 2 - 10, 160);
+  c.textAlign = 'center';
+  c.fillStyle = '#71717a';
+  c.font = `500 28px ${sans}`;
+  c.fillText('Certificate of completion', W / 2, 270);
+  c.fillStyle = '#18181b';
+  c.font = `650 96px ${sans}`;
+  const name = opts.name.length > 32 ? `${opts.name.slice(0, 31)}…` : opts.name;
+  c.fillText(name, W / 2, 400);
+  c.fillStyle = '#3f3f46';
+  c.font = `400 32px ${sans}`;
+  const body = `designed, debugged and fixed ${opts.levels} broken AI systems: retrieval, agents, guardrails, evals, inference, cost, privacy and more.`;
+  wrap(c, body, W - 400).forEach((l, i) => c.fillText(l, W / 2, 490 + i * 46));
+  // stats
+  const stats: [string, string][] = [
+    [`${opts.levels}`, 'levels cleared'],
+    [`${opts.stars}/${opts.maxStars}`, 'stars'],
+    [`${opts.bosses}`, 'bosses beaten'],
+  ];
+  const colW = 300;
+  stats.forEach(([v, l], i) => {
+    const x = W / 2 + (i - 1) * colW;
+    c.fillStyle = '#18181b';
+    c.font = `600 56px ${mono}`;
+    c.fillText(v, x, 690);
+    c.fillStyle = '#71717a';
+    c.font = `500 24px ${sans}`;
+    c.fillText(l, x, 730);
+  });
+  for (let i = 0; i < 3; i++) star(c, W / 2 - 70 + i * 70, 820, 26, '#f59e0b');
+  c.fillStyle = '#71717a';
+  c.font = `400 24px ${sans}`;
+  c.fillText(opts.date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }), W / 2, 930);
+  c.fillStyle = '#18181b';
+  c.font = `500 24px ${mono}`;
+  c.fillText(opts.site.replace(/^https?:\/\//, '').replace(/\/$/, ''), W / 2, 970);
+  c.textAlign = 'left';
+  return new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('Could not draw the certificate'))), 'image/png'));
 }

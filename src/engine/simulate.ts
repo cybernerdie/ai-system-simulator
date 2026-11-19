@@ -335,7 +335,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     const rv = vectorOn ? cs.cap * (exact ? 0.45 : 1) * curve(topK) : 0;
     const rk = kw ? (exact ? 0.93 : 0.45) * curve(topK) : 0;
     let r = 1 - (1 - rv) * (1 - rk);
-    if (reranker && keep < topK) r *= 0.97; // reranker occasionally drops the right chunk
+    if (reranker && keep < topK) r *= keep >= 3 ? 0.97 : keep === 2 ? 0.88 : 0.72; // keeping very few drops the right chunk (or the second fact) more often
     return r * cs.completeness;
   };
 
@@ -369,7 +369,8 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   const strictness = inputGuard ? cfgNum(inputGuard, 'strictness', 0.7) : 0;
   const threshold = cache ? cfgNum(cache, 'threshold', 0.9) : 0.9;
   const cacheHitP = Math.max(0.3, Math.min(0.98, 0.98 - (threshold - 0.8) * 2.5));
-  const cacheFalseHitP = Math.max(0, 0.92 - threshold) * 1.6;
+  // loose thresholds get much worse quickly: below ~0.86, different questions start to look 'the same'
+  const cacheFalseHitP = Math.max(0, 0.92 - threshold) * 1.6 + Math.max(0, 0.86 - threshold) * 4;
   const maxSteps = agent ? cfgNum(agent, 'maxSteps', 20) : 0;
   const team = first('agent_team');
   const workers = team ? Math.max(1, Math.round(cfgNum(team, 'workers', 3))) : 0;
@@ -540,7 +541,8 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     if (inputGuard) {
       touch(inputGuard, 35, 0.00008);
       const catchP = 0.55 + 0.44 * strictness;
-      const fpP = Math.max(0, (strictness - 0.5) * 0.06);
+      // near maximum strictness the guard starts rejecting ordinary questions
+      const fpP = Math.max(0, (strictness - 0.5) * 0.06) + Math.max(0, strictness - 0.85) * 1.2;
       const gs = t.steps.length;
       t.steps.push({ nodeId: inputGuard.id, kind: 'input_guard', text: 'Screened prompt, looks clean', tone: 'ok', ms: 35 });
       if (req.adversarial && rng() < catchP) {

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [{ "source": "/play/:id", "destination": "/play/:id/index.html" }],
+  "headers": [
+    {
+      "source": "/play/(.*)",
+      "headers": [{ "key": "Content-Security-Policy", "value": "frame-ancestors *" }]
+    },
+    {
+      "source": "/oembed/(.*)",
+      "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+    }
+  ]
+}

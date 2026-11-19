@@ -12,19 +12,28 @@ import {
   useReactFlow,
   type Connection,
 } from '@xyflow/react';
-import { BookOpen, Check, CircleQuestionMark, Code, Link2, Moon, Music2, Pause, Play, RotateCcw, Sun, Volume2, VolumeX } from 'lucide-react';
-import { COMPONENTS } from './engine/components';
+import { BookOpen, Check, CircleQuestionMark, Code, Command as CommandIcon, ExternalLink, GitCompareArrows, Link2, Moon, Music2, Pause, PencilRuler, Play, RotateCcw, Sun, Volume2, VolumeX } from 'lucide-react';
+import { COMPONENTS, PALETTE_ORDER } from './engine/components';
 import { simulate } from './engine/simulate';
 import { PATTERNS, TICK_SECONDS, trafficMultiplier, type Pattern } from './engine/patterns';
 import { bindingPressure, goalMet, type Pressure } from './engine/pressures';
 import { SANDBOX, SCENARIOS, withDefaults, type Scenario } from './engine/scenarios';
+import { BOSSES } from './engine/bosses';
+import { findBuiltIn, levelNumber, levelTag, nextAfter, unlockCap } from './engine/catalog';
+import { dailyNumber, dailyShareText, dailyStreak, loadDaily, saveDaily, todayKey, type DailyResult } from './engine/daily';
+import { INCIDENTS, INCIDENT_SCENARIO, formatDuration, incidentGoals, incidentTick, incidentTraffic, loadIncidentBest, newIncidentRun, saveIncidentBest, type IncidentState } from './engine/incident';
+import { ACHIEVEMENTS, addFlag, loadFlags, loadUnlocked, newlyEarned, saveUnlocked, type Progress } from './engine/achievements';
+import { QUIZ, loadQuiz, saveQuiz } from './content/quiz';
+import { customScenario, readHashLevel, recallLevel, rememberLevel, type CustomLevel } from './ui/customLevel';
+import { AchievementToast, AchievementsDialog, CommandPalette, CompareDialog, IncidentBanner, IncidentHud, IncidentOverDialog, LevelMakerDialog, ModeCards, type Command } from './ui/Modes';
+import { track } from './ui/track';
 import type { ComponentType, ConfigValue, Metrics, SimGraph, TrafficProfile } from './engine/types';
 import { SimNodeView, type SimFlowNode } from './ui/SimNodeView';
 import type { Shown } from './ui/Requests';
 import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
 import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
 import { LearnHub, firstUnreadLesson, type HubView } from './ui/LearnHub';
-import { loadStars, loadUnlockAll, saveStars, saveUnlockAll, clearDesign, encodeDesign, introSeen, loadCleared, loadDesign, loadLastScenario, markIntroSeen, readHashDesign, saveCleared, saveDesign, saveLastScenario, savedTheme, saveTheme, systemTheme, type SharedDesign, type Theme } from './ui/persist';
+import { loadStars, loadUnlockAll, saveStars, saveUnlockAll, clearDesign, encodeDesign, introSeen, loadCleared, loadDesign, loadLastScenario, loadRead, markIntroSeen, readHashDesign, saveCleared, saveDesign, saveLastScenario, savedTheme, saveTheme, systemTheme, type SharedDesign, type Theme } from './ui/persist';
 import { Tour, type TourStep } from './ui/Tour';
 import { autoWire, removeAndHeal, tidyLayout } from './engine/autowire';
 import { scoreStars, type StarResult } from './engine/stars';
@@ -33,12 +42,30 @@ import { COACH, hintLine, nudgeLine, pressureLine, showMeLine, winLine } from '.
 import { Complaints, Confetti, GuideCard, useVoice, VoiceMenu, WelcomeScreen } from './ui/Guide';
 import { speak, stopVoice } from './ui/voice';
 import { onSfxChange, play, setSfx, sfxOn } from './ui/sfx';
-import { drawCard, improvements, shareText } from './ui/shareCard';
+import { drawCard, drawCertificate, improvements, shareText } from './ui/shareCard';
 import { LESSONS, TERMS } from './content/learn';
 import { Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from './ui/Panels';
 
-const ALL = [...SCENARIOS, SANDBOX];
 const TICK_MS = 700;
+const SITE = 'https://ai-system-simulator.vercel.app';
+
+/** Embedded in another page (?embed) or opened on a level's own page (/play/<id>). */
+const EMBED = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('embed');
+const PLAY_ID = typeof window !== 'undefined' ? window.location.pathname.match(/^\/play\/([\w-]+)/)?.[1] ?? null : null;
+
+// levels made by players, once opened, are kept here and in localStorage
+const customs = new Map<string, Scenario>();
+function lookup(id: string): Scenario | undefined {
+  const b = findBuiltIn(id);
+  if (b) return b;
+  if (!customs.has(id)) {
+    const r = recallLevel(id);
+    if (r) customs.set(id, r);
+  }
+  return customs.get(id);
+}
+/** Numbered levels and bosses get their own URL (/play/<id>), so a refresh or a shared address opens them. */
+const hasPage = (s: Scenario) => levelNumber(s) !== null || s.kind === 'boss';
 const HOLD_TICKS = 5;
 const HISTORY = 40;
 const MOBILE_FIT = { padding: 0.12, maxZoom: 1 } as const;
@@ -95,10 +122,25 @@ function designToFlow(d: SharedDesign) {
   };
 }
 
+function packDesign(scenarioId: string, ns: SimFlowNode[], es: FlowEdgeType[]): SharedDesign {
+  return {
+    scenarioId,
+    nodes: ns.map((n) => ({ id: n.id, type: n.data.kind, x: n.position.x, y: n.position.y, config: n.data.config })),
+    edges: es.map((e) => ({ source: e.source, target: e.target })),
+  };
+}
+const designGraph = (d: SharedDesign): SimGraph => ({
+  nodes: d.nodes.map((n) => ({ id: n.id, type: n.type, config: n.config })),
+  edges: d.edges.map((e) => ({ source: e.source, target: e.target })),
+});
+
 /** Where to start: the scenario you were last on, with your work restored. */
 function startingPoint(): { id: string; restored: boolean; flow: ReturnType<typeof buildFlow> } {
+  const fromUrl = PLAY_ID ? lookup(PLAY_ID) : undefined;
   const last = loadLastScenario();
-  const s = ALL.find((x) => x.id === last) ?? SCENARIOS[0];
+  const remembered = last ? lookup(last) : undefined;
+  // a stale daily from an earlier day isn't today's challenge; start from the levels instead
+  const s = fromUrl ?? (remembered && !(remembered.kind === 'daily' && remembered.id !== `daily-${todayKey()}`) && remembered.kind !== 'incident' ? remembered : SCENARIOS[0]);
   const saved = loadDesign(s.id);
   return { id: s.id, restored: !!saved, flow: saved ? designToFlow(saved) : buildFlow(s) };
 }
@@ -138,7 +180,8 @@ function BrandMark() {
 export default function App() {
   const start = useMemo(() => startingPoint(), []);
   const [scenarioId, setScenarioId] = useState(start.id);
-  const scenario = ALL.find((s) => s.id === scenarioId)!;
+  const scenario = lookup(scenarioId) ?? SCENARIOS[0];
+  const isIncident = scenario.kind === 'incident';
   const initial = start.flow;
   const [nodes, setNodes, onNodesChange] = useNodesState<SimFlowNode>(initial.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdgeType>(initial.edges);
@@ -158,7 +201,7 @@ export default function App() {
   const [result, setResult] = useState<StarResult | null>(null);
   // stars already celebrated this session per level, so improving a level celebrates again
   const awarded = useRef(new Map<string, number>());
-  const [intro, setIntro] = useState<number | null>(() => (introSeen() || readHashDesign() ? null : 0));
+  const [intro, setIntro] = useState<number | null>(() => (introSeen() || readHashDesign() || readHashLevel() || PLAY_ID || EMBED ? null : 0));
   const [touring, setTouring] = useState(false);
   // coached first level: index into COACH, or null when not coaching
   const [coach, setCoach] = useState<number | null>(null);
@@ -167,6 +210,7 @@ export default function App() {
   const [voiceMenu, setVoiceMenu] = useState<DOMRect | null>(null);
   // the component list can collapse to a narrow rail of icons
   const [palCollapsed, setPalCollapsed] = useState(() => {
+    if (EMBED) return true;
     try {
       return localStorage.getItem('aisim.palCollapsed.v1') === '1';
     } catch {
@@ -191,6 +235,32 @@ export default function App() {
   // the numbers from the first run of a level, for the before → after share card
   const baselineRef = useRef<Metrics | null>(null);
   const ticksRef = useRef(0);
+
+  /* ---------- daily, incident mode, quiz, achievements, compare, level maker, commands ---------- */
+  const [daily, setDaily] = useState<Record<string, DailyResult>>(() => loadDaily());
+  const dayStreak = useMemo(() => dailyStreak(daily), [daily]);
+  const [incident, setIncident] = useState<IncidentState | null>(() => (isIncident ? newIncidentRun(1) : null));
+  const incidentRef = useRef<IncidentState | null>(incident);
+  const [incidentBest, setIncidentBest] = useState(() => loadIncidentBest());
+  const [incidentOver, setIncidentOver] = useState<IncidentState | null>(null);
+  const [banner, setBanner] = useState<{ title: string; text: string } | null>(null);
+  useEffect(() => {
+    if (!banner) return;
+    const t = window.setTimeout(() => setBanner(null), 4800);
+    return () => window.clearTimeout(t);
+  }, [banner]);
+  const [quiz, setQuiz] = useState(() => loadQuiz());
+  const [quizPick, setQuizPick] = useState<number | null>(null);
+  const [flags, setFlags] = useState(() => loadFlags());
+  const [unlocked, setUnlocked] = useState(() => loadUnlocked());
+  const [achQueue, setAchQueue] = useState<string[]>([]);
+  const [achOpen, setAchOpen] = useState(false);
+  const [readCount, setReadCount] = useState(() => loadRead().size);
+  const [pin, setPin] = useState<SharedDesign | null>(null);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [makerOpen, setMakerOpen] = useState(false);
+  const [cmdk, setCmdk] = useState(false);
+  const goals = useMemo(() => (isIncident ? incidentGoals((incident?.active ?? []).map((a) => a.kind)) : scenario.goals), [isIncident, incident, scenario]);
 
   const [toast, setToast] = useState<{ text: string; action?: { label: string; run: () => void } } | null>(null);
   const [picker, setPicker] = useState(false);
@@ -302,7 +372,7 @@ export default function App() {
 
   const loadScenario = useCallback(
     (id: string, opts: { fresh?: boolean } = {}) => {
-      const s = ALL.find((x) => x.id === id)!;
+      const s = lookup(id) ?? SCENARIOS[0];
       if (opts.fresh) clearDesign(id);
       const saved = opts.fresh ? null : loadDesign(id);
       const f = saved ? designToFlow(saved) : buildFlow(s);
@@ -322,7 +392,16 @@ export default function App() {
       setSelectedId(null);
       setTab('mission');
       setPicked(null);
-      if (window.location.hash) window.history.replaceState(null, '', window.location.pathname);
+      setQuizPick(null);
+      setIncidentOver(null);
+      setBanner(null);
+      const run = s.kind === 'incident' ? newIncidentRun(Math.floor(Math.random() * 1e6)) : null;
+      incidentRef.current = run;
+      setIncident(run);
+      // keep the address in step: numbered levels and bosses have their own page
+      const path = hasPage(s) ? `/play/${s.id}` : '/';
+      if (window.location.pathname !== path || window.location.hash) window.history.replaceState(null, '', `${path}${window.location.search}`);
+      track('level_start', { level: s.kind === 'daily' ? 'daily' : s.kind === 'custom' ? 'custom' : s.id });
       userMoved.current = false;
       requestAnimationFrame(() => flow.fitView({ ...fitOptions(), duration: 250 }));
     },
@@ -342,7 +421,7 @@ export default function App() {
         showToast('That share link is broken or incomplete, so it couldn\'t be opened.');
         return;
       }
-      const target = ALL.some((x) => x.id === d.scenarioId) ? d.scenarioId : SANDBOX.id;
+      const target = lookup(d.scenarioId) ? d.scenarioId : SANDBOX.id;
       const mine = loadDesign(target);
       loadScenario(target);
       const f = designToFlow({ ...d, scenarioId: target });
@@ -361,7 +440,20 @@ export default function App() {
             }
           : undefined,
       );
-    } else if (start.restored) {
+    } else if (/^#l=/.test(window.location.hash)) {
+      const h = readHashLevel();
+      if (!h) {
+        window.history.replaceState(null, '', window.location.pathname);
+        showToast('That level link is broken or incomplete, so it couldn\'t be opened.');
+        return;
+      }
+      const sc = customScenario(h.code, h.level);
+      customs.set(sc.id, sc);
+      rememberLevel(sc.id, h.code);
+      loadScenario(sc.id, { fresh: true });
+      showToast('Playing a level someone made and shared. Press Space to run it.');
+      track('custom_opened');
+    } else if (start.restored && !PLAY_ID) {
       showToast('Picked up where you left off.', { label: 'Start over', run: () => loadScenario(start.id, { fresh: true }) });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -369,20 +461,20 @@ export default function App() {
 
   // Keep your work: remember the scenario you're on and your design in each one
   useEffect(() => {
-    saveLastScenario(scenarioId);
+    if (!EMBED) saveLastScenario(scenarioId);
   }, [scenarioId]);
+  // the tab title follows the level
+  const baseTitle = useRef(document.title);
+  useEffect(() => {
+    document.title = hasPage(scenario) || scenario.kind ? `${scenario.title.replace(/^(\d+|Boss|Daily #\d+) · /, '')} · AISim` : baseTitle.current;
+  }, [scenario]);
   useEffect(() => {
     const t = window.setTimeout(() => {
-      const s = ALL.find((x) => x.id === scenarioId)!;
-      const pack = (ns: SimFlowNode[], es: FlowEdgeType[]): SharedDesign => ({
-        scenarioId,
-        nodes: ns.map((n) => ({ id: n.id, type: n.data.kind, x: n.position.x, y: n.position.y, config: n.data.config })),
-        edges: es.map((e) => ({ source: e.source, target: e.target })),
-      });
-      const mine = pack(nodes, edges);
+      const s = lookup(scenarioId) ?? SCENARIOS[0];
+      const mine = packDesign(scenarioId, nodes, edges);
       const b = buildFlow(s);
       // don't store anything until the design actually differs from the scenario's starting point
-      if (encodeDesign(mine) === encodeDesign(pack(b.nodes, b.edges))) clearDesign(scenarioId);
+      if (encodeDesign(mine) === encodeDesign(packDesign(scenarioId, b.nodes, b.edges))) clearDesign(scenarioId);
       else saveDesign(mine);
     }, 400);
     return () => window.clearTimeout(t);
@@ -402,12 +494,9 @@ export default function App() {
   }, [scenario.id, loadScenario, showToast, setNodes, setEdges]);
 
   const share = useCallback(async () => {
-    const code = encodeDesign({
-      scenarioId: scenario.id,
-      nodes: nodes.map((n) => ({ id: n.id, type: n.data.kind, x: n.position.x, y: n.position.y, config: n.data.config })),
-      edges: edges.map((e) => ({ source: e.source, target: e.target })),
-    });
-    const url = `${window.location.origin}${window.location.pathname}#d=${code}`;
+    const code = encodeDesign(packDesign(scenario.id, nodes, edges));
+    const url = `${window.location.origin}/#d=${code}`;
+    track('share', { kind: 'design' });
     window.history.replaceState(null, '', url);
     try {
       await navigator.clipboard.writeText(url);
@@ -430,15 +519,40 @@ export default function App() {
     const tick = () => {
       simTimeRef.current += TICK_SECONDS;
       setSimTime(simTimeRef.current);
-      const effRps = Math.max(0.5, Math.round(rps * trafficMultiplier(pattern, simTimeRef.current) * 10) / 10);
-      const raw = simulate(graphRef.current, { ...trafficRef.current, rps: effRps }, { seed: seed.current++, samples: 1500 });
+      // incident mode: traffic and goals come from the incidents currently active
+      const inc = scenario.kind === 'incident' ? incidentRef.current : null;
+      const activeKinds = inc ? inc.active.map((a) => a.kind) : [];
+      const baseT = inc ? incidentTraffic(activeKinds, inc.count) : trafficRef.current;
+      const baseRps = inc ? baseT.rps * (rps / INCIDENT_SCENARIO.traffic.rps) : rps;
+      const effRps = Math.max(0.5, Math.round(baseRps * trafficMultiplier(pattern, simTimeRef.current) * 10) / 10);
+      const raw = simulate(graphRef.current, { ...baseT, rps: effRps }, { seed: seed.current++, samples: 1500 });
       ticksRef.current = metricsRef.current ? ticksRef.current + 1 : 0;
       const m = smooth(metricsRef.current, raw);
       if (ticksRef.current === 3 && !baselineRef.current) baselineRef.current = m;
       metricsRef.current = m;
       setMetrics(m);
       setHistory((h) => [...h.slice(-(HISTORY - 1)), m]);
-      setPressure(bindingPressure(m, scenario.goals));
+      const gs = inc ? incidentGoals(activeKinds) : scenario.goals;
+      setPressure(bindingPressure(m, gs));
+      if (inc) {
+        const nx = incidentTick(inc, gs.filter((g) => !goalMet(m, g)).length, TICK_SECONDS);
+        incidentRef.current = nx;
+        setIncident(nx);
+        if (nx.started) {
+          const d = INCIDENTS[nx.started];
+          setBanner({ title: d.title, text: d.text });
+          speak(`incident-${d.kind}`, d.text);
+          play('problem');
+        }
+        if (nx.over) {
+          setRunning(false);
+          setIncidentOver(nx);
+          setIncidentBest(saveIncidentBest({ seconds: Math.round(nx.t), incidents: nx.count }));
+          speak('incident-over', `Your system went down after ${formatDuration(nx.t).replace('m', ' minutes').replace('s', ' seconds')}.`);
+          track('incident_over', { seconds: Math.round(nx.t), incidents: nx.count });
+        }
+        return;
+      }
       if (scenario.goals.length) {
         const ok = scenario.goals.every((g) => goalMet(m, g));
         const metNow = scenario.goals.filter((g) => goalMet(m, g)).length;
@@ -452,6 +566,11 @@ export default function App() {
           const before = awarded.current.get(scenario.id) ?? 0;
           if (!cleared.has(scenario.id) || r.stars > before) {
             awarded.current.set(scenario.id, r.stars);
+            setQuizPick(null);
+            if (m.costPer1k <= r.par.cost * 0.5) setFlags(addFlag('half-budget'));
+            if (parts < r.par.parts) setFlags(addFlag('under-par'));
+            if (scenario.kind === 'daily') setDaily(saveDaily(scenario.id.slice(6), { stars: r.stars, cost: m.costPer1k, parts }));
+            track('level_won', { level: scenario.kind === 'daily' ? 'daily' : scenario.kind === 'custom' ? 'custom' : scenario.id, stars: r.stars });
             setResult({ ...r, improved: before > 0 });
             setWon(true);
             setRunning(false);
@@ -510,7 +629,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running]);
   useEffect(() => {
-    if (!running || coach !== null || won || !scenario.goals.length) return;
+    if (!running || coach !== null || won || !scenario.goals.length || scenario.kind === 'incident') return;
     const id = window.setInterval(() => {
       if (streakRef.current > 0) return; // on track
       const idle = (Date.now() - lastEdit.current) / 1000;
@@ -575,17 +694,40 @@ export default function App() {
     baselineRef.current = null;
   }, [scenario.id]);
 
+  const copyText = useCallback(
+    async (text: string, done: string) => {
+      try {
+        if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
+          await navigator.share({ text });
+          return;
+        }
+        await navigator.clipboard.writeText(text);
+        showToast(done);
+      } catch (e) {
+        if ((e as Error).name !== 'AbortError') showToast('Couldn\'t copy on this device.');
+      }
+    },
+    [showToast],
+  );
   const shareResult = useCallback(async () => {
     const after = metricsRef.current;
     if (!after) return;
-    const level = SCENARIOS.findIndex((x) => x.id === scenario.id) + 1;
     const n = result?.stars ?? 1;
+    const site = `${SITE}/`;
+    track('share', { kind: scenario.kind ?? 'level' });
+    if (scenario.kind === 'daily') {
+      const key = scenario.id.slice(6);
+      const r = daily[key] ?? { stars: n, cost: after.costPer1k, parts: nodesRef.current.length - 1 };
+      await copyText(`${dailyShareText(key, r, dayStreak)}\n${site}`, 'Result copied, ready to paste.');
+      return;
+    }
+    const num = levelNumber(scenario);
+    const label = num ? `Level ${num}` : scenario.kind === 'boss' ? 'Boss level' : 'Level';
     const imps = improvements(scenario, baselineRef.current, after);
-    const site = 'https://ai-system-simulator.vercel.app/';
-    const text = shareText(scenario, level, n, imps);
+    const text = shareText(scenario, label, n, imps);
     try {
-      const blob = await drawCard({ s: scenario, level, stars: n, imps, site });
-      const file = new File([blob], `aisim-level-${level}.png`, { type: 'image/png' });
+      const blob = await drawCard({ s: scenario, label, stars: n, imps, site });
+      const file = new File([blob], `aisim-${scenario.id}.png`, { type: 'image/png' });
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text, url: site });
         return;
@@ -604,7 +746,7 @@ export default function App() {
     } catch (e) {
       if ((e as Error).name !== 'AbortError') showToast('Couldn\'t create the card on this device.');
     }
-  }, [scenario, result, showToast]);
+  }, [scenario, result, showToast, daily, dayStreak, copyText]);
   useEffect(() => {
     if (coach !== null && coach > 0) play('step');
   }, [coach]);
@@ -625,16 +767,17 @@ export default function App() {
   // Every component is listed; ones you haven't reached are locked until you clear the level that introduces them.
   // Sandbox and "Unlock every level" open everything.
   const unlock = useMemo(() => {
-    const idx = SCENARIOS.findIndex((x) => x.id === scenario.id);
-    if (unlockAll || idx < 0) return null;
+    const cap = unlockCap(scenario);
+    if (unlockAll || cap === null) return null;
     const firstLevel = unlockLevels();
     // open: everything introduced up to this level, plus anything already on the canvas
     const locks = new Map<ComponentType, number>();
     firstLevel.forEach((lvl, t) => {
-      if (lvl > idx + 1 && !nodes.some((n) => n.data.kind === t)) locks.set(t, lvl);
+      if (lvl > cap && !nodes.some((n) => n.data.kind === t)) locks.set(t, lvl);
     });
     const startHere = new Set(scenario.nodes.map((n) => n.type));
-    const fresh = new Set([...firstLevel].filter(([t, lvl]) => lvl === idx + 1 && !startHere.has(t)).map(([t]) => t));
+    const isLevel = levelNumber(scenario) !== null;
+    const fresh = new Set([...firstLevel].filter(([t, lvl]) => isLevel && lvl === cap && !startHere.has(t)).map(([t]) => t));
     return { locks, fresh };
   }, [scenario, unlockAll, nodes]);
 
@@ -752,14 +895,146 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
-      if (e.code === 'Space' && !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag) && intro === null && !touring && !won && !picker && !hub) {
+      const typing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(tag) || (e.target as HTMLElement).isContentEditable;
+      const modal = intro !== null || touring || won || picker || hub || cmdk || compareOpen || makerOpen || achOpen || !!incidentOver;
+      if (e.code === 'Space' && !typing && tag !== 'BUTTON' && !modal) {
         e.preventDefault();
         setRunning((r) => !r);
+      }
+      // the command palette: '/' or Ctrl/Cmd+K
+      if (((e.key === '/' && !typing) || (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey))) && !modal && !EMBED) {
+        e.preventDefault();
+        setCmdk(true);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [intro, touring, won, picker, hub]);
+  }, [intro, touring, won, picker, hub, cmdk, compareOpen, makerOpen, achOpen, incidentOver]);
+
+  /* ---------- achievements ---------- */
+  const progress: Progress = useMemo(
+    () => ({ cleared, stars, quiz, daily, dailyStreak: dayStreak, incident: incidentBest, lessonsRead: readCount, flags }),
+    [cleared, stars, quiz, daily, dayStreak, incidentBest, readCount, flags],
+  );
+  const firstAch = useRef(true);
+  useEffect(() => {
+    const fresh = newlyEarned(progress, unlocked);
+    const first = firstAch.current;
+    firstAch.current = false;
+    if (!fresh.length) return;
+    const next = { ...unlocked };
+    fresh.forEach((a) => (next[a.id] = Date.now()));
+    saveUnlocked(next);
+    setUnlocked(next);
+    // earned before achievements existed: record them quietly
+    if (first) return;
+    setAchQueue((q) => [...q, ...fresh.map((a) => a.title)]);
+    fresh.forEach((a) => track('achievement', { id: a.id }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress]);
+  useEffect(() => {
+    if (!achQueue.length) return;
+    play('star', 0.2);
+    const t = window.setTimeout(() => setAchQueue((q) => q.slice(1)), 3400);
+    return () => window.clearTimeout(t);
+  }, [achQueue]);
+
+  const answerQuiz = useCallback(
+    (i: number) => {
+      const q = QUIZ[scenario.id];
+      if (!q) return;
+      setQuizPick(i);
+      setQuiz(saveQuiz(scenario.id, i === q.answer));
+      play(i === q.answer ? 'goal' : 'pause');
+      track('quiz', { level: scenario.id, correct: i === q.answer });
+    },
+    [scenario.id],
+  );
+
+  /* ---------- compare, level maker, certificate, embed ---------- */
+  const pinHere = pin && pin.scenarioId === scenario.id ? pin : null;
+  const compare = useCallback(() => {
+    if (!pinHere) {
+      setPin(packDesign(scenario.id, nodesRef.current, edgesRef.current));
+      showToast('Pinned this design. Change it, then press Compare again to see both side by side.');
+      return;
+    }
+    setCompareOpen(true);
+    setFlags(addFlag('compared'));
+    track('compare');
+  }, [pinHere, scenario.id, showToast]);
+  const publishLevel = useCallback(
+    async (code: string, level: CustomLevel) => {
+      const sc = customScenario(code, level);
+      customs.set(sc.id, sc);
+      rememberLevel(sc.id, code);
+      setFlags(addFlag('made-level'));
+      track('level_made');
+      const url = `${SITE}/#l=${code}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast('Level link copied. Anyone who opens it plays your level.');
+      } catch {
+        window.prompt('Copy this link to share your level:', url);
+      }
+    },
+    [showToast],
+  );
+  const downloadCertificate = useCallback(
+    async (name: string) => {
+      const total = [...SCENARIOS, ...BOSSES].reduce((a, x) => a + (stars[x.id] ?? 0), 0);
+      try {
+        const blob = await drawCertificate({ name, levels: SCENARIOS.length, stars: total, maxStars: (SCENARIOS.length + BOSSES.length) * 3, bosses: BOSSES.filter((b) => cleared.has(b.id)).length, date: new Date(), site: SITE });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'aisim-certificate.png';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        track('certificate');
+      } catch {
+        showToast('Couldn\'t draw the certificate on this device.');
+      }
+    },
+    [stars, cleared, showToast],
+  );
+  const copyEmbed = useCallback(
+    async (id: string) => {
+      const sc = lookup(id);
+      const html = `<iframe src="${SITE}/play/${id}?embed=1" title="AISim: ${(sc?.title ?? '').replace(/^\d+ · /, '').replace(/"/g, '&quot;')}" width="100%" height="720" style="border:0;border-radius:12px" loading="lazy"></iframe>`;
+      try {
+        await navigator.clipboard.writeText(html);
+        showToast('Embed code copied. Paste it into any page or blog that allows iframes.');
+      } catch {
+        window.prompt('Copy this embed code:', html);
+      }
+      track('embed_copied', { level: id });
+    },
+    [showToast],
+  );
+  useEffect(() => {
+    if (EMBED) track('embed_view', { level: scenarioId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // first run of each level visit, for the funnel
+  const ranHere = useRef('');
+  useEffect(() => {
+    if (running && ranHere.current !== scenario.id) {
+      ranHere.current = scenario.id;
+      track('level_run', { level: scenario.kind ? scenario.kind : scenario.id });
+    }
+  }, [running, scenario]);
+  const goIncidentAgain = useCallback(() => {
+    const st = newIncidentRun(Math.floor(Math.random() * 1e6));
+    incidentRef.current = st;
+    setIncident(st);
+    setIncidentOver(null);
+    simTimeRef.current = 0;
+    setSimTime(0);
+    setMetrics(null);
+    setHistory([]);
+    metricsRef.current = null;
+    setRunning(true);
+  }, []);
 
   const tourSteps: TourStep[] = useMemo(
     () => [
@@ -826,20 +1101,67 @@ export default function App() {
     [setTab],
   );
 
+  const commands: Command[] = useMemo(() => {
+    const add: Command[] = PALETTE_ORDER.filter((t) => t !== 'users').map((t) => {
+      const lvl = unlock?.locks.get(t);
+      return { id: `add-${t}`, group: 'Add', label: COMPONENTS[t].name, hint: COMPONENTS[t].short, disabled: lvl ? `Unlocks in level ${lvl}` : false, run: () => addNode(t) };
+    });
+    return [
+      { id: 'run', group: 'Run', label: running ? 'Pause the simulation' : 'Run the simulation', keys: 'Space', run: () => setRunning((r) => !r) },
+      ...add,
+      { id: 'compare', group: 'Design', label: pinHere ? 'Compare with the pinned design' : 'Pin this design to compare later', run: compare },
+      { id: 'share', group: 'Design', label: 'Copy a link to this design', run: share },
+      ...(scenario.id === SANDBOX.id ? [{ id: 'maker', group: 'Design', label: 'Make a level from this sandbox', run: () => setMakerOpen(true) }] : []),
+      { id: 'reset', group: 'Design', label: 'Reset this level', run: resetScenario },
+      { id: 'levels', group: 'Go to', label: 'All levels', run: () => setPicker(true) },
+      { id: 'daily', group: 'Go to', label: `Daily challenge #${dailyNumber(todayKey())}`, run: () => loadScenario(`daily-${todayKey()}`) },
+      { id: 'incident', group: 'Go to', label: 'Incident mode', run: () => loadScenario(INCIDENT_SCENARIO.id) },
+      { id: 'sandbox', group: 'Go to', label: 'Sandbox', run: () => loadScenario(SANDBOX.id) },
+      { id: 'learn', group: 'Go to', label: 'Lessons and glossary', run: () => setHub({ tab: 'lessons', lessonId: firstUnreadLesson() }) },
+      { id: 'ach', group: 'Go to', label: 'Achievements', run: () => setAchOpen(true) },
+      { id: 'theme', group: 'Settings', label: theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode', run: toggleTheme },
+      { id: 'sfx', group: 'Settings', label: sfx ? 'Turn sound effects off' : 'Turn sound effects on', run: () => setSfx(!sfx) },
+      { id: 'tour', group: 'Help', label: 'Take the tour', run: () => setTouring(true) },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlock, running, pinHere, scenario.id, theme, sfx, compare, share, resetScenario, loadScenario, addNode]);
+
   const selected = nodes.find((n) => n.id === selectedId);
-  const idx = SCENARIOS.findIndex((s) => s.id === scenario.id);
-  const next = idx >= 0 ? SCENARIOS[idx + 1] : undefined;
+  const next = nextAfter(scenario, new Set([...cleared, scenario.id]));
+  const num = levelNumber(scenario);
+  const winKicker = num ? `Level ${num} cleared` : scenario.kind === 'boss' ? 'Boss beaten' : scenario.kind === 'daily' ? `Daily #${dailyNumber(scenario.id.slice(6))} solved` : 'Level cleared';
+  const nextLabel = EMBED ? 'Keep playing on AISim' : next ? (next.kind === 'boss' ? 'Face the boss' : 'Next level') : scenario.kind === 'daily' || scenario.kind === 'custom' ? 'Back to the levels' : 'Open the sandbox';
+  const goNext = () => {
+    if (EMBED) {
+      window.open(`${SITE}${next && hasPage(next) ? `/play/${next.id}` : '/'}`, '_blank', 'noopener');
+      setWon(false);
+      return;
+    }
+    if (next) loadScenario(next.id);
+    else if (scenario.kind === 'daily' || scenario.kind === 'custom') {
+      setWon(false);
+      setPicker(true);
+    } else loadScenario(SANDBOX.id);
+  };
+  const totalStarsAll = [...SCENARIOS, ...BOSSES].reduce((a, x) => a + (stars[x.id] ?? 0), 0);
 
   return (
-    <div className={`app${palCollapsed ? ' pal-collapsed' : ''}`}>
+    <div className={`app${palCollapsed ? ' pal-collapsed' : ''}${EMBED ? ' is-embed' : ''}`}>
       <header className="topbar">
         <div className="brand">
           <BrandMark />
           <span>AISim</span>
         </div>
         <span className="topbar-divider" aria-hidden />
-        <ScenarioTrigger scenario={scenario} index={SCENARIOS.findIndex((x) => x.id === scenario.id)} onOpen={() => setPicker(true)} />
-        <div className="traffic">
+        {EMBED ? (
+          <span className="scenario-trigger is-static">
+            <span className="scenario-trigger-num">{levelTag(scenario)}</span>
+            <span className="scenario-trigger-title">{scenario.title.replace(/^(\d+|Boss|Daily #\d+) · /, '')}</span>
+          </span>
+        ) : (
+          <ScenarioTrigger scenario={scenario} tag={levelTag(scenario)} onOpen={() => setPicker(true)} />
+        )}
+        {!EMBED && <div className="traffic">
           <label className="traffic-rate">
             <span>Traffic</span>
             <input type="range" min={1} max={150} value={rps} onChange={(e) => setRps(Number(e.target.value))} aria-label="Base requests per second" />
@@ -857,9 +1179,23 @@ export default function App() {
             </select>
           </label>
           {pattern !== 'steady' && <span className="sim-clock">t={simTime}s</span>}
-        </div>
+        </div>}
         <div className="topbar-spacer" />
+        {EMBED ? (
+          <div className="topbar-tools">
+            <a className="btn btn-ghost btn-icon" href={`${SITE}${hasPage(scenario) ? `/play/${scenario.id}` : '/'}`} target="_blank" rel="noreferrer" title="Open the full game in a new tab">
+              <ExternalLink size={15} aria-hidden />
+              <span>Open AISim</span>
+            </a>
+          </div>
+        ) : (
         <div className="topbar-tools">
+        {scenario.id === SANDBOX.id && (
+          <button className="btn btn-ghost btn-icon" onClick={() => setMakerOpen(true)} title="Turn this sandbox into a level others can play">
+            <PencilRuler size={15} aria-hidden />
+            <span>Make a level</span>
+          </button>
+        )}
         <button className="btn btn-ghost btn-icon" data-tour="reset" onClick={resetScenario} title="Reset scenario">
           <RotateCcw size={15} aria-hidden />
           <span>Reset</span>
@@ -867,6 +1203,10 @@ export default function App() {
         <button className="btn btn-ghost btn-icon" data-tour="share" onClick={share} title="Copy a link to this design">
           <Link2 size={15} aria-hidden />
           <span>Share</span>
+        </button>
+        <button className={`btn btn-ghost btn-icon${pinHere ? ' is-pinned' : ''}`} data-tour="compare" onClick={compare} title={pinHere ? 'Compare the pinned design with this one' : 'Pin this design, then change it and compare'}>
+          <GitCompareArrows size={15} aria-hidden />
+          <span>{pinHere ? 'Compare' : 'Pin'}</span>
         </button>
         <button className="btn btn-ghost btn-icon" data-tour="learn" onClick={() => setHub({ tab: 'lessons', lessonId: firstUnreadLesson() })} title="Lessons and glossary">
           <BookOpen size={15} aria-hidden />
@@ -898,6 +1238,9 @@ export default function App() {
         >
           {voice ? <Volume2 size={15} aria-hidden /> : <VolumeX size={15} aria-hidden />}
         </button>
+        <button className="btn btn-ghost theme-toggle only-keys" onClick={() => setCmdk(true)} title="Commands and shortcuts ( / )" aria-label="Commands and shortcuts">
+          <CommandIcon size={15} aria-hidden />
+        </button>
         <button className="btn btn-ghost theme-toggle" data-tour="help" onClick={() => setTouring(true)} title="Take the tour" aria-label="Take the tour">
           <CircleQuestionMark size={15} aria-hidden />
         </button>
@@ -906,6 +1249,7 @@ export default function App() {
           <span className="sr-only">Source code on GitHub</span>
         </a>
         </div>
+        )}
         <span className="topbar-divider" aria-hidden />
         <button className={`btn btn-primary btn-run${running ? ' is-running' : ''}`} onClick={() => setRunning((r) => !r)}>
           {running ? <Pause size={14} fill="currentColor" aria-hidden /> : <Play size={14} fill="currentColor" aria-hidden />}
@@ -986,8 +1330,9 @@ export default function App() {
             <Controls showInteractive={false} position="bottom-right" orientation="horizontal" />
           )}
         </ReactFlow>
-        <PressureWindow p={pressure} running={running} hasRun={!!metrics} />
-        <Telemetry m={metrics} history={history} goals={scenario.goals} />
+        <PressureWindow p={pressure} running={running} hasRun={!!metrics} hud={isIncident && incident ? <IncidentHud s={incident} /> : undefined} />
+        <Telemetry m={metrics} history={history} goals={goals} />
+        {banner && <IncidentBanner title={banner.title} text={banner.text} />}
         <Complaints samples={metrics?.samples} running={running && !celebrate} />
       </main>
 
@@ -995,7 +1340,7 @@ export default function App() {
       <SidePanel
         sheet={isPhone ? { open: sheetOpen && !!selected, onClose: () => setSheetOpen(false) } : undefined}
         key={scenario.id}
-        scenario={scenario}
+        scenario={isIncident ? { ...scenario, goals } : scenario}
         m={metrics}
         streak={streak}
         needed={HOLD_TICKS}
@@ -1048,7 +1393,7 @@ export default function App() {
           closeLabel="Skip the tutorial"
         />
       )}
-      {coach === null && stuck > 0 && running && !won && (
+      {coach === null && stuck > 0 && running && !won && !isIncident && (
         <GuideCard
           key={`stuck-${stuck}`}
           target={stuck === 1 ? '.pressure-window' : stuck === 3 && missing ? `[data-palette="${missing.type}"]` : undefined}
@@ -1084,6 +1429,29 @@ export default function App() {
       {picker && (
         <ScenarioPicker
           scenarios={SCENARIOS}
+          bosses={BOSSES}
+          onEmbed={copyEmbed}
+          modes={
+            <ModeCards
+              dailyNumber={dailyNumber(todayKey())}
+              dailyDone={daily[todayKey()]?.stars ?? null}
+              streak={dayStreak}
+              incidentBest={incidentBest}
+              achievements={[Object.keys(unlocked).filter((id) => ACHIEVEMENTS.some((a) => a.id === id)).length, ACHIEVEMENTS.length]}
+              onDaily={() => {
+                setPicker(false);
+                loadScenario(`daily-${todayKey()}`);
+              }}
+              onIncident={() => {
+                setPicker(false);
+                loadScenario(INCIDENT_SCENARIO.id);
+              }}
+              onAchievements={() => {
+                setPicker(false);
+                setAchOpen(true);
+              }}
+            />
+          }
           sandbox={SANDBOX}
           currentId={scenario.id}
           cleared={cleared}
@@ -1104,7 +1472,10 @@ export default function App() {
         <LearnHub
           view={hub}
           setView={setHub}
-          onClose={() => setHub(null)}
+          onClose={() => {
+            setHub(null);
+            setReadCount(loadRead().size);
+          }}
           onReplayIntro={() => {
             setHub(null);
             setIntro(0);
@@ -1135,10 +1506,14 @@ export default function App() {
       {won && (
         <WinDialog
           s={scenario}
-          index={SCENARIOS.findIndex((x) => x.id === scenario.id)}
+          kicker={winKicker}
           result={result}
           best={stars[scenario.id] ?? 0}
-          next={next}
+          nextLabel={nextLabel}
+          quiz={QUIZ[scenario.id]}
+          quizPick={quizPick}
+          onQuiz={answerQuiz}
+          shareLabel={scenario.kind === 'daily' ? 'Share your score' : 'Share result'}
           lesson={LESSONS.find((l) => l.scenarioId === scenario.id)}
           onLesson={(id) => {
             setWon(false);
@@ -1146,9 +1521,69 @@ export default function App() {
           }}
           onStay={() => setWon(false)}
           onShare={shareResult}
-          onNext={() => loadScenario(next ? next.id : SANDBOX.id)}
+          onNext={goNext}
         />
       )}
+      {incidentOver && (
+        <IncidentOverDialog
+          seconds={incidentOver.t}
+          incidents={incidentOver.count}
+          best={incidentBest}
+          onRetry={goIncidentAgain}
+          onShare={() => copyText(`I kept an AI system alive for ${formatDuration(incidentOver.t)} through ${incidentOver.count} incidents in AISim's incident mode. ${SITE}/`, 'Result copied, ready to paste.')}
+          onLevels={() => {
+            setIncidentOver(null);
+            setPicker(true);
+          }}
+        />
+      )}
+      {compareOpen && pinHere && (
+        <CompareDialog
+          pinned={{ graph: designGraph(pinHere), parts: pinHere.nodes.filter((n) => n.type !== 'users').length }}
+          current={{ graph, parts: nodes.filter((n) => n.data.kind !== 'users').length }}
+          traffic={isIncident && incident ? incidentTraffic(incident.active.map((a) => a.kind), incident.count) : { ...traffic, rps }}
+          goals={goals}
+          onRestore={() => {
+            const f = designToFlow(pinHere);
+            setNodes(f.nodes);
+            setEdges(f.edges);
+            setCompareOpen(false);
+            showToast('Back to the pinned design.');
+          }}
+          onPinCurrent={() => {
+            setPin(packDesign(scenario.id, nodes, edges));
+            setCompareOpen(false);
+            showToast('Pinned the current design.');
+          }}
+          onClear={() => {
+            setPin(null);
+            setCompareOpen(false);
+          }}
+          onClose={() => setCompareOpen(false)}
+        />
+      )}
+      {makerOpen && (
+        <LevelMakerDialog
+          traffic={{ ...traffic, rps }}
+          solution={packDesign(SANDBOX.id, nodes, edges)}
+          pinned={pin && pin.scenarioId === SANDBOX.id ? pin : null}
+          onPublish={publishLevel}
+          onClose={() => setMakerOpen(false)}
+        />
+      )}
+      {achOpen && (
+        <AchievementsDialog
+          progress={progress}
+          unlocked={unlocked}
+          levelsTotal={SCENARIOS.length}
+          levelsCleared={SCENARIOS.filter((x) => cleared.has(x.id)).length}
+          totalStars={totalStarsAll}
+          onCertificate={downloadCertificate}
+          onClose={() => setAchOpen(false)}
+        />
+      )}
+      {cmdk && <CommandPalette commands={commands} onClose={() => setCmdk(false)} />}
+      {achQueue[0] && <AchievementToast key={achQueue[0]} title={achQueue[0]} />}
     </div>
   );
 }

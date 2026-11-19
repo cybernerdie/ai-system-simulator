@@ -6,6 +6,8 @@ import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../engin
 import { QUALITY_METRICS, goalMet, type Pressure } from '../engine/pressures';
 import type { Scenario } from '../engine/scenarios';
 import type { ComponentType, ConfigValue, Goal, GoalMetric, Metrics, NodeConfig, TrafficProfile } from '../engine/types';
+import type { QuizQuestion } from '../content/quiz';
+import { QuizBlock } from './Modes';
 import { KindIcon } from './icons';
 import { profileOf } from '../engine/models';
 import { RequestsPanel, type Shown } from './Requests';
@@ -215,7 +217,7 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
 
 /* ---------- binding pressure (floating window) ---------- */
 
-export function PressureWindow({ p, running, hasRun }: { p: Pressure | null; running: boolean; hasRun: boolean }) {
+export function PressureWindow({ p, running, hasRun, hud }: { p: Pressure | null; running: boolean; hasRun: boolean; hud?: React.ReactNode }) {
   const state = !hasRun || !p ? 'idle' : p.key === 'stable' ? 'stable' : 'binding';
   return (
     <section className={`pressure-window is-${state}`} aria-live="polite">
@@ -228,6 +230,7 @@ export function PressureWindow({ p, running, hasRun }: { p: Pressure | null; run
         <span className="window-title">Binding pressure</span>
         {running && <span className="live-pill">Live</span>}
       </header>
+      {hud}
       <div className="pressure-body">
         {state === 'idle' ? (
           <p className="pressure-why">Run the simulation. The one limit hurting your system most will show up here.</p>
@@ -654,26 +657,34 @@ export function IntroDialog({ step, setStep, onClose, onTour }: { step: number; 
 
 export function WinDialog({
   s,
-  index,
+  kicker,
   result,
   best,
-  next,
+  nextLabel,
   lesson,
+  quiz,
+  quizPick,
+  onQuiz,
   onLesson,
   onNext,
   onStay,
   onShare,
+  shareLabel = 'Share result',
 }: {
   s: Scenario;
-  index: number;
+  kicker: string;
   result: StarResult | null;
   best: number;
-  next?: Scenario;
+  nextLabel: string;
   lesson?: Lesson;
+  quiz?: QuizQuestion;
+  quizPick: number | null;
+  onQuiz: (i: number) => void;
   onLesson: (id: string) => void;
   onNext: () => void;
   onStay: () => void;
   onShare: () => void;
+  shareLabel?: string;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -693,7 +704,7 @@ export function WinDialog({
           ))}
         </div>
         <p className="dialog-kicker">
-          {result?.improved ? 'New best' : `Level ${index + 1} cleared`}
+          {result?.improved ? 'New best' : kicker}
           {best > n && ` · your best is ${best} stars`}
         </p>
         <h2 id="win-title">{s.title.replace(/^\d+ · /, '')}</h2>
@@ -717,25 +728,28 @@ export function WinDialog({
             </li>
           </ul>
         )}
-        <div className="win-learned">
-          <span className="win-learned-label">What you just learned</span>
-          <p>{takeaway?.kind === 'takeaway' ? takeaway.text : s.lesson.split(/(?<=[.!?])\s/)[0]}</p>
-          <p className="win-learned-more">{s.lesson}</p>
-          {lesson && (
-            <button className="link-btn" onClick={() => onLesson(lesson.id)}>
-              Read the lesson: {lesson.title}
-            </button>
-          )}
-        </div>
+        {quiz && <QuizBlock q={quiz} picked={quizPick} onPick={onQuiz} />}
+        {(!quiz || quizPick !== null) && s.lesson && (
+          <div className="win-learned">
+            <span className="win-learned-label">What you just learned</span>
+            <p>{takeaway?.kind === 'takeaway' ? takeaway.text : s.lesson.split(/(?<=[.!?])\s/)[0]}</p>
+            <p className="win-learned-more">{s.lesson}</p>
+            {lesson && (
+              <button className="link-btn" onClick={() => onLesson(lesson.id)}>
+                Read the lesson: {lesson.title}
+              </button>
+            )}
+          </div>
+        )}
         <div className="dialog-actions win-actions">
           <button className="btn btn-ghost win-share" onClick={onShare}>
-            <Share2 size={14} aria-hidden /> Share result
+            <Share2 size={14} aria-hidden /> {shareLabel}
           </button>
           <button className="btn btn-ghost" onClick={onStay}>
             {n < 3 ? 'Go for 3 stars' : 'Keep experimenting'}
           </button>
-          <button className="btn btn-primary" autoFocus onClick={onNext}>
-            {next ? `Next level` : 'Open the sandbox'}
+          <button className="btn btn-primary" autoFocus={!quiz || quizPick !== null} onClick={onNext}>
+            {nextLabel}
           </button>
         </div>
       </div>

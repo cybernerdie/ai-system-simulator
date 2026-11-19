@@ -6,6 +6,9 @@ import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
 import './styles.css';
 import App from './App';
+import { initAnalytics } from './ui/track';
+
+initAnalytics();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
