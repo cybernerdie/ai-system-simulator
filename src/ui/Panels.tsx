@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Check, ChevronDown, Circle, Lightbulb, Lock, PanelLeftClose, PanelLeftOpen, Share2, Star, Trash2, TriangleAlert, X } from 'lucide-react';
+import { BookOpen, Check, ClipboardCheck, ChevronDown, Circle, Lightbulb, Lock, PanelLeftClose, PanelLeftOpen, Share2, Star, Trash2, TriangleAlert, X } from 'lucide-react';
 import { COMPONENT_TERM, TERM_BY_ID, type Lesson } from '../content/learn';
 import type { StarResult } from '../engine/stars';
 import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../engine/components';
@@ -275,7 +275,9 @@ export function SidePanel({
   traffic,
   onMix,
   onResetMix,
+  onReview,
 }: {
+  onReview?: () => void;
   traffic: TrafficProfile;
   onMix: (patch: Partial<TrafficProfile>) => void;
   onResetMix: () => void;
@@ -319,7 +321,7 @@ export function SidePanel({
         </button>
       </div>
       {tab === 'mission' ? (
-        <Mission scenario={scenario} m={m} streak={streak} needed={needed} warnings={warnings} traffic={traffic} onMix={onMix} onResetMix={onResetMix} />
+        <Mission scenario={scenario} m={m} streak={streak} needed={needed} warnings={warnings} traffic={traffic} onMix={onMix} onResetMix={onResetMix} onReview={onReview} />
       ) : tab === 'requests' ? (
         <RequestsPanel samples={m?.samples ?? []} running={running} picked={picked} onPick={onPick} qualityVisible={m?.qualityVisible ?? true} />
       ) : selected ? (
@@ -396,6 +398,7 @@ function Mission({
   traffic,
   onMix,
   onResetMix,
+  onReview,
 }: {
   scenario: Scenario;
   m: Metrics | null;
@@ -405,6 +408,7 @@ function Mission({
   traffic: TrafficProfile;
   onMix: (p: Partial<TrafficProfile>) => void;
   onResetMix: () => void;
+  onReview?: () => void;
 }) {
   const [hint, setHint] = useState(false);
   const met = m ? s.goals.filter((g) => goalMet(m, g)).length : 0;
@@ -471,6 +475,11 @@ function Mission({
             <Lightbulb size={14} aria-hidden /> Show a hint
           </button>
         ))}
+      {onReview && (
+        <button className="btn btn-ghost btn-block review-btn" onClick={onReview}>
+          <ClipboardCheck size={14} aria-hidden /> Review my design
+        </button>
+      )}
     </div>
   );
 }
@@ -669,8 +678,10 @@ export function WinDialog({
   onNext,
   onStay,
   onShare,
+  onReview,
   shareLabel = 'Share result',
 }: {
+  onReview?: () => void;
   s: Scenario;
   kicker: string;
   result: StarResult | null;
@@ -727,6 +738,11 @@ export function WinDialog({
               </span>
             </li>
           </ul>
+        )}
+        {onReview && (
+          <button className="link-btn win-review" onClick={onReview}>
+            <ClipboardCheck size={13} aria-hidden /> See the full review of your design
+          </button>
         )}
         {quiz && <QuizBlock q={quiz} picked={quizPick} onPick={onQuiz} />}
         {(!quiz || quizPick !== null) && s.lesson && (

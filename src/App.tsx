@@ -25,7 +25,7 @@ import { INCIDENTS, INCIDENT_SCENARIO, formatDuration, incidentGoals, incidentTi
 import { ACHIEVEMENTS, addFlag, loadFlags, loadUnlocked, newlyEarned, saveUnlocked, type Progress } from './engine/achievements';
 import { QUIZ, loadQuiz, saveQuiz } from './content/quiz';
 import { customScenario, readHashLevel, recallLevel, rememberLevel, type CustomLevel } from './ui/customLevel';
-import { AchievementToast, AchievementsDialog, CommandPalette, CompareDialog, IncidentBanner, IncidentHud, IncidentOverDialog, LevelMakerDialog, ModeCards, type Command } from './ui/Modes';
+import { AchievementToast, AchievementsDialog, ReviewDialog, CommandPalette, CompareDialog, IncidentBanner, IncidentHud, IncidentOverDialog, LevelMakerDialog, ModeCards, type Command } from './ui/Modes';
 import { track } from './ui/track';
 import type { ComponentType, ConfigValue, Metrics, SimGraph, TrafficProfile } from './engine/types';
 import { SimNodeView, type SimFlowNode } from './ui/SimNodeView';
@@ -38,6 +38,7 @@ import { Tour, type TourStep } from './ui/Tour';
 import { autoWire, removeAndHeal, tidyLayout } from './engine/autowire';
 import { scoreStars, type StarResult } from './engine/stars';
 import { unlockLevels } from './engine/unlocks';
+import { reviewDesign, type Review } from './engine/review';
 import { COACH, hintLine, nudgeLine, pressureLine, showMeLine, winLine } from './content/guide';
 import { Complaints, Confetti, GuideCard, useVoice, VoiceMenu, WelcomeScreen } from './ui/Guide';
 import { speak, stopVoice } from './ui/voice';
@@ -260,6 +261,7 @@ export default function App() {
   const [compareOpen, setCompareOpen] = useState(false);
   const [makerOpen, setMakerOpen] = useState(false);
   const [cmdk, setCmdk] = useState(false);
+  const [review, setReview] = useState<Review | null | 'loading'>(null);
   const goals = useMemo(() => (isIncident ? incidentGoals((incident?.active ?? []).map((a) => a.kind)) : scenario.goals), [isIncident, incident, scenario]);
 
   const [toast, setToast] = useState<{ text: string; action?: { label: string; run: () => void } } | null>(null);
@@ -896,7 +898,7 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       const typing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(tag) || (e.target as HTMLElement).isContentEditable;
-      const modal = intro !== null || touring || won || picker || hub || cmdk || compareOpen || makerOpen || achOpen || !!incidentOver;
+      const modal = intro !== null || touring || won || picker || hub || cmdk || compareOpen || makerOpen || achOpen || !!incidentOver || !!review;
       if (e.code === 'Space' && !typing && tag !== 'BUTTON' && !modal) {
         e.preventDefault();
         setRunning((r) => !r);
@@ -909,7 +911,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [intro, touring, won, picker, hub, cmdk, compareOpen, makerOpen, achOpen, incidentOver]);
+  }, [intro, touring, won, picker, hub, cmdk, compareOpen, makerOpen, achOpen, incidentOver, review]);
 
   /* ---------- achievements ---------- */
   const progress: Progress = useMemo(
@@ -949,6 +951,32 @@ export default function App() {
       track('quiz', { level: scenario.id, correct: i === q.answer });
     },
     [scenario.id],
+  );
+
+  /* ---------- design review ---------- */
+  const openReview = useCallback(() => {
+    setReview('loading');
+    setRunning(false);
+    track('review', { level: scenario.kind ?? scenario.id });
+    // let the dialog paint first: the review reruns the design once per component
+    window.setTimeout(() => {
+      const inc = incidentRef.current;
+      const t = scenario.kind === 'incident' && inc ? incidentTraffic(inc.active.map((a) => a.kind), inc.count) : { ...trafficRef.current, rps };
+      setReview(reviewDesign(scenario, graphRef.current, t, goals));
+    }, 60);
+  }, [scenario, rps, goals]);
+  const focusNode = useCallback(
+    (id: string) => {
+      setReview(null);
+      setWon(false);
+      setNodes((ns) => ns.map((n) => ({ ...n, selected: n.id === id })));
+      setSelectedId(id);
+      setTab('component');
+      setSheetOpen(true);
+      const n = nodesRef.current.find((x) => x.id === id);
+      if (n) flow.setCenter(n.position.x + 110, n.position.y + 40, { zoom: 1, duration: 400 });
+    },
+    [flow, setNodes, setTab],
   );
 
   /* ---------- compare, level maker, certificate, embed ---------- */
@@ -1111,6 +1139,7 @@ export default function App() {
       // what you can add right now first, locked ones after
       ...add.filter((c) => !c.disabled),
       ...add.filter((c) => c.disabled),
+      { id: 'review', group: 'Design', label: 'Review my design', run: openReview },
       { id: 'compare', group: 'Design', label: pinHere ? 'Compare with the pinned design' : 'Pin this design to compare later', run: compare },
       { id: 'share', group: 'Design', label: 'Copy a link to this design', run: share },
       ...(scenario.id === SANDBOX.id ? [{ id: 'maker', group: 'Design', label: 'Make a level from this sandbox', run: () => setMakerOpen(true) }] : []),
@@ -1126,7 +1155,7 @@ export default function App() {
       { id: 'tour', group: 'Help', label: 'Take the tour', run: () => setTouring(true) },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unlock, running, pinHere, scenario.id, theme, sfx, compare, share, resetScenario, loadScenario, addNode]);
+  }, [unlock, running, pinHere, scenario.id, theme, sfx, compare, share, resetScenario, loadScenario, addNode, openReview]);
 
   const selected = nodes.find((n) => n.id === selectedId);
   const next = nextAfter(scenario, new Set([...cleared, scenario.id]));
@@ -1359,6 +1388,7 @@ export default function App() {
         traffic={traffic}
         onMix={(patch) => setMixOverride((o) => ({ ...(o ?? {}), ...patch }))}
         onResetMix={() => setMixOverride(null)}
+        onReview={EMBED ? undefined : openReview}
       />
 
       {intro !== null && (
@@ -1523,6 +1553,7 @@ export default function App() {
           }}
           onStay={() => setWon(false)}
           onShare={shareResult}
+          onReview={openReview}
           onNext={goNext}
         />
       )}
@@ -1584,6 +1615,7 @@ export default function App() {
           onClose={() => setAchOpen(false)}
         />
       )}
+      {review && <ReviewDialog review={review === 'loading' ? null : review} onFocusNode={focusNode} onClose={() => setReview(null)} />}
       {cmdk && <CommandPalette commands={commands} onClose={() => setCmdk(false)} />}
       {achQueue[0] && <AchievementToast key={achQueue[0]} title={achQueue[0]} />}
     </div>

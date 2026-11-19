@@ -15,7 +15,7 @@ export const BUG_LEVELS: Scenario[] = [
       'Your docs assistant is quick and costs almost nothing, thanks to a cache. But some customers asking about the Pro plan are getting answers about the Basic plan, and people asking how to cancel are told how to upgrade. Everything is already in place. Something in it is set wrong.',
     traffic: { ...base, rps: 20, kbShare: 0.6, exactTermShare: 0.2, easyShare: 0.7, repeatShare: 0.45 },
     goals: [
-      { metric: 'accuracy', op: '>=', value: 0.8 },
+      { metric: 'accuracy', op: '>=', value: 0.78 },
       { metric: 'costPer1k', op: '<=', value: 5 },
       { metric: 'errorRate', op: '<=', value: 0.01 },
     ],

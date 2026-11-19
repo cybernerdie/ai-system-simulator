@@ -163,3 +163,27 @@ describe('quiz and achievements', () => {
     expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(ACHIEVEMENTS.length);
   });
 });
+
+describe('design review', () => {
+  it('grades a broken start low and the reference design high, with notes that point at real components', async () => {
+    const { reviewDesign } = await import('./review');
+    for (const id of ['docs-bot', 'bug-reranker', 'boss-launch']) {
+      const s = [...SCENARIOS, ...BOSSES].find((x) => x.id === id)!;
+      const start = reviewDesign(s, graph(s.nodes, s.edges), s.traffic, s.goals);
+      const sol = reviewDesign(s, graph(s.solution.nodes, s.solution.edges), s.traffic, s.goals);
+      expect(['D', 'F']).toContain(start.grade);
+      expect(['A', 'B']).toContain(sol.grade);
+      expect(start.notes.some((n) => n.tone === 'bad' || n.tone === 'warn')).toBe(true);
+      const ids = new Set(s.solution.nodes.map((n) => n.id));
+      for (const n of sol.notes) if (n.nodeId) expect(ids.has(n.nodeId)).toBe(true);
+    }
+  });
+  it('spots a component that does nothing', async () => {
+    const { reviewDesign } = await import('./review');
+    const s = SCENARIOS[0];
+    const nodes = [...s.solution.nodes, { id: 'oj', type: 'pii_redactor' as const, x: 0, y: 0 }];
+    const edges = [{ source: 'users', target: 'oj' }, { source: 'oj', target: 'emb' }, ...s.solution.edges.filter((e) => e.source !== 'users')];
+    const r = reviewDesign(s, graph(nodes, edges), s.traffic, s.goals);
+    expect(r.notes.some((n) => n.nodeId === 'oj' && n.tone === 'warn')).toBe(true);
+  });
+});
