@@ -44,7 +44,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'What is binding pressure in AI system design?',
-    a: 'Binding pressure is the single limit hurting your system right now: a rate limit, retrieval misses, prompt injection, latency, cost, a full context window, or GPU capacity. Fixing anything else doesn\'t help until that limit is relieved. AISim shows the binding pressure live and explains it in plain language.',
+    a: "Binding pressure is the single limit hurting your system right now: a rate limit, retrieval misses, prompt injection, latency, cost, a full context window, or GPU capacity. Fixing anything else doesn't help until that limit is relieved. AISim shows the binding pressure live and explains it in plain language.",
   },
   {
     q: 'Who is AISim for?',
@@ -74,8 +74,7 @@ const FAQ: { q: string; a: string }[] = [
 
 /* ---------------- helpers ---------------- */
 
-const esc = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const playable = SCENARIOS.filter((s) => s.difficulty > 0);
 const lessonById = Object.fromEntries(LESSONS.map((l) => [l.id, l])) as Record<string, Lesson>;
@@ -110,7 +109,8 @@ function lessonMd(l: Lesson): string {
 function staticBody(): string {
   const scenarios = playable
     .map(
-      (s) => `<li id="scenario-${s.id}"><h3>${esc(s.title)}</h3><p><strong>${esc(s.tagline)}</strong> ${esc(s.brief)}</p><p>Level: ${LEVEL[s.difficulty]}. Concepts: ${esc(s.skills.join(', '))}.</p><p>What you learn: ${esc(s.lesson)}</p></li>`,
+      (s) =>
+        `<li id="scenario-${s.id}"><h3>${esc(s.title)}</h3><p><strong>${esc(s.tagline)}</strong> ${esc(s.brief)}</p><p>Level: ${LEVEL[s.difficulty]}. Concepts: ${esc(s.skills.join(', '))}.</p><p>What you learn: ${esc(s.lesson)}</p></li>`,
     )
     .join('');
   const modules = MODULES.map(
@@ -134,7 +134,15 @@ function staticBody(): string {
 <p>This interactive simulator needs JavaScript. <a href="${REPO}">Source code on GitHub</a>.</p><p>${AUTHOR_HTML}</p></header>
 <section><h2>Frequently asked questions</h2>${faq}</section>
 <section><h2>Scenarios (${playable.length})</h2><ol>${scenarios}</ol></section>
-<section><h2>Chapters and boss levels</h2>${CHAPTERS.map((c, i) => `<section id="chapter-${i + 1}"><h3>Chapter ${i + 1}: ${esc(c.title)}</h3><p>${esc(c.blurb)}</p><ul>${c.ids.map((id) => { const sc = SCENARIOS.find((x) => x.id === id)!; return `<li><a href="${SITE}/play/${id}">${esc(plainTitle(sc))}</a></li>`; }).join('')}<li><a href="${SITE}/play/${c.boss}">Boss: ${esc(plainTitle(BOSSES.find((b) => b.id === c.boss)!))}</a></li></ul></section>`).join('')}</section>
+<section><h2>Chapters and boss levels</h2>${CHAPTERS.map(
+    (c, i) =>
+      `<section id="chapter-${i + 1}"><h3>Chapter ${i + 1}: ${esc(c.title)}</h3><p>${esc(c.blurb)}</p><ul>${c.ids
+        .map((id) => {
+          const sc = SCENARIOS.find((x) => x.id === id)!;
+          return `<li><a href="${SITE}/play/${id}">${esc(plainTitle(sc))}</a></li>`;
+        })
+        .join('')}<li><a href="${SITE}/play/${c.boss}">Boss: ${esc(plainTitle(BOSSES.find((b) => b.id === c.boss)!))}</a></li></ul></section>`,
+  ).join('')}</section>
 <section><h2>Learn AI system design: ${MODULES.length} modules, ${LESSONS.length} lessons</h2>${modules}</section>
 <section><h2>AI glossary in plain English (${TERMS.length} terms)</h2><dl>${glossary}</dl></section>
 </main>`;
@@ -260,7 +268,13 @@ ${playable.map((s) => `- **${s.title}** (${LEVEL[s.difficulty]}): ${s.tagline} T
 
 ## Learning modules
 
-${MODULES.map((m, i) => `- **Module ${i + 1}: ${m.title}** (${m.level}): ${m.blurb} Lessons: ${m.lessons.map((id) => lessonById[id]?.title).filter(Boolean).join('; ')}.`).join('\n')}
+${MODULES.map(
+  (m, i) =>
+    `- **Module ${i + 1}: ${m.title}** (${m.level}): ${m.blurb} Lessons: ${m.lessons
+      .map((id) => lessonById[id]?.title)
+      .filter(Boolean)
+      .join('; ')}.`,
+).join('\n')}
 `;
 }
 
@@ -299,10 +313,9 @@ ${MODULES.map(
 
 ## Glossary
 
-${TERMS.map(
-  (t) =>
-    `### ${t.term}${t.aka ? ` (${t.aka})` : ''}\n\n${t.simple}${t.analogy ? `\n\nAnalogy: ${t.analogy}` : ''}${t.why ? `\n\nWhy it matters: ${t.why}` : ''}`,
-).join('\n\n')}
+${TERMS.map((t) => `### ${t.term}${t.aka ? ` (${t.aka})` : ''}\n\n${t.simple}${t.analogy ? `\n\nAnalogy: ${t.analogy}` : ''}${t.why ? `\n\nWhy it matters: ${t.why}` : ''}`).join(
+  '\n\n',
+)}
 `;
 }
 
@@ -360,10 +373,20 @@ const METRIC_WORDS: Record<string, string> = {
   fairnessGap: 'quality gap between user groups',
 };
 const goalText = (g: Scenario['goals'][number]) => {
-  const v = g.metric === 'costPer1k' ? `$${g.value}` : g.metric === 'p50' || g.metric === 'ttftP50' ? `${(g.value / 1000).toFixed(1)}s` : g.metric === 'diagnoseHours' ? `${g.value} hours` : g.metric === 'fairnessGap' ? `${Math.round(g.value * 100)} points` : `${+(g.value * 100).toFixed(2)}%`;
+  const v =
+    g.metric === 'costPer1k'
+      ? `$${g.value}`
+      : g.metric === 'p50' || g.metric === 'ttftP50'
+        ? `${(g.value / 1000).toFixed(1)}s`
+        : g.metric === 'diagnoseHours'
+          ? `${g.value} hours`
+          : g.metric === 'fairnessGap'
+            ? `${Math.round(g.value * 100)} points`
+            : `${+(g.value * 100).toFixed(2)}%`;
   return `${METRIC_WORDS[g.metric]} ${g.op === '>=' ? 'at least' : 'at most'} ${v}`;
 };
-const embedHtml = (s: Scenario) => `<iframe src="${SITE}/play/${s.id}?embed=1" title="AISim: ${esc(plainTitle(s))}" width="100%" height="720" style="border:0;border-radius:12px" loading="lazy"></iframe>`;
+const embedHtml = (s: Scenario) =>
+  `<iframe src="${SITE}/play/${s.id}?embed=1" title="AISim: ${esc(plainTitle(s))}" width="100%" height="720" style="border:0;border-radius:12px" loading="lazy"></iframe>`;
 
 function levelPage(base: string, s: Scenario, label: string): string {
   const url = `${SITE}/play/${s.id}`;
@@ -417,7 +440,10 @@ ${others.length ? `<h2>More in this chapter</h2><ul>${others.map((o) => `<li><a 
   return base
     .replace(/<title>.*?<\/title>/, `<title>${esc(title)}</title>`)
     .replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${esc(short)}" />`)
-    .replace(/<link rel="canonical"[^>]*>/, `<link rel="canonical" href="${url}" />\n    <link rel="alternate" type="application/json+oembed" href="${SITE}/oembed/${s.id}.json" title="${esc(plainTitle(s))}" />`)
+    .replace(
+      /<link rel="canonical"[^>]*>/,
+      `<link rel="canonical" href="${url}" />\n    <link rel="alternate" type="application/json+oembed" href="${SITE}/oembed/${s.id}.json" title="${esc(plainTitle(s))}" />`,
+    )
     .replace(/<meta property="og:type"[^>]*>/, `<meta property="og:type" content="article" />\n    <meta property="og:url" content="${url}" />`)
     .replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${esc(plainTitle(s))} | AISim" />`)
     .replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${esc(short)}" />`)

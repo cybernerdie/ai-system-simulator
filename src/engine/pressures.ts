@@ -1,6 +1,26 @@
 import type { Cause, Goal, GoalMetric, Metrics } from './types';
 
-export type PressureKey = Cause | 'blind_cohort' | 'unauthenticated' | 'no_traces' | 'cost' | 'latency' | 'ttft' | 'stable' | 'history_bloat' | 'blind' | 'idle_gpus' | 'slow_decode' | 'sequential_agent' | 'background_jobs' | 'uncached_prompt' | 'pii_leak' | 'abuse' | 'slow_voice' | 'no_model' | 'eval_blindspot';
+export type PressureKey =
+  | Cause
+  | 'blind_cohort'
+  | 'unauthenticated'
+  | 'no_traces'
+  | 'cost'
+  | 'latency'
+  | 'ttft'
+  | 'stable'
+  | 'history_bloat'
+  | 'blind'
+  | 'idle_gpus'
+  | 'slow_decode'
+  | 'sequential_agent'
+  | 'background_jobs'
+  | 'uncached_prompt'
+  | 'pii_leak'
+  | 'abuse'
+  | 'slow_voice'
+  | 'no_model'
+  | 'eval_blindspot';
 
 export interface Pressure {
   key: PressureKey;
@@ -12,22 +32,22 @@ export interface Pressure {
 export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   no_knowledge: {
     title: 'Missing knowledge',
-    why: 'Users are asking about your private docs, and the model has never seen them. When it doesn\'t know, it guesses — fluently.',
+    why: "Users are asking about your private docs, and the model has never seen them. When it doesn't know, it guesses — fluently.",
     try: 'Ground the model: add an Embedding Model → Vector DB in front of the LLM (retrieval-augmented generation).',
   },
   retrieval_miss: {
     title: 'Retrieval recall',
-    why: 'The answer exists in your docs, but the retriever isn\'t finding the right chunk, so the model answers from a near-miss.',
+    why: "The answer exists in your docs, but the retriever isn't finding the right chunk, so the model answers from a near-miss.",
     try: 'Check the query mix. Exact codes and names need Keyword Search (hybrid). Paraphrases need more Top-K or better chunking.',
   },
   context_noise: {
     title: 'Context noise',
-    why: 'You\'re stuffing so many unranked chunks into the prompt that the model loses the relevant one in the middle.',
+    why: "You're stuffing so many unranked chunks into the prompt that the model loses the relevant one in the middle.",
     try: 'Retrieve wide, then add a Reranker so only the best few chunks reach the model. Or shrink chunk size.',
   },
   weak_reasoning: {
     title: 'Model capability',
-    why: 'The context is right but the model isn\'t strong enough for the hard requests.',
+    why: "The context is right but the model isn't strong enough for the hard requests.",
     try: 'Give hard requests more brainpower: a thinking budget or a larger model. A Router lets you do that without paying for it on easy requests too.',
   },
   no_tools: {
@@ -43,7 +63,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   agent_loop: {
     title: 'Runaway agents',
     why: 'Some agents get stuck repeating themselves. With a huge step cap, each stuck run burns dozens of LLM calls.',
-    try: 'Cap Max steps (or an Agent Team\'s Max rounds) just above what real tasks need. Stuck runs then fail fast and cheap instead of slow and expensive. Fewer agents also means fewer chances to loop.',
+    try: "Cap Max steps (or an Agent Team's Max rounds) just above what real tasks need. Stuck runs then fail fast and cheap instead of slow and expensive. Fewer agents also means fewer chances to loop.",
   },
   rate_limit: {
     title: 'Tokens-per-minute limit',
@@ -52,7 +72,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   },
   context_overflow: {
     title: 'Context window overflow',
-    why: 'The prompt (system + retrieved chunks + agent history) is bigger than the model\'s context window.',
+    why: "The prompt (system + retrieved chunks + agent history) is bigger than the model's context window.",
     try: 'Retrieve fewer/smaller chunks, add a Reranker to keep only the best, or use a model with a bigger window.',
   },
   injection: {
@@ -62,7 +82,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   },
   cache_false_hit: {
     title: 'Cache serving wrong answers',
-    why: 'Your similarity threshold is so loose that different questions match each other and get someone else\'s answer.',
+    why: "Your similarity threshold is so loose that different questions match each other and get someone else's answer.",
     try: 'Raise the cache similarity threshold. Fewer hits, but the hits are actually the same question.',
   },
   guard_false_positive: {
@@ -82,12 +102,12 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   },
   stale_index: {
     title: 'Stale index',
-    why: 'Your docs changed but the index didn\'t. Retrieval finds the old version and the model repeats it confidently. Even an output judge can\'t tell, because the sources agree with the answer.',
+    why: "Your docs changed but the index didn't. Retrieval finds the old version and the model repeats it confidently. Even an output judge can't tell, because the sources agree with the answer.",
     try: 'Re-index more often (nightly or live) so changes reach the index before users ask about them.',
   },
   parse_miss: {
     title: 'Scrambled documents',
-    why: 'Answers inside tables and complex PDFs were flattened into word soup when the docs were ingested, so retrieval can\'t find them.',
+    why: "Answers inside tables and complex PDFs were flattened into word soup when the docs were ingested, so retrieval can't find them.",
     try: 'Switch the Vector DB to layout-aware parsing so tables and page structure survive ingestion.',
   },
   background_jobs: {
@@ -101,7 +121,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     try: 'Turn on prompt caching on the model, so the fixed start of every prompt is read from cache for a fraction of the price.',
   },
   task_unknown: {
-    title: 'The model doesn\'t know your task',
+    title: "The model doesn't know your task",
     why: 'Your requests use your own labels, format and house style. An off-the-shelf model has never seen them, so it guesses, even a large one.',
     try: 'Fine-tune a model on a few thousand of your own examples. A fine-tuned small model often beats a general large one on a narrow task, for a fraction of the price.',
   },
@@ -122,7 +142,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   },
   pii_leak: {
     title: 'Personal data leaving your systems',
-    why: 'Requests contain names, emails and health or card details, and they\'re sent as-is to a third-party model provider. That\'s a compliance problem, whatever the provider promises.',
+    why: "Requests contain names, emails and health or card details, and they're sent as-is to a third-party model provider. That's a compliance problem, whatever the provider promises.",
     try: 'Add a PII Redactor before the model to swap personal details for placeholders, or keep sensitive traffic on a self-hosted model.',
   },
   language_gap: {
@@ -141,7 +161,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     try: 'Add Auth in front of everything else, so calls without valid credentials are rejected before they cost anything. Then move the provider key to your server.',
   },
   no_traces: {
-    title: 'You can\'t see why it failed',
+    title: "You can't see why it failed",
     why: 'A customer reports a wrong answer and nobody can tell what the model was sent or what retrieval found. Without traces of failed requests, every bug report takes days of guessing.',
     try: 'Add a Trace Collector after the model. Keep every failure (and a small sample of the rest), and store the prompts, with personal data redacted first.',
   },
@@ -157,22 +177,22 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   },
   sequential_agent: {
     title: 'One agent doing everything',
-    why: 'A single agent works through every sub-question one after another, and its prompt grows with each one. It\'s slow, and the details get buried in its own context.',
+    why: "A single agent works through every sub-question one after another, and its prompt grows with each one. It's slow, and the details get buried in its own context.",
     try: 'Split the work: an Agent Team runs worker agents in parallel, each with a small, focused context, and combines their results.',
   },
   provider_down: {
     title: 'Provider outage',
     why: 'Your model provider is failing most requests, and every call depends on it. A single provider is a single point of failure.',
-    try: 'Put Retry & Fallback in front of your model, connect a second model on another provider (or your own GPUs), and turn on failover. Retries alone won\'t survive a real outage.',
+    try: "Put Retry & Fallback in front of your model, connect a second model on another provider (or your own GPUs), and turn on failover. Retries alone won't survive a real outage.",
   },
   gpu_saturated: {
     title: 'GPU capacity',
-    why: 'Your self-hosted GPUs can\'t write tokens as fast as requests arrive. Requests queue, then time out.',
+    why: "Your self-hosted GPUs can't write tokens as fast as requests arrive. Requests queue, then time out.",
     try: 'Add GPUs, raise the batch size (more total throughput, slower per request), or quantize the model so each GPU does more.',
   },
   idle_gpus: {
     title: 'Paying for idle GPUs',
-    why: 'GPUs cost the same per hour whether they\'re busy or not. At this traffic most of yours sit idle, so each request carries a big share of the bill.',
+    why: "GPUs cost the same per hour whether they're busy or not. At this traffic most of yours sit idle, so each request carries a big share of the bill.",
     try: 'Use fewer GPUs with bigger batches, or a smaller or quantized model. If traffic is low or spiky, an API may simply be cheaper.',
   },
   slow_decode: {
@@ -193,7 +213,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   cost: {
     title: 'Cost per request',
     why: 'Quality is fine, but every request pays for your most expensive model and longest prompt.',
-    try: 'Cache repeats, route easy traffic to a small model, and don\'t retrieve more chunks than you need.',
+    try: "Cache repeats, route easy traffic to a small model, and don't retrieve more chunks than you need.",
   },
   latency: {
     title: 'End-to-end latency',
@@ -208,7 +228,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   sampling_noise: {
     title: 'Same question, different answers',
     why: 'Temperature controls how adventurously the model picks each next word. Yours is high, so on tasks with exactly one right answer (a total, a date, an ID) it sometimes picks a less likely token and returns a different value than last time.',
-    try: 'Turn temperature down to 0–0.2 for extraction and classification. A bigger model won\'t fix sampling; JSON mode or a validator stops malformed output.',
+    try: "Turn temperature down to 0–0.2 for extraction and classification. A bigger model won't fix sampling; JSON mode or a validator stops malformed output.",
   },
   too_repetitive: {
     title: 'Every answer sounds the same',
@@ -221,19 +241,19 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     try: 'Defence in depth: treat everything the system reads as untrusted (a Content Sanitiser), give the agent only the permissions it needs, and require approval before risky actions like sending or paying.',
   },
   no_permission: {
-    title: 'The agent can\'t finish the job',
+    title: "The agent can't finish the job",
     why: 'You took away the permission some real tasks need. Least privilege is right, but here users asked for replies to be sent, and the agent can only draft them.',
     try: 'Give back only what the task needs, and put a check in front of it instead: an approval step on risky actions keeps the feature and stops hijacked sends.',
   },
   eval_blindspot: {
     title: 'Your evals are lying to you',
-    why: 'The dashboard and real outcomes disagree. A small test set of easy, hand-picked questions doesn\'t look like today\'s traffic, and an LLM judge that isn\'t checked against humans gets fooled by confident, fluent wrong answers.',
+    why: "The dashboard and real outcomes disagree. A small test set of easy, hand-picked questions doesn't look like today's traffic, and an LLM judge that isn't checked against humans gets fooled by confident, fluent wrong answers.",
     try: 'In the Eval Harness, test on a sample of real traffic and calibrate the judge against human-reviewed answers. Then fix whatever the honest numbers show.',
   },
   no_model: {
     title: 'Nothing reaches a model',
     why: 'Requests leave Users but never arrive at an LLM, so every one of them fails. Components only do anything when they sit on a path from Users to a model.',
-    try: 'Connect a path Users → … → LLM: drag from a node\'s right dot to the next node. Add an LLM from the left if there isn\'t one.',
+    try: "Connect a path Users → … → LLM: drag from a node's right dot to the next node. Add an LLM from the left if there isn't one.",
   },
   stable: {
     title: 'Holding',
@@ -250,7 +270,6 @@ function metricValue(m: Metrics, g: GoalMetric): number {
 
 /** Metrics you can only see with evals in place. */
 export const QUALITY_METRICS: GoalMetric[] = ['accuracy', 'hallucination', 'injection'];
-
 
 export function goalMet(m: Metrics, g: Goal) {
   if (!m.qualityVisible && QUALITY_METRICS.includes(g.metric)) return false;

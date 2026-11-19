@@ -41,10 +41,7 @@ export function useGuide({ scenario, nodes, designSig, running, won, streak, str
   useEffect(() => {
     if (coach === null) return;
     const w = COACH[coach].wait;
-    const done =
-      (w.kind === 'running' && running) ||
-      (w.kind === 'has' && nodes.some((n) => n.data.kind === w.type)) ||
-      (w.kind === 'won' && (won || streak >= HOLD_TICKS));
+    const done = (w.kind === 'running' && running) || (w.kind === 'has' && nodes.some((n) => n.data.kind === w.type)) || (w.kind === 'won' && (won || streak >= HOLD_TICKS));
     if (done) setCoach(coach + 1 < COACH.length ? coach + 1 : null);
   }, [coach, running, nodes, won, streak]);
   useEffect(() => {

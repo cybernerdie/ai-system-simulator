@@ -44,7 +44,12 @@ export const saveRead = (s: Set<string>) => writeJson('lessonsRead', [...s]);
 export const loadLastScenario = () => readString('lastScenario');
 export const saveLastScenario = (id: string) => writeString('lastScenario', id);
 
-const readDesigns = () => readJson('designs', recordOf((v): v is string => typeof v === 'string'), {});
+const readDesigns = () =>
+  readJson(
+    'designs',
+    recordOf((v): v is string => typeof v === 'string'),
+    {},
+  );
 
 /** The design you last left in this level, if you changed it. */
 export function loadDesign(scenarioId: string): SharedDesign | null {
@@ -83,7 +88,12 @@ export function saveIncidentBest(run: IncidentBest): IncidentBest {
 }
 
 /** Quiz answers: only the first answer to each question counts. */
-export const loadQuiz = () => readJson('quiz', recordOf((v): v is boolean => typeof v === 'boolean'), {});
+export const loadQuiz = () =>
+  readJson(
+    'quiz',
+    recordOf((v): v is boolean => typeof v === 'boolean'),
+    {},
+  );
 export function saveQuiz(id: string, correct: boolean): Record<string, boolean> {
   const all = loadQuiz();
   if (!(id in all)) all[id] = correct;
@@ -92,7 +102,12 @@ export function saveQuiz(id: string, correct: boolean): Record<string, boolean> 
 }
 
 /** Achievement id → when it was earned. */
-export const loadUnlocked = () => readJson('achievements', recordOf((v): v is number => typeof v === 'number'), {});
+export const loadUnlocked = () =>
+  readJson(
+    'achievements',
+    recordOf((v): v is number => typeof v === 'number'),
+    {},
+  );
 export const saveUnlocked = (u: Record<string, number>) => writeJson('achievements', u);
 
 /** One-off facts about how you played (cleared a level at half budget, compared designs...). */
@@ -105,6 +120,11 @@ export function addFlag(flag: string): Set<string> {
 }
 
 /** Levels made by players, kept by id so a reload can reopen them. */
-const readLevels = () => readJson('customLevels', recordOf((v): v is string => typeof v === 'string'), {});
+const readLevels = () =>
+  readJson(
+    'customLevels',
+    recordOf((v): v is string => typeof v === 'string'),
+    {},
+  );
 export const rememberLevel = (id: string, code: string) => writeJson('customLevels', { ...readLevels(), [id]: code });
 export const recallLevelCode = (id: string): string | null => readLevels()[id] ?? null;

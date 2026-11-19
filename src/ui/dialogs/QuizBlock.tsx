@@ -1,4 +1,4 @@
-import {  Check, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import type { QuizQuestion } from '../../content/quiz';
 
 /* ---------- quiz after a win ---------- */
@@ -13,7 +13,13 @@ export function QuizBlock({ q, picked, onPick }: { q: QuizQuestion; picked: numb
         {q.options.map((o, i) => {
           const state = !answered ? '' : i === q.answer ? ' is-right' : i === picked ? ' is-wrong' : ' is-dim';
           return (
-            <button key={i} className={`quiz-option${state}`} onClick={() => !answered && onPick(i)} disabled={answered && i !== q.answer && i !== picked} aria-pressed={picked === i}>
+            <button
+              key={i}
+              className={`quiz-option${state}`}
+              onClick={() => !answered && onPick(i)}
+              disabled={answered && i !== q.answer && i !== picked}
+              aria-pressed={picked === i}
+            >
               <span className="quiz-letter" aria-hidden>
                 {answered && i === q.answer ? <Check size={13} strokeWidth={3} /> : answered && i === picked ? <X size={13} strokeWidth={3} /> : 'ABC'[i]}
               </span>

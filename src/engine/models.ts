@@ -99,7 +99,7 @@ export function profileOf(n: SimNode): ModelProfile {
       injectable: model.injectable,
       gpu: { gpus, batch, perStreamTps, capacityTps, hourly: GPU_HOURLY * gpus },
       thinkTokens: 0,
-      invalidRate: n.config.jsonMode === true ? 0.004 : INVALID_JSON[str(n, 'model', 'open-70b')] ?? 0.08,
+      invalidRate: n.config.jsonMode === true ? 0.004 : (INVALID_JSON[str(n, 'model', 'open-70b')] ?? 0.08),
       promptCache: true, // self-hosted servers reuse cached prefixes automatically
       fineTuned: n.config.fineTuned === true,
       taskAcc: (n.config.fineTuned === true ? TASK_ACC_TUNED : TASK_ACC)[str(n, 'model', 'open-70b')] ?? 0.7,
@@ -117,7 +117,7 @@ export function profileOf(n: SimNode): ModelProfile {
     label: `${size}${n.config.fineTuned === true ? ' (fine-tuned)' : ''}${th.tokens ? ' + thinking' : ''}`,
     rank: accHard,
     thinkTokens: th.tokens,
-    invalidRate: n.config.jsonMode === true ? 0.004 : INVALID_JSON[size] ?? 0.08,
+    invalidRate: n.config.jsonMode === true ? 0.004 : (INVALID_JSON[size] ?? 0.08),
     promptCache: n.config.promptCache === true,
     fineTuned: n.config.fineTuned === true,
     taskAcc: (n.config.fineTuned === true ? TASK_ACC_TUNED : TASK_ACC)[size] ?? 0.7,

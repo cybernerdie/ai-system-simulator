@@ -62,7 +62,13 @@ describe('stored progress', () => {
       scenarioId: 'docs-bot',
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 0, config: {} },
-        { id: 'llm', type: 'llm', x: 270, y: 0, config: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false, fineTuned: false, version: 'pinned', temperature: 0.7 } },
+        {
+          id: 'llm',
+          type: 'llm',
+          x: 270,
+          y: 0,
+          config: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false, fineTuned: false, version: 'pinned', temperature: 0.7 },
+        },
       ],
       edges: [{ source: 'users', target: 'llm' }],
     };

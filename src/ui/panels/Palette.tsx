@@ -1,4 +1,4 @@
-import {  Lock, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Lock, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { COMPONENTS, PALETTE_ORDER } from '../../engine/components';
 import type { ComponentType } from '../../engine/types';
 import { KindIcon } from '../canvas/icons';
@@ -78,7 +78,9 @@ export function Palette({
           </section>
         );
       })}
-      <p className="palette-help">Tap a component to add it: it connects itself where it belongs. You can also drag it, and rewire from a node's right edge. Locked ones open up as you clear levels.</p>
+      <p className="palette-help">
+        Tap a component to add it: it connects itself where it belongs. You can also drag it, and rewire from a node's right edge. Locked ones open up as you clear levels.
+      </p>
     </aside>
   );
 }

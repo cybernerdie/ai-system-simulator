@@ -28,7 +28,10 @@ export function improvements(s: Scenario, before: Metrics | null, after: Metrics
     const meta = METRIC_META[k];
     out.push({ imp: { label: meta.label, before: meta.fmt(b), after: meta.fmt(a) }, gain });
   }
-  return out.sort((x, y) => y.gain - x.gain).slice(0, 3).map((x) => x.imp);
+  return out
+    .sort((x, y) => y.gain - x.gain)
+    .slice(0, 3)
+    .map((x) => x.imp);
 }
 
 /** One sentence for the post text. */
@@ -154,7 +157,9 @@ export async function drawCard(opts: { s: Scenario; label: string; stars: number
   } else {
     c.fillStyle = '#d4d4d8';
     c.font = `400 28px ${sans}`;
-    wrap(c, opts.s.tagline, W - 144).slice(0, 2).forEach((l, i) => c.fillText(l, 72, y + 30 + i * 40));
+    wrap(c, opts.s.tagline, W - 144)
+      .slice(0, 2)
+      .forEach((l, i) => c.fillText(l, 72, y + 30 + i * 40));
   }
 
   // footer

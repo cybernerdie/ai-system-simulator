@@ -62,15 +62,10 @@ export function RequestsPanel({
     () =>
       qualityVisible
         ? samples
-        : samples.map((r) =>
-            r.outcome === 'rate_limited' || r.outcome === 'overflow' || r.outcome === 'failed' ? r : { ...r, outcome: 'unverified' as const, cause: undefined },
-          ),
+        : samples.map((r) => (r.outcome === 'rate_limited' || r.outcome === 'overflow' || r.outcome === 'failed' ? r : { ...r, outcome: 'unverified' as const, cause: undefined })),
     [samples, qualityVisible],
   );
-  const list = useMemo(
-    () => visible.filter((r) => filter === 'all' || OUTCOME_META[r.outcome].tone === 'bad' || OUTCOME_META[r.outcome].tone === 'warn'),
-    [visible, filter],
-  );
+  const list = useMemo(() => visible.filter((r) => filter === 'all' || OUTCOME_META[r.outcome].tone === 'bad' || OUTCOME_META[r.outcome].tone === 'warn'), [visible, filter]);
 
   if (picked) return <RequestDetail r={picked} onBack={() => onPick(null)} />;
 
@@ -88,14 +83,12 @@ export function RequestsPanel({
         <span className="requests-note">{running ? 'Sampled live' : samples.length ? 'Last sample' : ''}</span>
       </div>
       {!qualityVisible && samples.length > 0 && (
-        <p className="req-blind">
-          No evals yet, so you can see timings, cost and errors, but not whether any answer was right. Add an Eval Harness to find out.
-        </p>
+        <p className="req-blind">No evals yet, so you can see timings, cost and errors, but not whether any answer was right. Add an Eval Harness to find out.</p>
       )}
       {!samples.length ? (
         <p className="side-empty">Run the simulation to see individual requests flow through your design.</p>
       ) : !list.length ? (
-        <p className="side-empty">{qualityVisible ? 'No failures in this sample. Push more traffic to find some.' : 'No visible failures. That doesn\'t mean there aren\'t any.'}</p>
+        <p className="side-empty">{qualityVisible ? 'No failures in this sample. Push more traffic to find some.' : "No visible failures. That doesn't mean there aren't any."}</p>
       ) : (
         <ul className="req-list">
           {list.map((r) => {

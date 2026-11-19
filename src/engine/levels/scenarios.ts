@@ -13,9 +13,9 @@ const CORE: Scenario[] = [
     difficulty: 1,
     skills: ['RAG', 'Grounding'],
     title: '1 · The docs chatbot',
-    tagline: 'It sounds confident. It\'s making things up.',
+    tagline: "It sounds confident. It's making things up.",
     brief:
-      'Your company shipped a chatbot that answers questions about its product docs. It\'s just a prompt and an LLM. Support tickets are piling up: customers got detailed, confident, wrong answers.',
+      "Your company shipped a chatbot that answers questions about its product docs. It's just a prompt and an LLM. Support tickets are piling up: customers got detailed, confident, wrong answers.",
     traffic: { ...base, kbShare: 0.75, exactTermShare: 0.1 },
     goals: [
       { metric: 'accuracy', op: '>=', value: 0.7 },
@@ -28,7 +28,7 @@ const CORE: Scenario[] = [
     edges: chain('users', 'llm'),
     hint: 'The model has never seen your docs. What component lets it look things up at question time?',
     lesson:
-      'You built retrieval-augmented generation (RAG). A model can only be as right as the information it\'s given — when the answer lives in private data, the fix is retrieval, not a bigger model. Notice recall: it\'s not 100%, and every miss is still a potential hallucination. That\'s the next wall.',
+      "You built retrieval-augmented generation (RAG). A model can only be as right as the information it's given — when the answer lives in private data, the fix is retrieval, not a bigger model. Notice recall: it's not 100%, and every miss is still a potential hallucination. That's the next wall.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -81,7 +81,7 @@ const CORE: Scenario[] = [
     title: '3 · Launch day',
     tagline: 'It works. Now 40× more people want it.',
     brief:
-      'Quality is great — you\'re running the large model on everything. Then you hit the front page: traffic jumps to 60 req/s. The provider starts returning 429s and finance asks why the bill looks like a phone number. Lots of these questions are repeats, and most are easy.',
+      "Quality is great — you're running the large model on everything. Then you hit the front page: traffic jumps to 60 req/s. The provider starts returning 429s and finance asks why the bill looks like a phone number. Lots of these questions are repeats, and most are easy.",
     traffic: { ...base, rps: 60, kbShare: 0.6, exactTermShare: 0.2, easyShare: 0.7, repeatShare: 0.4 },
     goals: [
       { metric: 'errorRate', op: '<=', value: 0.01 },
@@ -97,7 +97,7 @@ const CORE: Scenario[] = [
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: 'Do repeat questions need the model at all? Do easy questions need the large model?',
     lesson:
-      'At scale, the expensive part of an AI system is tokens through your biggest model. A semantic cache removes repeats entirely, and a router sends easy traffic to a model that\'s ~100× cheaper with its own rate limit. You kept the large model — just for the requests that need it.',
+      "At scale, the expensive part of an AI system is tokens through your biggest model. A semantic cache removes repeats entirely, and a router sends easy traffic to a model that's ~100× cheaper with its own rate limit. You kept the large model — just for the requests that need it.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -152,7 +152,7 @@ const CORE: Scenario[] = [
     title: '5 · Someone pasted a jailbreak',
     tagline: '"Ignore previous instructions and…"',
     brief:
-      'Your assistant is public. 15% of traffic is now people trying to make it leak the system prompt, insult customers, or promise refunds it can\'t give. A screenshot is already on social media.',
+      "Your assistant is public. 15% of traffic is now people trying to make it leak the system prompt, insult customers, or promise refunds it can't give. A screenshot is already on social media.",
     traffic: { ...base, rps: 6, kbShare: 0.6, exactTermShare: 0.2, adversarialShare: 0.15 },
     goals: [
       { metric: 'injection', op: '<=', value: 0.03 },
@@ -202,7 +202,7 @@ const CORE: Scenario[] = [
       { id: 'llm', type: 'llm', x: 560, y: 120, config: { size: 'small' } },
     ],
     edges: chain('users', 'emb', 'vdb', 'llm'),
-    hint: 'Count the tokens: 12 chunks × 1,000 tokens won\'t fit in a small model\'s window. You can buy a bigger window, or send fewer, better chunks. Which one keeps the bill down?',
+    hint: "Count the tokens: 12 chunks × 1,000 tokens won't fit in a small model's window. You can buy a bigger window, or send fewer, better chunks. Which one keeps the bill down?",
     lesson:
       'Context windows are a budget, not a bucket. Stuffing more into the prompt costs money, adds latency and drowns the answer ("lost in the middle"). Retrieving wide and reranking down to a few precise chunks fits a small, cheap model, and is usually more accurate than a huge prompt on a big one.',
     solution: {
@@ -239,7 +239,7 @@ const CORE: Scenario[] = [
       { id: 'oj', type: 'output_guard', x: 700, y: 120 },
     ],
     edges: [...chain('users', 'emb', 'vdb', 'llm'), { source: 'llm', target: 'oj' }],
-    hint: 'Turn on streaming and watch first-token time. Why doesn\'t it move? Something downstream has to read the whole answer first. What can replace it on the quality side?',
+    hint: "Turn on streaming and watch first-token time. Why doesn't it move? Something downstream has to read the whole answer first. What can replace it on the quality side?",
     lesson:
       'Perceived speed is time to first token, and streaming is the biggest lever. But anything that must read the full answer first, like an output judge, silently cancels streaming. Here better retrieval protects quality up front, so the model can stream straight to the user.',
     solution: {
@@ -309,7 +309,7 @@ const CORE: Scenario[] = [
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: 'Before you change anything, make quality visible: add an Eval Harness after the LLM. Then let the numbers, and the failed requests, tell you what to fix.',
     lesson:
-      'You can\'t improve what you can\'t see. Speed, cost and errors are easy to measure, so teams optimise them and quietly wreck quality. An eval harness (a test set with known answers, plus an LLM judge scoring a sample of real traffic) turns "I think it\'s worse" into a number, and tells you whether each change actually helped.',
+      "You can't improve what you can't see. Speed, cost and errors are easy to measure, so teams optimise them and quietly wreck quality. An eval harness (a test set with known answers, plus an LLM judge scoring a sample of real traffic) turns \"I think it's worse\" into a number, and tells you whether each change actually helped.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -385,7 +385,7 @@ const CORE: Scenario[] = [
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: 'Try Retry & Fallback with only retries first, and push them up. Does it get better or worse? Then give it somewhere else to go: a second model on provider B, or your own GPUs.',
     lesson:
-      'Retries help with brief blips, but during a real outage they pile more load onto a struggling provider and make things worse (a retry storm). Resilience means having somewhere else to go: a second provider or a self-hosted model, with automatic failover, timeouts and a cap on retries. The backup doesn\'t need to be identical, just good enough to keep you up.',
+      "Retries help with brief blips, but during a real outage they pile more load onto a struggling provider and make things worse (a retry storm). Resilience means having somewhere else to go: a second provider or a self-hosted model, with automatic failover, timeouts and a cap on retries. The backup doesn't need to be identical, just good enough to keep you up.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -481,7 +481,7 @@ const CORE: Scenario[] = [
       { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'small' } },
     ],
     edges: chain('users', 'llm'),
-    hint: 'Look at what failed in the request inspector. Is the model wrong, or just badly formatted? There\'s a model setting built for exactly this. A validator helps too, but is it enough on its own?',
+    hint: "Look at what failed in the request inspector. Is the model wrong, or just badly formatted? There's a model setting built for exactly this. A validator helps too, but is it enough on its own?",
     lesson:
       'Asking nicely for JSON isn\'t a contract. Models occasionally break format, and at scale "occasionally" means constant crashes. Structured output (JSON mode or schema-constrained decoding) makes the model produce valid output by construction. A validator that checks and retries is the safety net, not the fix.',
     solution: {
@@ -496,7 +496,7 @@ const CORE: Scenario[] = [
     id: 'stale-index',
     difficulty: 2,
     skills: ['Data ingestion', 'Index freshness', 'Document parsing'],
-    title: '15 · Yesterday\'s answers',
+    title: "15 · Yesterday's answers",
     tagline: 'The price changed on Monday. The bot still quotes the old one.',
     brief:
       'Your retrieval setup is solid (hybrid search, reranking), but the docs it searches change daily: prices, policies, release notes. The index was built once, by hand, from text scraped out of PDFs. Customers get confident answers that were true last month, and anything inside a table seems invisible.',
@@ -515,9 +515,9 @@ const CORE: Scenario[] = [
       { id: 'llm', type: 'llm', x: 700, y: 120, config: { size: 'medium' } },
     ],
     edges: [...chain('users', 'emb', 'vdb', 'rr', 'llm'), ...chain('users', 'kw', 'rr')],
-    hint: 'Open the Vector DB settings. Retrieval is only as good as what went into the index: how often is it rebuilt, and how are documents turned into text? (An Output Judge won\'t save you here. Why not?)',
+    hint: "Open the Vector DB settings. Retrieval is only as good as what went into the index: how often is it rebuilt, and how are documents turned into text? (An Output Judge won't save you here. Why not?)",
     lesson:
-      'Most RAG problems start before retrieval: in ingestion. Content that changes needs a pipeline that re-indexes on a schedule or on every change, or the model will confidently quote old facts that your judge can\'t catch, because the sources agree. And how you parse documents matters: plain text extraction turns tables and multi-column PDFs into word soup.',
+      "Most RAG problems start before retrieval: in ingestion. Content that changes needs a pipeline that re-indexes on a schedule or on every change, or the model will confidently quote old facts that your judge can't catch, because the sources agree. And how you parse documents matters: plain text extraction turns tables and multi-column PDFs into word soup.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -537,7 +537,7 @@ const CORE: Scenario[] = [
     title: '16 · The 20-page system prompt',
     tagline: 'Every request re-reads the whole manual.',
     brief:
-      'Your compliance assistant sends a 12,000-token system prompt with every request: the full policy manual, tone guide and twenty worked examples. Quality is excellent. The bill is not: almost all of it pays for reading the same text over and over. The small model can\'t even fit it.',
+      "Your compliance assistant sends a 12,000-token system prompt with every request: the full policy manual, tone guide and twenty worked examples. Quality is excellent. The bill is not: almost all of it pays for reading the same text over and over. The small model can't even fit it.",
     traffic: { ...base, rps: 6, systemPromptTokens: 12000, repeatShare: 0 },
     goals: [
       { metric: 'costPer1k', op: '<=', value: 15 },
@@ -567,7 +567,7 @@ const CORE: Scenario[] = [
     title: '17 · The nightly job ate the day',
     tagline: 'A million tickets to summarise, and live users get 429s.',
     brief:
-      'Someone kicked off a job to summarise and tag every support ticket from the last year. It runs through the same real-time API as your live chat. Now 60% of your traffic is a background job nobody is waiting on, it\'s eating your rate limit, and live customers are getting errors.',
+      "Someone kicked off a job to summarise and tag every support ticket from the last year. It runs through the same real-time API as your live chat. Now 60% of your traffic is a background job nobody is waiting on, it's eating your rate limit, and live customers are getting errors.",
     traffic: { ...base, rps: 40, easyShare: 0.5, repeatShare: 0, batchShare: 0.6, systemPromptTokens: 2500 },
     goals: [
       { metric: 'errorRate', op: '<=', value: 0.01 },
@@ -582,7 +582,7 @@ const CORE: Scenario[] = [
     edges: chain('users', 'llm'),
     hint: 'Not every request needs an answer in seconds. Where could work that can wait a few hours go instead?',
     lesson:
-      'Separate work that someone is waiting on from work that can wait. Providers offer batch APIs at roughly half price with results within hours, and batch jobs don\'t compete with your live traffic for rate limits. Real-time capacity is precious: keep it for real-time users.',
+      "Separate work that someone is waiting on from work that can wait. Providers offer batch APIs at roughly half price with results within hours, and batch jobs don't compete with your live traffic for rate limits. Real-time capacity is precious: keep it for real-time users.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -614,7 +614,7 @@ const CORE: Scenario[] = [
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: 'Try a fine-tuned model in the LLM settings. Which size? And what happens to the help-centre questions if you remove retrieval?',
     lesson:
-      'Prompting, RAG and fine-tuning solve different problems. Fine-tuning teaches behaviour: your labels, your format, your tone. A fine-tuned small model often beats a general large one on a narrow task, at a fraction of the price. But it doesn\'t reliably teach facts, and facts change, so knowledge still comes from retrieval. Most real systems use both.',
+      "Prompting, RAG and fine-tuning solve different problems. Fine-tuning teaches behaviour: your labels, your format, your tone. A fine-tuned small model often beats a general large one on a narrow task, at a fraction of the price. But it doesn't reliably teach facts, and facts change, so knowledge still comes from retrieval. Most real systems use both.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -664,7 +664,7 @@ const CORE: Scenario[] = [
     difficulty: 1,
     skills: ['Privacy', 'PII redaction', 'Compliance'],
     title: '20 · Compliance is calling',
-    tagline: 'Half your prompts contain someone\'s medical history.',
+    tagline: "Half your prompts contain someone's medical history.",
     brief:
       'Your insurance assistant works well, and every claim question that customers paste in (names, policy numbers, diagnoses) goes straight to a third-party model provider. The compliance team has found out. They want personal data to stop leaving your systems without killing the product.',
     traffic: { ...base, kbShare: 0.6, exactTermShare: 0.1, piiShare: 0.5 },
@@ -682,7 +682,7 @@ const CORE: Scenario[] = [
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: 'Personal data can be stripped before it leaves, or the model can run somewhere data never leaves. What does each cost you?',
     lesson:
-      'Anything in a prompt is data you\'re sending to whoever runs the model. Redact personal details before they leave (swap them for placeholders and put them back in the answer), or keep sensitive traffic on models you host yourself. Detection is never perfect, so combine it with provider agreements, retention settings and data minimisation.',
+      "Anything in a prompt is data you're sending to whoever runs the model. Redact personal details before they leave (swap them for placeholders and put them back in the answer), or keep sensitive traffic on models you host yourself. Detection is never perfect, so combine it with provider agreements, retention settings and data minimisation.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -732,7 +732,7 @@ const CORE: Scenario[] = [
     difficulty: 1,
     skills: ['Abuse', 'Per-user limits', 'Cost control'],
     title: '22 · One user, half your bill',
-    tagline: 'A few scripted accounts are eating everyone\'s capacity.',
+    tagline: "A few scripted accounts are eating everyone's capacity.",
     brief:
       'You launched a free tier. Within a week, a handful of accounts started hammering your API from scripts, with huge prompts, hundreds of times a minute. Half your traffic is now them. Real users are getting 429 errors, and your cost per real request has nearly tripled.',
     traffic: { ...base, rps: 40, abuseShare: 0.5, repeatShare: 0 },
@@ -748,7 +748,7 @@ const CORE: Scenario[] = [
     edges: chain('users', 'llm'),
     hint: 'Your provider rate-limits you, but nothing rate-limits your users. How many messages a minute does a real person send?',
     lesson:
-      'Your provider\'s rate limits protect them, not you. Anything that\'s free, or billed per seat while you pay per token, needs per-user limits on requests, on tokens per day and on spend, so a single script can\'t burn your capacity or your budget. Set them generously for people and tightly for machines.',
+      "Your provider's rate limits protect them, not you. Anything that's free, or billed per seat while you pay per token, needs per-user limits on requests, on tokens per day and on spend, so a single script can't burn your capacity or your budget. Set them generously for people and tightly for machines.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -779,7 +779,7 @@ const CORE: Scenario[] = [
     edges: chain('users', 'llm'),
     hint: 'Open the LLM settings. One of them decides how adventurously the model picks each word. What should it be for a task with exactly one right answer?',
     lesson:
-      'Temperature controls randomness, not intelligence. For extraction, classification and anything with one right answer, run near 0 so the same input gives the same output. Keep some temperature for writing where variety helps. A bigger model doesn\'t fix sampling; it just costs more.',
+      "Temperature controls randomness, not intelligence. For extraction, classification and anything with one right answer, run near 0 so the same input gives the same output. Keep some temperature for writing where variety helps. A bigger model doesn't fix sampling; it just costs more.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -792,10 +792,10 @@ const CORE: Scenario[] = [
     id: 'eval-trust',
     difficulty: 3,
     skills: ['Evals', 'LLM-as-judge', 'Test sets'],
-    title: '24 · The evals say it\'s fine',
+    title: "24 · The evals say it's fine",
     tagline: 'The dashboard says 98%. Support says otherwise.',
     brief:
-      'Your docs assistant\'s eval dashboard has been green since launch: nearly every answer passes. Meanwhile support tickets keep arriving about wrong part numbers and made-up steps. Your goals are measured on real outcomes (tickets, refunds, follow-up questions), not on the dashboard.',
+      "Your docs assistant's eval dashboard has been green since launch: nearly every answer passes. Meanwhile support tickets keep arriving about wrong part numbers and made-up steps. Your goals are measured on real outcomes (tickets, refunds, follow-up questions), not on the dashboard.",
     traffic: { ...base, rps: 6, kbShare: 0.7, exactTermShare: 0.35, easyShare: 0.4, repeatShare: 0 },
     goals: [
       { metric: 'evalGap', op: '<=', value: 0.05 },
@@ -810,9 +810,9 @@ const CORE: Scenario[] = [
       { id: 'ev', type: 'eval_harness', x: 700, y: 120, config: { testSet: 'easy', judge: 'llm' } },
     ],
     edges: chain('users', 'emb', 'vdb', 'llm', 'ev'),
-    hint: 'Before fixing the system, fix the measurement. What is your Eval Harness testing, and who is judging? Once the numbers are honest, the binding pressure will tell you what\'s really wrong.',
+    hint: "Before fixing the system, fix the measurement. What is your Eval Harness testing, and who is judging? Once the numbers are honest, the binding pressure will tell you what's really wrong.",
     lesson:
-      'Evals are only as good as their test set and their judge. Test on samples of real traffic, refreshed regularly, not the 50 examples you wrote at launch. If an LLM judges, check it against human ratings so you know how often it\'s fooled. Exact match is cheap but punishes correct answers worded differently. Honest evals first, then fix what they show.',
+      "Evals are only as good as their test set and their judge. Test on samples of real traffic, refreshed regularly, not the 50 examples you wrote at launch. If an LLM judges, check it against human ratings so you know how often it's fooled. Exact match is cheap but punishes correct answers worded differently. Honest evals first, then fix what they show.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -832,7 +832,7 @@ const CORE: Scenario[] = [
     title: '25 · The email that hijacked the agent',
     tagline: 'Nobody attacked the chat. They emailed the agent.',
     brief:
-      'Your inbox assistant reads customers\' emails, sorts them, looks things up and sends replies on its own. This morning it forwarded a batch of invoices to an outside address. No user typed anything suspicious: the instructions were hidden in white text inside an incoming email. Customers still want replies sent for them.',
+      "Your inbox assistant reads customers' emails, sorts them, looks things up and sends replies on its own. This morning it forwarded a batch of invoices to an outside address. No user typed anything suspicious: the instructions were hidden in white text inside an incoming email. Customers still want replies sent for them.",
     traffic: { ...base, rps: 4, toolShare: 0.9, easyShare: 0.6, repeatShare: 0, sendShare: 0.35, poisonShare: 0.08 },
     goals: [
       { metric: 'harmfulActions', op: '<=', value: 0.0015 },
@@ -845,9 +845,9 @@ const CORE: Scenario[] = [
       { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
     ],
     edges: chain('users', 'agent', 'llm'),
-    hint: 'The Input Guard only reads what the user typed, and the attack isn\'t there. Think in layers: how the agent treats what it reads, what it\'s allowed to do, and what has to be checked before it does it.',
+    hint: "The Input Guard only reads what the user typed, and the attack isn't there. Think in layers: how the agent treats what it reads, what it's allowed to do, and what has to be checked before it does it.",
     lesson:
-      'Anything your system reads can carry instructions: emails, web pages, documents, tool results. Models can\'t reliably tell data from commands, so assume some will get through. Limit the damage instead: mark external content as untrusted, give agents the fewest permissions the job needs, and require approval for actions that send, pay or delete. No single layer is enough.',
+      "Anything your system reads can carry instructions: emails, web pages, documents, tool results. Models can't reliably tell data from commands, so assume some will get through. Limit the damage instead: mark external content as untrusted, give agents the fewest permissions the job needs, and require approval for actions that send, pay or delete. No single layer is enough.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },

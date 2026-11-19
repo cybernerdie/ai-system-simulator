@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import {  Volume2 } from 'lucide-react';
+import { Volume2 } from 'lucide-react';
 import { chosenVoice, listVoices, onVoicesChanged, previewVoice, setChosenVoice, setVoiceRate, voiceRate } from './voice';
 import { useVoice } from './useVoice';
 
@@ -34,8 +34,7 @@ export function VoiceMenu({ anchor, onClose }: { anchor: DOMRect | null; onClose
     };
   }, [onClose]);
   const phone = window.innerWidth <= 900;
-  const style: CSSProperties | undefined =
-    anchor && !phone ? { top: anchor.bottom + 8, left: Math.min(Math.max(12, anchor.right - 300), window.innerWidth - 312) } : undefined;
+  const style: CSSProperties | undefined = anchor && !phone ? { top: anchor.bottom + 8, left: Math.min(Math.max(12, anchor.right - 300), window.innerWidth - 312) } : undefined;
   return (
     <div ref={box} className={`voice-menu${style ? '' : ' is-docked'}`} style={style} role="dialog" aria-label="Voice guide settings">
       <div className="voice-menu-head">
@@ -59,7 +58,11 @@ export function VoiceMenu({ anchor, onClose }: { anchor: DOMRect | null; onClose
             >
               {voices.map((v, i) => (
                 <option key={v.name + v.lang} value={v.name}>
-                  {v.name.replace(/^(Microsoft|Google)\s/, '').replace(/\s*[-–]\s*English.*$/i, '').replace(/\s*Online\s*/, ' ')} · {v.lang.replace('en-', '')}
+                  {v.name
+                    .replace(/^(Microsoft|Google)\s/, '')
+                    .replace(/\s*[-–]\s*English.*$/i, '')
+                    .replace(/\s*Online\s*/, ' ')}{' '}
+                  · {v.lang.replace('en-', '')}
                   {i === 0 ? ' (recommended)' : ''}
                 </option>
               ))}

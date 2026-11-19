@@ -1,4 +1,4 @@
-import {  HeartPulse, Siren } from 'lucide-react';
+import { HeartPulse, Siren } from 'lucide-react';
 import { INCIDENTS, formatDuration, type IncidentState } from '../../engine/modes/incident';
 
 /* ---------- incident mode ---------- */

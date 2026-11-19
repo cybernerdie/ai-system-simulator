@@ -1,5 +1,5 @@
-import {  useState } from 'react';
-import {  ChevronDown } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 
 export function Group({ title, count, children, defaultOpen = true }: { title: string; count?: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);

@@ -1,5 +1,5 @@
-import {  CalendarDays, Flame, Siren, Trophy } from 'lucide-react';
-import {  formatDuration, type IncidentBest } from '../../engine/modes/incident';
+import { CalendarDays, Flame, Siren, Trophy } from 'lucide-react';
+import { formatDuration, type IncidentBest } from '../../engine/modes/incident';
 
 /* ---------- mode cards on the level map ---------- */
 
@@ -37,7 +37,9 @@ export function ModeCards({
       <button className="mode-card is-incident" onClick={onIncident}>
         <Siren size={18} aria-hidden />
         <strong>Incident mode</strong>
-        <span>{incidentBest ? `Best: ${formatDuration(incidentBest.seconds)}, ${incidentBest.incidents} incidents` : 'Keep a system alive while outages, spikes and attacks hit it.'}</span>
+        <span>
+          {incidentBest ? `Best: ${formatDuration(incidentBest.seconds)}, ${incidentBest.incidents} incidents` : 'Keep a system alive while outages, spikes and attacks hit it.'}
+        </span>
       </button>
       <button className="mode-card is-ach" onClick={onAchievements}>
         <Trophy size={18} aria-hidden />

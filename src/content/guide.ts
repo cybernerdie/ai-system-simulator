@@ -22,11 +22,7 @@ const WELCOME: Line = {
 
 /* ---------------- level 1 coaching ---------------- */
 
-export type CoachWait =
-  | { kind: 'running' }
-  | { kind: 'has'; type: ComponentType }
-  | { kind: 'won' }
-  | { kind: 'next' }; // the player taps "Got it"
+export type CoachWait = { kind: 'running' } | { kind: 'has'; type: ComponentType } | { kind: 'won' } | { kind: 'next' }; // the player taps "Got it"
 
 export interface CoachStep extends Line {
   /** what to highlight while this step is active */
@@ -77,11 +73,11 @@ export const COACH: CoachStep[] = [
 /* ---------------- customer complaints ---------------- */
 
 const BY_CAUSE: Partial<Record<Cause, string[]>> = {
-  no_knowledge: ['That answer was completely made up.', 'It invented a feature you don\'t even have.'],
-  retrieval_miss: ['It answered about the wrong product.', 'Close, but that\'s not what your docs say.'],
+  no_knowledge: ['That answer was completely made up.', "It invented a feature you don't even have."],
+  retrieval_miss: ['It answered about the wrong product.', "Close, but that's not what your docs say."],
   context_noise: ['It mixed up two different answers.', 'Half right, half nonsense.'],
-  weak_reasoning: ['It got the steps in the wrong order.', 'That doesn\'t add up.'],
-  no_tools: ['It can\'t even look up my order?', 'It just said it can\'t do that.'],
+  weak_reasoning: ['It got the steps in the wrong order.', "That doesn't add up."],
+  no_tools: ["It can't even look up my order?", "It just said it can't do that."],
   agent_limit: ['It gave up halfway through.'],
   agent_loop: ['It kept going in circles, then stopped.'],
   rate_limit: ['I got an error. Twice.', '"Too many requests"? I sent one!'],
@@ -91,21 +87,21 @@ const BY_CAUSE: Partial<Record<Cause, string[]>> = {
   provider_down: ['Your bot is down. Again.'],
   gpu_saturated: ['It timed out on me.'],
   invalid_output: ['The app crashed when the bot replied.'],
-  stale_index: ['It quoted last month\'s prices.'],
+  stale_index: ["It quoted last month's prices."],
   parse_miss: ['It ignored the table in the PDF.'],
-  task_unknown: ['It put my ticket in a category you don\'t have.'],
+  task_unknown: ["It put my ticket in a category you don't have."],
   model_drift: ['It used to answer this fine. Not any more.'],
   sampling_noise: ['Same invoice, two different totals?!'],
   too_repetitive: ['Every description sounds identical.'],
   indirect_injection: ['Why did your assistant email my invoices to a stranger?!'],
   no_permission: ['It wrote a reply but never sent it.'],
-  voice_pipeline: ['It can\'t hear me at all.'],
+  voice_pipeline: ["It can't hear me at all."],
   guard_false_positive: ['It blocked a totally normal question.'],
   handoff_loss: ['The final report missed what I asked for.'],
 };
 const BY_OUTCOME: Partial<Record<Outcome, string>> = {
   hallucinated: 'That answer was just wrong.',
-  declined: 'It just said it doesn\'t know.',
+  declined: "It just said it doesn't know.",
   rate_limited: 'I got an error message.',
   overflow: 'It errored out.',
   failed: 'It timed out.',

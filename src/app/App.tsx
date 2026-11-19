@@ -13,12 +13,35 @@ import { paletteLocks } from '../engine/unlocks';
 import { reviewDesign, type Review } from '../engine/review';
 import type { ComponentType, ConfigValue, Metrics, TrafficProfile } from '../engine/types';
 import { COACH } from '../content/guide';
-import { LESSONS } from '../content/learn';
+import { LESSONS, firstUnreadLesson } from '../content/learn';
 import { QUIZ } from '../content/quiz';
 import { tourSteps } from '../content/tour';
 import { track } from '../lib/analytics';
 import { copyWithFallback, downloadBlob, shareOrCopy } from '../lib/clipboard';
-import { addFlag, clearDesign, introSeen, loadCleared, loadDaily, loadDesign, loadFlags, loadIncidentBest, loadQuiz, loadRead, loadStars, loadUnlockAll, markIntroSeen, rememberLevel, saveCleared, saveDaily, saveDesign, saveIncidentBest, saveLastScenario, saveQuiz, saveStars, saveUnlockAll } from '../lib/progress';
+import {
+  addFlag,
+  clearDesign,
+  introSeen,
+  loadCleared,
+  loadDaily,
+  loadDesign,
+  loadFlags,
+  loadIncidentBest,
+  loadQuiz,
+  loadRead,
+  loadStars,
+  loadUnlockAll,
+  markIntroSeen,
+  rememberLevel,
+  saveCleared,
+  saveDaily,
+  saveDesign,
+  saveIncidentBest,
+  saveLastScenario,
+  saveQuiz,
+  saveStars,
+  saveUnlockAll,
+} from '../lib/progress';
 import { customScenario, readHashLevel, type CustomLevel } from '../share/customLevel';
 import { encodeDesign, readHashDesign, type SharedDesign } from '../share/designLink';
 import { drawCard, drawCertificate, improvements, shareText } from '../share/shareCard';
@@ -29,7 +52,7 @@ import { AchievementToast, AchievementsDialog } from '../ui/dialogs/Achievements
 import { CommandPalette } from '../ui/dialogs/CommandPalette';
 import { CompareDialog } from '../ui/dialogs/CompareDialog';
 import { IncidentOverDialog } from '../ui/dialogs/IncidentOverDialog';
-import { LearnHub, firstUnreadLesson, type HubView } from '../ui/dialogs/LearnHub';
+import { LearnHub, type HubView } from '../ui/dialogs/LearnHub';
 import { LevelMakerDialog } from '../ui/dialogs/LevelMakerDialog';
 import { ModeCards } from '../ui/dialogs/ModeCards';
 import { ReviewDialog } from '../ui/dialogs/ReviewDialog';
@@ -485,7 +508,10 @@ export default function App() {
       let next = [...nodesRef.current.map((n) => ({ ...n, selected: false })), added];
       if (!position) {
         // tapped from the palette rather than dropped: tidy the diagram into columns along the flow
-        const at = tidyLayout(next.map((n) => ({ id: n.id, type: n.data.kind })), wired);
+        const at = tidyLayout(
+          next.map((n) => ({ id: n.id, type: n.data.kind })),
+          wired,
+        );
         next = next.map((n) => (at.has(n.id) ? { ...n, position: at.get(n.id)! } : n));
         canvas.fit(300);
       }
@@ -629,7 +655,7 @@ export default function App() {
   useShortcuts({ blocked: anyDialog, onToggleRun: toggleRun, onCommands: EMBED ? undefined : () => setCmdk(true) });
 
   const tour = useMemo(() => tourSteps({ setTab, run: () => setRunning(true) }), [setTab, setRunning]);
-  const openLearn = () => setHub({ tab: 'lessons', lessonId: firstUnreadLesson() });
+  const openLearn = () => setHub({ tab: 'lessons', lessonId: firstUnreadLesson(loadRead()) });
   const toggleSfx = () => setSfx(!sfx);
 
   const togglePal = () => {
@@ -640,7 +666,13 @@ export default function App() {
 
   const selected = nodes.find((n) => n.id === selectedId);
   const num = levelNumber(scenario);
-  const winKicker = num ? `Level ${num} cleared` : scenario.kind === 'boss' ? 'Boss beaten' : scenario.kind === 'daily' ? `Daily #${dailyNumber(scenario.id.slice(6))} solved` : 'Level cleared';
+  const winKicker = num
+    ? `Level ${num} cleared`
+    : scenario.kind === 'boss'
+      ? 'Boss beaten'
+      : scenario.kind === 'daily'
+        ? `Daily #${dailyNumber(scenario.id.slice(6))} solved`
+        : 'Level cleared';
   const nextLabel = EMBED
     ? 'Keep playing on AISim'
     : next
@@ -658,7 +690,14 @@ export default function App() {
         tag={levelTag(scenario)}
         title={displayTitle(scenario)}
         embedLink={EMBED ? `${SITE}${pathFor(scenario)}` : undefined}
-        traffic={{ rps: sim.rps, setRps, pattern: sim.pattern, setPattern: sim.setPattern, offered: metrics && sim.pattern !== 'steady' ? metrics.offered : null, simTime: sim.simTime }}
+        traffic={{
+          rps: sim.rps,
+          setRps,
+          pattern: sim.pattern,
+          setPattern: sim.setPattern,
+          offered: metrics && sim.pattern !== 'steady' ? metrics.offered : null,
+          simTime: sim.simTime,
+        }}
         running={running}
         pinned={!!pinHere}
         theme={theme}
@@ -927,7 +966,12 @@ export default function App() {
           incidents={incidentOver.count}
           best={incidentBest}
           onRetry={restartIncident}
-          onShare={() => copyText(`I kept an AI system alive for ${formatDuration(incidentOver.t)} through ${incidentOver.count} incidents in AISim's incident mode. ${SITE}/`, 'Result copied, ready to paste.')}
+          onShare={() =>
+            copyText(
+              `I kept an AI system alive for ${formatDuration(incidentOver.t)} through ${incidentOver.count} incidents in AISim's incident mode. ${SITE}/`,
+              'Result copied, ready to paste.',
+            )
+          }
           onLevels={() => {
             setIncidentOver(null);
             setPicker(true);

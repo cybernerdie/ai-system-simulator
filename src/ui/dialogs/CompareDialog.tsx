@@ -1,5 +1,5 @@
-import {  useMemo } from 'react';
-import {  Pin, X } from 'lucide-react';
+import { useMemo } from 'react';
+import { Pin, X } from 'lucide-react';
 import { simulate } from '../../engine/simulate';
 import { goalMet } from '../../engine/pressures';
 import type { Goal, GoalMetric, Metrics, SimGraph, TrafficProfile } from '../../engine/types';
@@ -81,7 +81,11 @@ export function CompareDialog({
                 <tr key={k}>
                   <th scope="row">
                     {METRIC_META[k].label}
-                    {g && <em>goal {g.op === '>=' ? '≥' : '≤'} {METRIC_META[k].fmt(g.value)}</em>}
+                    {g && (
+                      <em>
+                        goal {g.op === '>=' ? '≥' : '≤'} {METRIC_META[k].fmt(g.value)}
+                      </em>
+                    )}
                   </th>
                   <td className={`${aBetter ? 'is-better' : ''}${g && !goalMet(a, g) ? ' is-miss' : ''}`}>{METRIC_META[k].fmt(va)}</td>
                   <td className={`${bBetter ? 'is-better' : ''}${g && !goalMet(b, g) ? ' is-miss' : ''}`}>{METRIC_META[k].fmt(vb)}</td>

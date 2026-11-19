@@ -1,5 +1,5 @@
-import {  goalMet } from '../../engine/pressures';
-import type {  Goal, GoalMetric, Metrics } from '../../engine/types';
+import { goalMet } from '../../engine/pressures';
+import type { Goal, GoalMetric, Metrics } from '../../engine/types';
 import { money, monthlyCost } from '../../engine/review';
 import { METRIC_META, ms, pct, usd } from '../format';
 
@@ -59,14 +59,27 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
         }
       : { key: 'rec', label: 'Recall', value: m.recall == null ? '—' : pct(m.recall), series: history.map((h) => h.recall ?? 0) },
     goals.some((g) => g.metric === 'fairnessGap')
-      ? { key: 'fair', label: 'Group gap', value: m.fairnessVisible ? METRIC_META.fairnessGap.fmt(m.fairnessGap) : '?', series: history.map((h) => (h.fairnessVisible ? h.fairnessGap : 0)), metric: 'fairnessGap' as const, title: m.fairnessVisible ? undefined : 'Nothing measures quality per group yet' }
+      ? {
+          key: 'fair',
+          label: 'Group gap',
+          value: m.fairnessVisible ? METRIC_META.fairnessGap.fmt(m.fairnessGap) : '?',
+          series: history.map((h) => (h.fairnessVisible ? h.fairnessGap : 0)),
+          metric: 'fairnessGap' as const,
+          title: m.fairnessVisible ? undefined : 'Nothing measures quality per group yet',
+        }
       : goals.some((g) => g.metric === 'diagnoseHours')
-      ? { key: 'diag', label: 'Find a bug', value: METRIC_META.diagnoseHours.fmt(m.diagnoseHours), series: history.map((h) => h.diagnoseHours), metric: 'diagnoseHours' as const }
-      : goals.some((g) => g.metric === 'harmfulActions')
-      ? { key: 'harm', label: 'Hijacked', value: METRIC_META.harmfulActions.fmt(m.harmfulActions), series: history.map((h) => h.harmfulActions), metric: 'harmfulActions' as const }
-      : goals.some((g) => g.metric === 'piiLeak')
-      ? { key: 'pii', label: 'PII leaked', value: pct(m.piiLeak), series: history.map((h) => h.piiLeak), metric: 'piiLeak' as const }
-      : { key: 'inj', label: 'Injection', value: pct(m.injection), series: history.map((h) => h.injection), metric: 'injection' as const },
+        ? { key: 'diag', label: 'Find a bug', value: METRIC_META.diagnoseHours.fmt(m.diagnoseHours), series: history.map((h) => h.diagnoseHours), metric: 'diagnoseHours' as const }
+        : goals.some((g) => g.metric === 'harmfulActions')
+          ? {
+              key: 'harm',
+              label: 'Hijacked',
+              value: METRIC_META.harmfulActions.fmt(m.harmfulActions),
+              series: history.map((h) => h.harmfulActions),
+              metric: 'harmfulActions' as const,
+            }
+          : goals.some((g) => g.metric === 'piiLeak')
+            ? { key: 'pii', label: 'PII leaked', value: pct(m.piiLeak), series: history.map((h) => h.piiLeak), metric: 'piiLeak' as const }
+            : { key: 'inj', label: 'Injection', value: pct(m.injection), series: history.map((h) => h.injection), metric: 'injection' as const },
     { key: 'err', label: 'Errors', value: pct(m.errorRate), series: history.map((h) => h.errorRate), metric: 'errorRate' },
     { key: 'p50', label: 'p50 latency', value: ms(m.p50), series: history.map((h) => h.p50), metric: 'p50' },
     { key: 'ttft', label: m.voice ? 'First audio' : 'First token', value: ms(m.ttftP50), series: history.map((h) => h.ttftP50), metric: 'ttftP50' },

@@ -23,10 +23,32 @@ export function dailyNumber(key: string): number {
   return Math.round((Date.UTC(y, m - 1, d) - EPOCH) / 86400000) + 1;
 }
 
-const hash = (s: string) => [...s].reduce((h, c) => (Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0), 2166136261);
+const hash = (s: string) => [...s].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261);
 
-type ShareKey = Exclude<{ [K in keyof TrafficProfile]: TrafficProfile[K] extends number | undefined ? K : never }[keyof TrafficProfile], 'rps' | 'chatTurns' | 'systemPromptTokens' | undefined>;
-const SHARES: ShareKey[] = ['kbShare', 'exactTermShare', 'toolShare', 'adversarialShare', 'repeatShare', 'complexShare', 'structuredShare', 'staleShare', 'tableShare', 'batchShare', 'taskShare', 'piiShare', 'abuseShare', 'extractShare', 'creativeShare', 'poisonShare', 'sendShare', 'recallShare'];
+type ShareKey = Exclude<
+  { [K in keyof TrafficProfile]: TrafficProfile[K] extends number | undefined ? K : never }[keyof TrafficProfile],
+  'rps' | 'chatTurns' | 'systemPromptTokens' | undefined
+>;
+const SHARES: ShareKey[] = [
+  'kbShare',
+  'exactTermShare',
+  'toolShare',
+  'adversarialShare',
+  'repeatShare',
+  'complexShare',
+  'structuredShare',
+  'staleShare',
+  'tableShare',
+  'batchShare',
+  'taskShare',
+  'piiShare',
+  'abuseShare',
+  'extractShare',
+  'creativeShare',
+  'poisonShare',
+  'sendShare',
+  'recallShare',
+];
 
 const SHARE_WORDS: Partial<Record<ShareKey, string>> = {
   kbShare: 'docs questions',

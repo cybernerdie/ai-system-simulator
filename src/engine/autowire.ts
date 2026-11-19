@@ -165,7 +165,6 @@ export function removeAndHeal(edges: WEdge[], id: string): WEdge[] {
   const ins = edges.filter((e) => e.target === id).map((e) => e.source);
   const outs = edges.filter((e) => e.source === id).map((e) => e.target);
   const kept = edges.filter((e) => e.source !== id && e.target !== id);
-  for (const s of ins)
-    for (const t of outs) if (s !== t && !kept.some((e) => e.source === s && e.target === t)) kept.push({ source: s, target: t });
+  for (const s of ins) for (const t of outs) if (s !== t && !kept.some((e) => e.source === s && e.target === t)) kept.push({ source: s, target: t });
   return kept;
 }

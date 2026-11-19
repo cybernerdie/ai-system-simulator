@@ -40,7 +40,10 @@ export function WelcomeScreen({ onPlay, onBrowse, onFree, onClose }: { onPlay: (
           </div>
         </div>
         <h1 id="welcome-title">Learn how AI apps really work, by fixing broken ones.</h1>
-        <p>Each level hands you an AI app with a real problem: it makes things up, falls over under load, gets tricked. Find the problem, fix it, watch the numbers turn green. No code, no setup.</p>
+        <p>
+          Each level hands you an AI app with a real problem: it makes things up, falls over under load, gets tricked. Find the problem, fix it, watch the numbers turn green. No
+          code, no setup.
+        </p>
         <button className="btn btn-primary welcome-play" autoFocus onClick={onPlay}>
           <Play size={16} aria-hidden /> Play level 1 <span className="welcome-time">2 min</span>
         </button>

@@ -55,14 +55,7 @@ export function Inspector({
                 </select>
               )}
               {f.kind === 'range' && (
-                <input
-                  type="range"
-                  min={f.min}
-                  max={f.max}
-                  step={f.step}
-                  value={Number(config[f.key])}
-                  onChange={(e) => onChange(id, f.key, Number(e.target.value))}
-                />
+                <input type="range" min={f.min} max={f.max} step={f.step} value={Number(config[f.key])} onChange={(e) => onChange(id, f.key, Number(e.target.value))} />
               )}
               {f.kind === 'toggle' && (
                 <span className="switch">

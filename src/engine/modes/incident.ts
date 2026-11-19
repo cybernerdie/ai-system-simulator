@@ -23,7 +23,7 @@ export const INCIDENTS: Record<IncidentKind, IncidentDef> = {
   spike: {
     kind: 'spike',
     title: 'Traffic spike',
-    text: 'You\'re on the front page. Traffic just tripled.',
+    text: "You're on the front page. Traffic just tripled.",
     apply: (t) => ({ ...t, rps: t.rps * 3, repeatShare: Math.min(0.6, t.repeatShare + 0.15) }),
   },
   outage: {
@@ -105,7 +105,7 @@ export const INCIDENT_SCENARIO: Scenario = {
   title: 'Incident mode',
   tagline: 'Keep it up as long as you can.',
   brief:
-    'You\'re on call for a working assistant: docs questions, exact codes, a few tool calls. Incidents will hit it, a few at a time: spikes, outages, attacks, budget cuts. Every goal you miss drains your health; holding them all heals it. Last as long as you can.',
+    "You're on call for a working assistant: docs questions, exact codes, a few tool calls. Incidents will hit it, a few at a time: spikes, outages, attacks, budget cuts. Every goal you miss drains your health; holding them all heals it. Last as long as you can.",
   traffic: INCIDENT_TRAFFIC,
   goals: incidentGoals([]),
   nodes: [
@@ -118,7 +118,7 @@ export const INCIDENT_SCENARIO: Scenario = {
     { id: 'llm', type: 'llm', x: 800, y: 120, config: { size: 'medium' } },
   ],
   edges: [...chain('users', 'emb', 'vdb', 'rr', 'ag', 'llm'), { source: 'users', target: 'kw' }, { source: 'kw', target: 'rr' }],
-  hint: 'Read the banner: each incident has a component that answers it. You don\'t need all of them on day one.',
+  hint: "Read the banner: each incident has a component that answers it. You don't need all of them on day one.",
   lesson: '',
   solution: { nodes: [], edges: [] },
 };

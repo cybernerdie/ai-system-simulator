@@ -1,5 +1,5 @@
-import {  Copy, Siren, Trophy } from 'lucide-react';
-import {  formatDuration, type IncidentBest } from '../../engine/modes/incident';
+import { Copy, Siren, Trophy } from 'lucide-react';
+import { formatDuration, type IncidentBest } from '../../engine/modes/incident';
 
 export function IncidentOverDialog({
   seconds,

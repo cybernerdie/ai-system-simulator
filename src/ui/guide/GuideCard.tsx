@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import {  X } from 'lucide-react';
-import { measure, place } from './Tour';
+import { X } from 'lucide-react';
+import { measure, place } from './spotlight';
 
 /* ---------- guide card: coaching, hints, nudges ---------- */
 

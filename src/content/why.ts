@@ -41,7 +41,7 @@ export const WHY: Partial<Record<ComponentType, Why>> = {
   },
   vector_db: {
     decides: 'Which chunks of your documents are closest in meaning to the question, and how many to return.',
-    without: 'The model answers from memory, and invents what it doesn\'t know.',
+    without: "The model answers from memory, and invents what it doesn't know.",
     notice: 'Confident wrong answers about your own product. Recall is the number to watch.',
   },
   keyword_search: {
@@ -72,12 +72,12 @@ export const WHY: Partial<Record<ComponentType, Why>> = {
   gpu_llm: {
     decides: 'How your own GPUs serve the model: how many, how big a batch, what precision.',
     without: 'You pay per token to a provider, and your data leaves your systems.',
-    notice: 'GPUs idle and expensive at low traffic, or queues and timeouts when they\'re full.',
+    notice: "GPUs idle and expensive at low traffic, or queues and timeouts when they're full.",
   },
   fallback: {
     decides: 'What happens when a call fails: retry, and whether to switch to another provider.',
     without: 'Every provider hiccup becomes an error for your user.',
-    notice: 'Error rate tracks your provider\'s status page. Retries alone make outages worse.',
+    notice: "Error rate tracks your provider's status page. Retries alone make outages worse.",
   },
   output_guard: {
     decides: 'Whether an answer is supported by its sources and safe to show, before it ships.',
@@ -91,12 +91,12 @@ export const WHY: Partial<Record<ComponentType, Why>> = {
   },
   eval_harness: {
     decides: 'How good the answers are, measured on a test set and a sample of live traffic.',
-    without: 'You can\'t see quality at all; changes ship on gut feel.',
+    without: "You can't see quality at all; changes ship on gut feel.",
     notice: 'You only hear about wrong answers from support tickets. A weak test set or judge makes the dashboard lie.',
   },
   tracing: {
     decides: 'Which requests are recorded step by step, and whether the text is kept.',
-    without: 'A complaint about a wrong answer can\'t be explained; debugging is guesswork.',
+    without: "A complaint about a wrong answer can't be explained; debugging is guesswork.",
     notice: 'Bugs take days to diagnose. Storing prompts unredacted puts personal data in your logs.',
   },
   fairness_eval: {
@@ -132,11 +132,11 @@ export const WHY: Partial<Record<ComponentType, Why>> = {
   auth: {
     decides: 'Whether a caller has valid credentials at all, before anything costs money.',
     without: 'Anyone with your endpoint (or a key shipped in your app) uses your models on your bill.',
-    notice: 'Traffic and cost rising with no matching growth in real users. Per-user limits don\'t catch callers rotating accounts.',
+    notice: "Traffic and cost rising with no matching growth in real users. Per-user limits don't catch callers rotating accounts.",
   },
   stt: {
     decides: 'How speech becomes text, and whether it starts while the user is still talking.',
-    without: 'Voice input can\'t be understood.',
+    without: "Voice input can't be understood.",
     notice: 'Seconds of silence before a voice reply when it waits for the whole clip.',
   },
   tts: {

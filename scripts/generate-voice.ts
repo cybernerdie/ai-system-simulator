@@ -18,8 +18,7 @@ import { COMPONENTS } from '../src/engine/components';
 
 const OUT = join(process.cwd(), 'public', 'voice');
 const MANIFEST = join(OUT, 'manifest.json');
-const STYLE =
-  'Warm, upbeat and clear, like a friendly game guide. Natural pace, light energy, never salesy.';
+const STYLE = 'Warm, upbeat and clear, like a friendly game guide. Natural pace, light energy, never salesy.';
 
 const hash = (s: string) => createHash('sha1').update(s).digest('hex').slice(0, 12);
 

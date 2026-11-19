@@ -30,7 +30,7 @@ export const BOSSES: Scenario[] = [
     edges: chain('users', 'llm'),
     hint: 'Take it one pressure at a time. Knowledge first, then exact codes, then tools, then attackers, then the bill.',
     lesson:
-      'Real systems hit every problem at once. The order you fix them in matters less than fixing the one that\'s binding right now, then checking what moved. Each component you added solved one problem and cost something somewhere else.',
+      "Real systems hit every problem at once. The order you fix them in matters less than fixing the one that's binding right now, then checking what moved. Each component you added solved one problem and cost something somewhere else.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -55,7 +55,7 @@ export const BOSSES: Scenario[] = [
     title: 'Boss · The enterprise pilot',
     tagline: 'A bank is trialling you. They read every transcript.',
     brief:
-      'A bank is piloting your contract assistant. Analysts hold long conversations about long documents, they expect words on screen within a second and a half, and their compliance team grades answers you can\'t see unless you measure them. Win the pilot without blowing the budget.',
+      "A bank is piloting your contract assistant. Analysts hold long conversations about long documents, they expect words on screen within a second and a half, and their compliance team grades answers you can't see unless you measure them. Win the pilot without blowing the budget.",
     traffic: { ...base, rps: 5, kbShare: 0.75, exactTermShare: 0.25, easyShare: 0.45, repeatShare: 0.05, chatTurns: 14, recallShare: 0.25, qualityHidden: true },
     goals: [
       { metric: 'accuracy', op: '>=', value: 0.78 },
@@ -70,7 +70,7 @@ export const BOSSES: Scenario[] = [
       { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'large' } },
     ],
     edges: chain('users', 'emb', 'vdb', 'llm'),
-    hint: 'You can\'t improve what you can\'t see, so measure first. Then: what overflows, what\'s slow to start, and what grows with every message?',
+    hint: "You can't improve what you can't see, so measure first. Then: what overflows, what's slow to start, and what grows with every message?",
     lesson:
       'Enterprise buyers judge on quality they can audit, speed they can feel and cost they can forecast. Evals make quality visible, smaller chunks and reranking keep context tight, streaming makes it feel fast, and memory keeps long conversations affordable.',
     solution: {
@@ -95,8 +95,19 @@ export const BOSSES: Scenario[] = [
     title: 'Boss · The 9am board report',
     tagline: 'The provider is down, the data changed overnight, and the output feeds a spreadsheet.',
     brief:
-      'Every morning your system answers questions about yesterday\'s numbers and fills a board report with JSON your code parses. Today your main provider is failing most calls, half the figures changed overnight and many live in tables. The report is due at 9.',
-    traffic: { ...base, rps: 8, kbShare: 0.7, exactTermShare: 0.2, easyShare: 0.55, repeatShare: 0.1, staleShare: 0.25, tableShare: 0.2, structuredShare: 0.4, providerErrors: { A: 0.6 } },
+      "Every morning your system answers questions about yesterday's numbers and fills a board report with JSON your code parses. Today your main provider is failing most calls, half the figures changed overnight and many live in tables. The report is due at 9.",
+    traffic: {
+      ...base,
+      rps: 8,
+      kbShare: 0.7,
+      exactTermShare: 0.2,
+      easyShare: 0.55,
+      repeatShare: 0.1,
+      staleShare: 0.25,
+      tableShare: 0.2,
+      structuredShare: 0.4,
+      providerErrors: { A: 0.6 },
+    },
     goals: [
       { metric: 'errorRate', op: '<=', value: 0.01 },
       { metric: 'accuracy', op: '>=', value: 0.78 },
@@ -109,9 +120,9 @@ export const BOSSES: Scenario[] = [
       { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium', provider: 'A' } },
     ],
     edges: chain('users', 'emb', 'vdb', 'llm'),
-    hint: 'Three separate problems: calls that fail, answers your code can\'t parse, and facts that are out of date or trapped in tables.',
+    hint: "Three separate problems: calls that fail, answers your code can't parse, and facts that are out of date or trapped in tables.",
     lesson:
-      'Reliability is layered. A second provider keeps you up when one fails, structured output keeps your code from crashing, and a fresh, layout-aware index keeps answers true. None of them helps with the others\' problem.',
+      "Reliability is layered. A second provider keeps you up when one fails, structured output keeps your code from crashing, and a fresh, layout-aware index keeps answers true. None of them helps with the others' problem.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -168,7 +179,7 @@ export const BOSSES: Scenario[] = [
     title: 'Boss · The agent goes public',
     tagline: 'Free signups, an inbox full of strangers, and one right answer per invoice.',
     brief:
-      'Your inbox agent is opening to the public with a free tier. It reads incoming emails, pulls totals out of invoices and sends replies on users\' behalf. Scripts are already signing up by the hundred, and some emails are written to hijack it. Launch without a single forwarded invoice.',
+      "Your inbox agent is opening to the public with a free tier. It reads incoming emails, pulls totals out of invoices and sends replies on users' behalf. Scripts are already signing up by the hundred, and some emails are written to hijack it. Launch without a single forwarded invoice.",
     traffic: { ...base, rps: 12, toolShare: 0.7, easyShare: 0.6, repeatShare: 0, sendShare: 0.3, poisonShare: 0.06, abuseShare: 0.3, extractShare: 0.3 },
     goals: [
       { metric: 'harmfulActions', op: '<=', value: 0.002 },
@@ -184,7 +195,7 @@ export const BOSSES: Scenario[] = [
     edges: chain('users', 'agent', 'llm'),
     hint: 'Who is sending traffic, what is the agent reading, what is it allowed to do without asking, and how random should an invoice total be?',
     lesson:
-      'Public agents need defence in depth: limits per user so scripts can\'t swamp you, untrusted content marked as untrusted, approval before anything leaves, and deterministic settings where there is one right answer.',
+      "Public agents need defence in depth: limits per user so scripts can't swamp you, untrusted content marked as untrusted, approval before anything leaves, and deterministic settings where there is one right answer.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },

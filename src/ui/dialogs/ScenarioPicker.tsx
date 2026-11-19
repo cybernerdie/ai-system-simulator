@@ -76,7 +76,9 @@ export function ScenarioPicker({
       (level === 'all' || (level === 'todo' ? !cleared.has(s.id) : s.difficulty === level)) &&
       (!needle || `${s.title} ${s.tagline} ${s.brief} ${s.skills.join(' ')}`.toLowerCase().includes(needle));
   }, [q, level, cleared]);
-  const shown = [...scenarios.map((s, i) => ({ s, i: i as number | undefined, boss: false })), ...bosses.map((s) => ({ s, i: undefined, boss: true }))].filter(({ s }) => matches(s));
+  const shown = [...scenarios.map((s, i) => ({ s, i: i as number | undefined, boss: false })), ...bosses.map((s) => ({ s, i: undefined, boss: true }))].filter(({ s }) =>
+    matches(s),
+  );
   const showSandbox = level === 'all' && matches(sandbox);
 
   const card = (s: Scenario, i?: number, boss = false) => {
@@ -122,7 +124,10 @@ export function ScenarioPicker({
         <header className="picker-head">
           <div>
             <h2 id="picker-title">Levels</h2>
-            <p>Each level hands you a broken AI app. Clear it to unlock the next, and clear a whole chapter to face its boss. Earn up to three stars: clear it, keep it within budget, build it lean.</p>
+            <p>
+              Each level hands you a broken AI app. Clear it to unlock the next, and clear a whole chapter to face its boss. Earn up to three stars: clear it, keep it within
+              budget, build it lean.
+            </p>
           </div>
           <div className="picker-progress">
             <span className="picker-count">
@@ -191,7 +196,10 @@ export function ScenarioPicker({
                       const open = isOpen(id);
                       const isDone = cleared.has(id);
                       return (
-                        <li key={id} className={`stop${isDone ? ' is-done' : ''}${open ? '' : ' is-locked'}${id === currentId ? ' is-current' : ''}${id === sel ? ' is-selected' : ''}`}>
+                        <li
+                          key={id}
+                          className={`stop${isDone ? ' is-done' : ''}${open ? '' : ' is-locked'}${id === currentId ? ' is-current' : ''}${id === sel ? ' is-selected' : ''}`}
+                        >
                           <button
                             className="stop-dot"
                             onClick={() => setSel(id)}
@@ -207,7 +215,9 @@ export function ScenarioPicker({
                       );
                     })}
                     {boss && (
-                      <li className={`stop is-boss${cleared.has(boss.id) ? ' is-done' : ''}${isOpen(boss.id) ? '' : ' is-locked'}${boss.id === currentId ? ' is-current' : ''}${boss.id === sel ? ' is-selected' : ''}`}>
+                      <li
+                        className={`stop is-boss${cleared.has(boss.id) ? ' is-done' : ''}${isOpen(boss.id) ? '' : ' is-locked'}${boss.id === currentId ? ' is-current' : ''}${boss.id === sel ? ' is-selected' : ''}`}
+                      >
                         <button
                           className="stop-dot"
                           onClick={() => setSel(boss.id)}
@@ -267,11 +277,11 @@ export function ScenarioPicker({
             </div>
           </div>
         ) : (
-        <div className="picker-grid">
-          {shown.map(({ s, i, boss }) => card(s, i, boss))}
-          {showSandbox && card(sandbox)}
-          {!shown.length && !showSandbox && <p className="side-empty picker-empty">No levels match "{q}". Try a broader word, like "cost" or "retrieval".</p>}
-        </div>
+          <div className="picker-grid">
+            {shown.map(({ s, i, boss }) => card(s, i, boss))}
+            {showSandbox && card(sandbox)}
+            {!shown.length && !showSandbox && <p className="side-empty picker-empty">No levels match "{q}". Try a broader word, like "cost" or "retrieval".</p>}
+          </div>
         )}
       </div>
     </div>

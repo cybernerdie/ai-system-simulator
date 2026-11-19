@@ -1,4 +1,4 @@
-import {  Check, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useEscape } from '../hooks/useEscape';
 
 /* ---------- design review ---------- */
@@ -60,7 +60,10 @@ export function ReviewDialog({ review, onFocusNode, onClose }: { review: import(
                 </li>
               ))}
             </ul>
-            <p className="dialog-note review-how">Every note comes from the simulation: it reruns your design on the same traffic, with and without each component, and compares it with the level's reference design. No AI writes this.</p>
+            <p className="dialog-note review-how">
+              Every note comes from the simulation: it reruns your design on the same traffic, with and without each component, and compares it with the level's reference design.
+              No AI writes this.
+            </p>
           </>
         )}
       </div>

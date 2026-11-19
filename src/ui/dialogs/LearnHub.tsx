@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, Clock, Lightbulb, Play, Search, Sparkles, X } from 'lucide-react';
-import { LESSON_BY_ID, LESSON_ORDER, MODULES, MODULE_OF, TERMS, TERM_BY_ID, type Lesson, type TermCategory } from '../../content/learn';
+import { LESSON_BY_ID, LESSON_ORDER, firstUnreadLesson, MODULES, MODULE_OF, TERMS, TERM_BY_ID, type Lesson, type TermCategory } from '../../content/learn';
 import { loadRead, saveRead } from '../../lib/progress';
 import { SCENARIOS } from '../../engine/levels/scenarios';
 import { KindIcon } from '../canvas/icons';
@@ -12,12 +12,6 @@ const TOUCH = typeof window !== 'undefined' && window.matchMedia?.('(pointer: co
 export type HubView = { tab: 'lessons'; lessonId: string } | { tab: 'glossary'; termId?: string };
 
 const CATEGORIES: TermCategory[] = ['Models', 'Retrieval', 'Memory', 'Inference', 'Voice', 'Production', 'Agents', 'Safety', 'Quality'];
-
-/** Where to open the lessons tab: the first lesson not read yet. */
-export function firstUnreadLesson(): string {
-  const read = loadRead();
-  return LESSON_ORDER.find((id) => !read.has(id)) ?? LESSON_ORDER[0];
-}
 
 export function LearnHub({
   view,
@@ -46,7 +40,11 @@ export function LearnHub({
             <BookOpen size={18} aria-hidden /> Learn
           </h2>
           <div className="seg" role="tablist">
-            <button role="tab" aria-pressed={view.tab === 'lessons'} onClick={() => setView({ tab: 'lessons', lessonId: view.tab === 'lessons' ? view.lessonId : firstUnreadLesson() })}>
+            <button
+              role="tab"
+              aria-pressed={view.tab === 'lessons'}
+              onClick={() => setView({ tab: 'lessons', lessonId: view.tab === 'lessons' ? view.lessonId : firstUnreadLesson(loadRead()) })}
+            >
               Lessons
             </button>
             <button role="tab" aria-pressed={view.tab === 'glossary'} onClick={() => setView({ tab: 'glossary' })}>
@@ -69,11 +67,7 @@ export function LearnHub({
             onTry={onTryScenario}
           />
         ) : (
-          <Glossary
-            focusId={view.termId}
-            onTerm={(id) => setView({ tab: 'glossary', termId: id })}
-            onLesson={(id) => setView({ tab: 'lessons', lessonId: id })}
-          />
+          <Glossary focusId={view.termId} onTerm={(id) => setView({ tab: 'glossary', termId: id })} onLesson={(id) => setView({ tab: 'lessons', lessonId: id })} />
         )}
       </div>
     </div>
@@ -95,12 +89,7 @@ function Lessons({ lesson, onPick, onTerm, onTry }: { lesson: Lesson; onPick: (i
   const hit = (id: string) => {
     if (!needle) return true;
     const l = LESSON_BY_ID[id];
-    const text = [
-      l.title,
-      l.summary,
-      ...l.terms.map((t) => `${TERM_BY_ID[t].term} ${TERM_BY_ID[t].aka ?? ''}`),
-      ...l.blocks.map((b) => ('text' in b ? b.text : b.items.join(' '))),
-    ]
+    const text = [l.title, l.summary, ...l.terms.map((t) => `${TERM_BY_ID[t].term} ${TERM_BY_ID[t].aka ?? ''}`), ...l.blocks.map((b) => ('text' in b ? b.text : b.items.join(' ')))]
       .join(' ')
       .toLowerCase();
     return text.includes(needle);

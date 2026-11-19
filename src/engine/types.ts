@@ -107,16 +107,7 @@ export interface TrafficProfile {
   cohortHidden?: boolean;
 }
 
-export type Outcome =
-  | 'correct'
-  | 'hallucinated'
-  | 'declined'
-  | 'blocked'
-  | 'injected'
-  | 'rate_limited'
-  | 'overflow'
-  | 'failed'
-  | 'unhelpful';
+export type Outcome = 'correct' | 'hallucinated' | 'declined' | 'blocked' | 'injected' | 'rate_limited' | 'overflow' | 'failed' | 'unhelpful';
 
 export type Cause =
   | 'no_knowledge'
@@ -248,18 +239,7 @@ export interface Metrics {
 }
 
 export type GoalMetric =
-  | 'diagnoseHours'
-  | 'fairnessGap'
-  | 'piiLeak'
-  | 'evalGap'
-  | 'harmfulActions'
-  | 'accuracy'
-  | 'hallucination'
-  | 'injection'
-  | 'errorRate'
-  | 'costPer1k'
-  | 'p50'
-  | 'ttftP50';
+  'diagnoseHours' | 'fairnessGap' | 'piiLeak' | 'evalGap' | 'harmfulActions' | 'accuracy' | 'hallucination' | 'injection' | 'errorRate' | 'costPer1k' | 'p50' | 'ttftP50';
 
 export interface Goal {
   metric: GoalMetric;

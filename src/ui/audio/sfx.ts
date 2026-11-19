@@ -4,7 +4,6 @@
  */
 import { readFlag, writeFlag } from '../../lib/storage';
 
-
 export type Sfx = 'add' | 'run' | 'pause' | 'problem' | 'goal' | 'win' | 'star' | 'step';
 
 type Listener = (on: boolean) => void;

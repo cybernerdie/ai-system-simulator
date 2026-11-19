@@ -1,4 +1,3 @@
-
 /* ---------- celebration ---------- */
 
 export function Confetti() {

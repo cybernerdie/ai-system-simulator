@@ -1,4 +1,21 @@
-import { BookOpen, CircleQuestionMark, Code, Command as CommandIcon, ExternalLink, GitCompareArrows, Link2, Moon, Music2, Pause, PencilRuler, Play, RotateCcw, Sun, Volume2, VolumeX } from 'lucide-react';
+import {
+  BookOpen,
+  CircleQuestionMark,
+  Code,
+  Command as CommandIcon,
+  ExternalLink,
+  GitCompareArrows,
+  Link2,
+  Moon,
+  Music2,
+  Pause,
+  PencilRuler,
+  Play,
+  RotateCcw,
+  Sun,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
 import { PATTERNS, type Pattern } from '../engine/patterns';
 import type { Scenario } from '../engine/levels/scenarios';
 import { BrandMark } from './BrandMark';

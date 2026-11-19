@@ -21,7 +21,13 @@ import {
   TextSearch,
   Users,
   Zap,
-  type LucideIcon, FileCheck, Hand, KeyRound, Footprints, Scale } from 'lucide-react';
+  type LucideIcon,
+  FileCheck,
+  Hand,
+  KeyRound,
+  Footprints,
+  Scale,
+} from 'lucide-react';
 import { COMPONENTS } from '../../engine/components';
 import type { ComponentType } from '../../engine/types';
 

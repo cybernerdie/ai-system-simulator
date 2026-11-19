@@ -20,9 +20,31 @@ export interface CustomLevel {
   solution: SharedDesign;
 }
 
-
 const METRICS: GoalMetric[] = ['accuracy', 'hallucination', 'injection', 'errorRate', 'costPer1k', 'p50', 'ttftP50', 'piiLeak', 'evalGap', 'harmfulActions'];
-const NUM_KEYS = ['rps', 'kbShare', 'exactTermShare', 'toolShare', 'adversarialShare', 'easyShare', 'repeatShare', 'chatTurns', 'recallShare', 'complexShare', 'structuredShare', 'staleShare', 'tableShare', 'systemPromptTokens', 'batchShare', 'taskShare', 'piiShare', 'abuseShare', 'extractShare', 'creativeShare', 'poisonShare', 'sendShare'] as const;
+const NUM_KEYS = [
+  'rps',
+  'kbShare',
+  'exactTermShare',
+  'toolShare',
+  'adversarialShare',
+  'easyShare',
+  'repeatShare',
+  'chatTurns',
+  'recallShare',
+  'complexShare',
+  'structuredShare',
+  'staleShare',
+  'tableShare',
+  'systemPromptTokens',
+  'batchShare',
+  'taskShare',
+  'piiShare',
+  'abuseShare',
+  'extractShare',
+  'creativeShare',
+  'poisonShare',
+  'sendShare',
+] as const;
 const BOOL_KEYS = ['qualityHidden', 'driftLatest', 'voice'] as const;
 
 export function encodeLevel(l: CustomLevel): string {
@@ -42,7 +64,8 @@ export function decodeLevel(code: string): CustomLevel | null {
     if (!start || !solution) return null;
     const traffic: TrafficProfile = { rps: 5, kbShare: 0, exactTermShare: 0, toolShare: 0, adversarialShare: 0, easyShare: 0.6, repeatShare: 0.2 };
     const tr = p.tr ?? {};
-    for (const k of NUM_KEYS) if (k in tr) (traffic as unknown as Record<string, number>)[k] = clamp(tr[k], 0, k === 'rps' ? 200 : k === 'chatTurns' ? 60 : k === 'systemPromptTokens' ? 40000 : 1, 0);
+    for (const k of NUM_KEYS)
+      if (k in tr) (traffic as unknown as Record<string, number>)[k] = clamp(tr[k], 0, k === 'rps' ? 200 : k === 'chatTurns' ? 60 : k === 'systemPromptTokens' ? 40000 : 1, 0);
     if (traffic.rps < 0.5) traffic.rps = 5;
     for (const k of BOOL_KEYS) if (tr[k] === true) (traffic as unknown as Record<string, boolean>)[k] = true;
     const goals: Goal[] = (Array.isArray(p.g) ? p.g : [])
@@ -50,7 +73,14 @@ export function decodeLevel(code: string): CustomLevel | null {
       .slice(0, 6)
       .map((g: unknown[]) => ({ metric: g[0] as GoalMetric, op: g[1] as '>=' | '<=', value: clamp(g[2], 0, 1e6, 0) }));
     if (!goals.length) return null;
-    const text = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max) : '');
+    const text = (v: unknown, max: number) =>
+      typeof v === 'string'
+        ? [...v]
+            .map((ch) => (ch < ' ' ? ' ' : ch))
+            .join('')
+            .trim()
+            .slice(0, max)
+        : '';
     return { title: text(p.t, 60) || 'A shared level', brief: text(p.b, 600), traffic, goals, start, solution };
   } catch {
     return null;

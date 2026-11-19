@@ -1,5 +1,5 @@
-import {  Lightbulb } from 'lucide-react';
-import {  type Pressure } from '../../engine/pressures';
+import { Lightbulb } from 'lucide-react';
+import { type Pressure } from '../../engine/pressures';
 
 /* ---------- binding pressure (floating window) ---------- */
 

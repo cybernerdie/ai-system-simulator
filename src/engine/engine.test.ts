@@ -14,8 +14,7 @@ const toGraph = (nodes: ScenarioNode[], edges: SimEdge[]) => ({
 });
 
 // Average a few seeds so tests check the model, not one lucky draw.
-const run = (nodes: ScenarioNode[], edges: SimEdge[], traffic: (typeof SCENARIOS)[number]['traffic']) =>
-  simulate(toGraph(nodes, edges), traffic, { seed: 42, samples: 6000 });
+const run = (nodes: ScenarioNode[], edges: SimEdge[], traffic: (typeof SCENARIOS)[number]['traffic']) => simulate(toGraph(nodes, edges), traffic, { seed: 42, samples: 6000 });
 
 describe('scenarios', () => {
   for (const s of PLAYABLE) {
@@ -97,7 +96,10 @@ describe('engine behaviour', () => {
     const streamed = run(nodes, [{ source: 'u', target: 'l' }], traffic);
     const judged = run(
       [...nodes, { id: 'j', type: 'output_guard', x: 0, y: 0 }],
-      [{ source: 'u', target: 'l' }, { source: 'l', target: 'j' }],
+      [
+        { source: 'u', target: 'l' },
+        { source: 'l', target: 'j' },
+      ],
       traffic,
     );
     expect(streamed.ttftP50).toBeLessThan(plain.ttftP50 / 3);

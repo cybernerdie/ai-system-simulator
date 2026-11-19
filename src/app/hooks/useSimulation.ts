@@ -58,14 +58,17 @@ export function useSimulation({ scenario, graph, designSig, traffic, events }: O
 
   const refs = useMemo(() => ({ metrics: metricsRef, streak: streakRef, baseline: baselineRef }), []);
 
-  const goals: Goal[] = useMemo(
-    () => (scenario.kind === 'incident' ? incidentGoals((incident?.active ?? []).map((a) => a.kind)) : scenario.goals),
-    [scenario, incident],
-  );
+  const goals: Goal[] = useMemo(() => (scenario.kind === 'incident' ? incidentGoals((incident?.active ?? []).map((a) => a.kind)) : scenario.goals), [scenario, incident]);
 
   /** The traffic a one-off rerun (review, compare) should use: what the player is currently facing. */
   const testTraffic: TrafficProfile = useMemo(
-    () => (scenario.kind === 'incident' && incident ? incidentTraffic(incident.active.map((a) => a.kind), incident.count) : { ...traffic, rps }),
+    () =>
+      scenario.kind === 'incident' && incident
+        ? incidentTraffic(
+            incident.active.map((a) => a.kind),
+            incident.count,
+          )
+        : { ...traffic, rps },
     [scenario.kind, incident, traffic, rps],
   );
 

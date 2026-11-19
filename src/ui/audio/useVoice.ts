@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import {  onVoiceChange, setVoice, voiceOn } from './voice';
+import { onVoiceChange, setVoice, voiceOn } from './voice';
 
 /* ---------- voice toggle state ---------- */
 

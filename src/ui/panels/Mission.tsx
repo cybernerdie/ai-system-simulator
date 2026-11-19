@@ -1,8 +1,8 @@
-import {  useState } from 'react';
-import {  Check, ClipboardCheck, Lightbulb, TriangleAlert, X } from 'lucide-react';
+import { useState } from 'react';
+import { Check, ClipboardCheck, Lightbulb, TriangleAlert, X } from 'lucide-react';
 import { QUALITY_METRICS, goalMet } from '../../engine/pressures';
 import type { Scenario } from '../../engine/levels/scenarios';
-import type {  Metrics, TrafficProfile } from '../../engine/types';
+import type { Metrics, TrafficProfile } from '../../engine/types';
 import { METRIC_META } from '../format';
 import { Group } from './Group';
 
@@ -29,14 +29,7 @@ function TrafficMix({ traffic, onMix, onReset }: { traffic: TrafficProfile; onMi
               {f.label}
               <output>{isTurns ? `${v}` : `${Math.round(v * 100)}%`}</output>
             </span>
-            <input
-              type="range"
-              min={0}
-              max={f.max ?? 1}
-              step={f.step ?? 0.05}
-              value={v}
-              onChange={(e) => onMix({ [f.key]: Number(e.target.value) } as Partial<TrafficProfile>)}
-            />
+            <input type="range" min={0} max={f.max ?? 1} step={f.step ?? 0.05} value={v} onChange={(e) => onMix({ [f.key]: Number(e.target.value) } as Partial<TrafficProfile>)} />
             <span className="field-help">{f.help}</span>
           </label>
         );

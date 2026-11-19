@@ -1,6 +1,7 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { COMPONENTS } from '../../engine/components';
 import type { ComponentType, NodeConfig, NodeStat } from '../../engine/types';
+import type { ZoneKey } from './zones';
 import { KindIcon } from './icons';
 
 export type SimNodeData = {
@@ -26,7 +27,12 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
         ...(config.version === 'latest' ? ['latest (unpinned)'] : []),
       ];
     case 'gpu_llm':
-      return [String(config.model).replace('open-', '').toUpperCase(), `${config.gpus} GPU${Number(config.gpus) > 1 ? 's' : ''}`, `batch ${config.batch}`, String(config.quant).toUpperCase()];
+      return [
+        String(config.model).replace('open-', '').toUpperCase(),
+        `${config.gpus} GPU${Number(config.gpus) > 1 ? 's' : ''}`,
+        `batch ${config.batch}`,
+        String(config.quant).toUpperCase(),
+      ];
     case 'agent_team':
       return [`${config.workers} worker${Number(config.workers) > 1 ? 's' : ''}`, ...(config.reviewer ? ['reviewer'] : []), `≤ ${config.maxRounds} rounds`];
     case 'fallback':
@@ -45,9 +51,7 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
     case 'semantic_cache':
       return [`≥ ${Number(config.threshold).toFixed(2)} sim`];
     case 'memory':
-      return [
-        { full: 'full history', window: `last ${config.windowTurns} turns`, summary: 'rolling summary', retrieval: 'long-term memory' }[String(config.strategy)] ?? '',
-      ];
+      return [{ full: 'full history', window: `last ${config.windowTurns} turns`, summary: 'rolling summary', retrieval: 'long-term memory' }[String(config.strategy)] ?? ''];
     case 'eval_harness':
       return [
         config.testSet === 'easy' ? '50 launch examples' : 'real traffic',
@@ -59,7 +63,10 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
     case 'user_limits':
       return [`${config.perUserRpm} req/min per user`];
     case 'tracing':
-      return [{ '1': '1% sampled', '10': '10% sampled', errors: 'failures + 5%', all: 'every request' }[String(config.sampling)] ?? '', config.capturePrompts ? 'with prompts' : 'timings only'];
+      return [
+        { '1': '1% sampled', '10': '10% sampled', errors: 'failures + 5%', all: 'every request' }[String(config.sampling)] ?? '',
+        config.capturePrompts ? 'with prompts' : 'timings only',
+      ];
     case 'embedding':
       return config.multilingual ? ['multilingual'] : [];
     case 'input_guard':
@@ -71,7 +78,7 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
 
 export function SimNodeView({ data, selected }: NodeProps<SimFlowNode>) {
   const spec = COMPONENTS[data.kind];
-  const status = data.running ? data.stat?.status ?? 'idle' : 'idle';
+  const status = data.running ? (data.stat?.status ?? 'idle') : 'idle';
   const tags = chips(data.kind, data.config);
   return (
     <div className={`simnode status-${status}${selected ? ' is-selected' : ''}`}>
@@ -89,55 +96,12 @@ export function SimNodeView({ data, selected }: NodeProps<SimFlowNode>) {
       )}
       <div className="simnode-stat">
         <span className="dot" />
-        <span>{data.running ? data.stat?.label ?? 'idle' : 'idle'}</span>
+        <span>{data.running ? (data.stat?.label ?? 'idle') : 'idle'}</span>
       </div>
       <Handle type="source" position={Position.Right} />
     </div>
   );
 }
-
-/* ---------- zones: labelled bands behind the components, by what they do ---------- */
-
-export type ZoneKey = 'entry' | 'guard' | 'context' | 'model' | 'check' | 'output' | 'observe';
-
-export const ZONE_OF: Partial<Record<ComponentType, ZoneKey>> = {
-  auth: 'entry',
-  user_limits: 'entry',
-  stt: 'entry',
-  pii_redactor: 'guard',
-  input_guard: 'guard',
-  content_sanitizer: 'guard',
-  semantic_cache: 'context',
-  memory: 'context',
-  embedding: 'context',
-  vector_db: 'context',
-  keyword_search: 'context',
-  reranker: 'context',
-  router: 'model',
-  fallback: 'model',
-  batch_queue: 'model',
-  agent: 'model',
-  agent_team: 'model',
-  llm: 'model',
-  gpu_llm: 'model',
-  validator: 'check',
-  output_guard: 'check',
-  action_approval: 'check',
-  tts: 'output',
-  eval_harness: 'observe',
-  tracing: 'observe',
-  fairness_eval: 'observe',
-};
-
-export const ZONE_LABEL: Record<ZoneKey, string> = {
-  entry: 'Entry',
-  guard: 'Safety, before the model',
-  context: 'Retrieval and memory',
-  model: 'Model',
-  check: 'Safety, after the model',
-  output: 'Output',
-  observe: 'Measure and observe',
-};
 
 export type ZoneFlowNode = Node<{ zone: ZoneKey; label: string }, 'zone'>;
 

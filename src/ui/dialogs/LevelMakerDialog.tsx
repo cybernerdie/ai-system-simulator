@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {  Check, Copy, X } from 'lucide-react';
+import { Check, Copy, X } from 'lucide-react';
 import { simulate } from '../../engine/simulate';
 import type { Goal, GoalMetric, TrafficProfile } from '../../engine/types';
 import type { SharedDesign } from '../../share/designLink';
@@ -46,7 +46,14 @@ export function LevelMakerDialog({
   const [rows, setRows] = useState(() =>
     MAKER_METRICS.map(({ k, op, unit }) => {
       const v = solM[k];
-      const suggested = op === '>=' ? Math.floor((v - 0.03) * 100) : unit === '%' ? Math.max(1, Math.ceil((v + 0.01) * 100)) : unit === '$' ? Math.ceil(v * 1.2 * 10) / 10 : Math.ceil((v * 1.2) / 100) * 100;
+      const suggested =
+        op === '>='
+          ? Math.floor((v - 0.03) * 100)
+          : unit === '%'
+            ? Math.max(1, Math.ceil((v + 0.01) * 100))
+            : unit === '$'
+              ? Math.ceil(v * 1.2 * 10) / 10
+              : Math.ceil((v * 1.2) / 100) * 100;
       const on = k === 'accuracy' || k === 'costPer1k' || (k === 'injection' && traffic.adversarialShare > 0) || (k === 'piiLeak' && (traffic.piiShare ?? 0) > 0);
       return { k, op, unit, on, value: suggested };
     }),
@@ -55,7 +62,13 @@ export function LevelMakerDialog({
     scenarioId: 'sandbox',
     nodes: [
       { id: 'users', type: 'users', x: 0, y: 132, config: {} },
-      { id: 'llm', type: 'llm', x: 270, y: 132, config: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false, fineTuned: false, version: 'pinned', temperature: 0.7 } },
+      {
+        id: 'llm',
+        type: 'llm',
+        x: 270,
+        y: 132,
+        config: { size: 'medium', streaming: false, provider: 'A', thinking: 'off', jsonMode: false, promptCache: false, fineTuned: false, version: 'pinned', temperature: 0.7 },
+      },
     ],
     edges: [{ source: 'users', target: 'llm' }],
   };

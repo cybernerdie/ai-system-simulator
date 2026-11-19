@@ -8,7 +8,6 @@
  */
 import { readFlag, readString, writeFlag, writeString } from '../../lib/storage';
 
-
 type Listener = (on: boolean) => void;
 
 let enabled = readFlag('voice', true);
@@ -70,7 +69,22 @@ export function setChosenVoice(name: string) {
 }
 
 /** Names that usually mean a natural-sounding voice, best first. */
-const NATURAL = ['Natural', 'Neural', 'Premium', 'Enhanced', 'Samantha', 'Ava', 'Serena', 'Google UK English Female', 'Google US English', 'Microsoft Aria', 'Microsoft Jenny', 'Daniel', 'Karen', 'Moira'];
+const NATURAL = [
+  'Natural',
+  'Neural',
+  'Premium',
+  'Enhanced',
+  'Samantha',
+  'Ava',
+  'Serena',
+  'Google UK English Female',
+  'Google US English',
+  'Microsoft Aria',
+  'Microsoft Jenny',
+  'Daniel',
+  'Karen',
+  'Moira',
+];
 const score = (v: SpeechSynthesisVoice) => {
   const i = NATURAL.findIndex((n) => v.name.includes(n));
   return i < 0 ? 100 : i;
@@ -101,7 +115,7 @@ function bestVoice(): SpeechSynthesisVoice | undefined {
 export function previewVoice(name?: string) {
   if (typeof speechSynthesis === 'undefined') return;
   stopVoice();
-  const u = new SpeechSynthesisUtterance('Hi! I\'ll guide you through each level. This is how I sound.');
+  const u = new SpeechSynthesisUtterance("Hi! I'll guide you through each level. This is how I sound.");
   const v = listVoices().find((x) => x.name === (name ?? chosen)) ?? bestVoice();
   try {
     if (v) u.voice = v;

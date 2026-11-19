@@ -48,7 +48,7 @@ export const BUG_LEVELS: Scenario[] = [
     title: '27 · The goldfish',
     tagline: '"As I said two minutes ago..."',
     brief:
-      'Your coaching chatbot has long conversations with its users, and the bill is under control. The complaint is that it keeps forgetting things: the user\'s goal, the injury they mentioned, the plan you agreed on ten messages back. They have to repeat themselves constantly.',
+      "Your coaching chatbot has long conversations with its users, and the bill is under control. The complaint is that it keeps forgetting things: the user's goal, the injury they mentioned, the plan you agreed on ten messages back. They have to repeat themselves constantly.",
     traffic: { ...base, rps: 6, easyShare: 0.6, repeatShare: 0.05, chatTurns: 22, recallShare: 0.35 },
     goals: [
       { metric: 'accuracy', op: '>=', value: 0.85 },
@@ -63,7 +63,7 @@ export const BUG_LEVELS: Scenario[] = [
     edges: chain('users', 'mem', 'llm'),
     hint: 'Look at what the model is actually sent with each message. How much of the conversation does it get to see?',
     lesson:
-      'Whatever isn\'t in the prompt doesn\'t exist for the model. A tight window keeps costs flat but drops everything older than a few turns. Rolling summaries keep the gist cheaply, and long-term memory brings back the specific earlier turns a new message needs.',
+      "Whatever isn't in the prompt doesn't exist for the model. A tight window keeps costs flat but drops everything older than a few turns. Rolling summaries keep the gist cheaply, and long-term memory brings back the specific earlier turns a new message needs.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },
@@ -116,7 +116,7 @@ export const BUG_LEVELS: Scenario[] = [
     difficulty: 2,
     skills: ['Debugging', 'Reranking', 'Context'],
     title: '29 · It found it, then threw it away',
-    tagline: 'Recall looks fine. The answers don\'t.',
+    tagline: "Recall looks fine. The answers don't.",
     brief:
       'Your search pipeline has everything: vector search, keyword search and a reranker. The logs show the right document is almost always retrieved. Yet the assistant still says "I couldn\'t find that" or guesses, especially on questions that need two pieces of information.',
     traffic: { ...base, kbShare: 0.85, exactTermShare: 0.5 },
@@ -135,7 +135,7 @@ export const BUG_LEVELS: Scenario[] = [
     edges: [...chain('users', 'emb', 'vdb', 'rr', 'llm'), { source: 'users', target: 'kw' }, { source: 'kw', target: 'rr' }],
     hint: 'Follow one failed request step by step. The right chunk is found. How many chunks actually reach the model?',
     lesson:
-      'A reranker is a filter: it decides what the model gets to read. Keep too few and you throw away the second fact a question needs, or the right chunk when the reranker\'s top pick is wrong. Keep too many and you\'re back to noise and cost. A handful usually works best.',
+      "A reranker is a filter: it decides what the model gets to read. Keep too few and you throw away the second fact a question needs, or the right chunk when the reranker's top pick is wrong. Keep too many and you're back to noise and cost. A handful usually works best.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },

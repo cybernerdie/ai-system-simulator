@@ -188,7 +188,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
           { value: 'plain', label: 'Plain text extraction' },
           { value: 'layout', label: 'Layout-aware (tables, PDFs)' },
         ],
-        help: 'Plain extraction scrambles tables and multi-column PDFs, so answers inside them can\'t be found. Layout-aware parsing keeps structure, at extra ingestion cost.',
+        help: "Plain extraction scrambles tables and multi-column PDFs, so answers inside them can't be found. Layout-aware parsing keeps structure, at extra ingestion cost.",
       },
       {
         key: 'topK',
@@ -248,7 +248,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'AG',
     group: 'Generation',
     color: '#f97316',
-    blurb: 'Lets the model call tools (order lookup, refunds, search, email) in a loop. Each step is another LLM call. Everything a tool returns is text the model reads, so it can carry instructions too.',
+    blurb:
+      'Lets the model call tools (order lookup, refunds, search, email) in a loop. Each step is another LLM call. Everything a tool returns is text the model reads, so it can carry instructions too.',
     defaults: { maxSteps: 20, permissions: 'send' },
     fields: [
       {
@@ -260,7 +261,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
           { value: 'write', label: 'Read and change records' },
           { value: 'send', label: 'Read, change and send externally' },
         ],
-        help: 'What the agent\'s tools are allowed to do. If hidden instructions hijack the agent, this is how much damage they can do. Fewer permissions also means some real tasks can\'t be finished.',
+        help: "What the agent's tools are allowed to do. If hidden instructions hijack the agent, this is how much damage they can do. Fewer permissions also means some real tasks can't be finished.",
       },
       {
         key: 'maxSteps',
@@ -279,7 +280,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'TM',
     group: 'Generation',
     color: '#c2410c',
-    blurb: 'An orchestrator agent splits a big task into parts, hands them to worker agents that run in parallel, then combines their results. Smaller focused contexts and faster finishes, but every agent is more model calls.',
+    blurb:
+      'An orchestrator agent splits a big task into parts, hands them to worker agents that run in parallel, then combines their results. Smaller focused contexts and faster finishes, but every agent is more model calls.',
     defaults: { workers: 3, reviewer: false, maxRounds: 10 },
     fields: [
       {
@@ -325,7 +327,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
           { value: 'A', label: 'Provider A' },
           { value: 'B', label: 'Provider B' },
         ],
-        help: 'Which API company runs this model. Two providers means one outage can\'t take you down.',
+        help: "Which API company runs this model. Two providers means one outage can't take you down.",
       },
       {
         key: 'size',
@@ -428,7 +430,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'EV',
     group: 'Quality',
     color: '#65a30d',
-    blurb: 'Scores answers against known-good answers and the sources, so you can see whether they\'re right. It doesn\'t change any answer. Its numbers are only as good as its test set and its judge.',
+    blurb:
+      "Scores answers against known-good answers and the sources, so you can see whether they're right. It doesn't change any answer. Its numbers are only as good as its test set and its judge.",
     defaults: { sampleRate: 0.05, testSet: 'representative', judge: 'calibrated' },
     fields: [
       {
@@ -469,7 +472,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'GPU',
     group: 'Inference',
     color: '#0d9488',
-    blurb: 'An open-weights model running on GPUs you rent by the hour. No per-token price and no provider rate limit, but you pay for the GPUs whether they\'re busy or idle, and you own the capacity planning.',
+    blurb:
+      "An open-weights model running on GPUs you rent by the hour. No per-token price and no provider rate limit, but you pay for the GPUs whether they're busy or idle, and you own the capacity planning.",
     defaults: { model: 'open-70b', gpus: 4, batch: 8, quant: 'fp16', fineTuned: false, temperature: 0.7 },
     fields: [
       {
@@ -501,7 +505,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
           { value: 'int8', label: 'INT8 (~1.5× faster, tiny quality loss)' },
           { value: 'int4', label: 'INT4 (~2× faster, noticeable loss)' },
         ],
-        help: 'Storing the model\'s numbers with fewer bits makes it smaller and faster, at some cost to accuracy.',
+        help: "Storing the model's numbers with fewer bits makes it smaller and faster, at some cost to accuracy.",
       },
       {
         key: 'fineTuned',
@@ -552,7 +556,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'VAL',
     group: 'Quality',
     color: '#4f46e5',
-    blurb: 'Checks every structured answer against your schema before your code uses it. If it\'s broken, asks the model once more with the error message.',
+    blurb: "Checks every structured answer against your schema before your code uses it. If it's broken, asks the model once more with the error message.",
     defaults: {},
     fields: [],
   },
@@ -562,7 +566,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'BQ',
     group: 'Inference',
     color: '#0891b2',
-    blurb: 'Sends background jobs nobody is waiting on to the provider\'s batch API: about half price, results within hours, and it doesn\'t eat the rate limit your live users need.',
+    blurb:
+      "Sends background jobs nobody is waiting on to the provider's batch API: about half price, results within hours, and it doesn't eat the rate limit your live users need.",
     defaults: {},
     fields: [],
   },
@@ -572,7 +577,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'PII',
     group: 'Safety',
     color: '#be123c',
-    blurb: 'Finds personal data (names, emails, card and health details) and swaps it for placeholders before anything leaves your systems. Puts the real values back in the answer afterwards.',
+    blurb:
+      'Finds personal data (names, emails, card and health details) and swaps it for placeholders before anything leaves your systems. Puts the real values back in the answer afterwards.',
     defaults: {},
     fields: [],
   },
@@ -582,7 +588,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'CS',
     group: 'Safety',
     color: '#9f1239',
-    blurb: 'Treats everything the system reads (retrieved documents, emails, web pages, tool results) as untrusted data. It wraps it clearly as data, strips hidden text and instruction-like passages, and tells the model never to obey it. Catches most planted instructions, not all.',
+    blurb:
+      'Treats everything the system reads (retrieved documents, emails, web pages, tool results) as untrusted data. It wraps it clearly as data, strips hidden text and instruction-like passages, and tells the model never to obey it. Catches most planted instructions, not all.',
     defaults: {},
     fields: [],
   },
@@ -592,7 +599,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'AA',
     group: 'Safety',
     color: '#b91c1c',
-    blurb: 'Every risky tool call (sending, paying, deleting, changing records) is checked before it runs: against a policy, and by a person for anything unusual. Stops hijacked actions, but adds a delay to every risky one.',
+    blurb:
+      'Every risky tool call (sending, paying, deleting, changing records) is checked before it runs: against a policy, and by a person for anything unusual. Stops hijacked actions, but adds a delay to every risky one.',
     defaults: {},
     fields: [],
   },
@@ -602,7 +610,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'STT',
     group: 'Voice',
     color: '#7c3aed',
-    blurb: 'Turns the user\'s voice into text the model can read.',
+    blurb: "Turns the user's voice into text the model can read.",
     defaults: { streaming: false },
     fields: [
       {
@@ -619,7 +627,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'TTS',
     group: 'Voice',
     color: '#9333ea',
-    blurb: 'Turns the model\'s answer into audio.',
+    blurb: "Turns the model's answer into audio.",
     defaults: { streaming: false },
     fields: [
       {
@@ -656,7 +664,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'AUTH',
     group: 'Safety',
     color: '#0f766e',
-    blurb: 'Checks every caller has valid credentials before anything expensive runs. Per-user limits slow down known users; auth keeps out people who shouldn\'t be calling at all.',
+    blurb:
+      "Checks every caller has valid credentials before anything expensive runs. Per-user limits slow down known users; auth keeps out people who shouldn't be calling at all.",
     defaults: {},
     fields: [],
   },
@@ -679,7 +688,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
           { value: 'errors', label: 'Every failure, plus 5% of the rest' },
           { value: 'all', label: 'Every request' },
         ],
-        help: 'Keeping everything is easiest to debug and most expensive to store. Random samples usually miss the rare failure you\'re hunting.',
+        help: "Keeping everything is easiest to debug and most expensive to store. Random samples usually miss the rare failure you're hunting.",
       },
       {
         key: 'capturePrompts',
@@ -695,7 +704,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'FAIR',
     group: 'Quality',
     color: '#be185d',
-    blurb: 'Scores answer quality separately for each group of users, so a gap can\'t hide inside a good average.',
+    blurb: "Scores answer quality separately for each group of users, so a gap can't hide inside a good average.",
     defaults: {},
     fields: [],
   },

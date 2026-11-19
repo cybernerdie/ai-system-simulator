@@ -76,7 +76,13 @@ describe('incident mode', () => {
       { id: 'oj', type: 'output_guard' },
       { id: 'ap', type: 'action_approval' },
     ].map((n) => ({ x: 0, y: 0, ...n }) as ScenarioNode),
-    [...chain('users', 'lim', 'pii', 'ig', 'san', 'sc', 'emb', 'vdb', 'rr', 'ag', 'fb', 'llm', 'oj', 'ap'), { source: 'sc', target: 'kw' }, { source: 'kw', target: 'rr' }, { source: 'fb', target: 'llmb' }, { source: 'llmb', target: 'oj' }],
+    [
+      ...chain('users', 'lim', 'pii', 'ig', 'san', 'sc', 'emb', 'vdb', 'rr', 'ag', 'fb', 'llm', 'oj', 'ap'),
+      { source: 'sc', target: 'kw' },
+      { source: 'kw', target: 'rr' },
+      { source: 'fb', target: 'llmb' },
+      { source: 'llmb', target: 'oj' },
+    ],
   );
   const holds = (g: ReturnType<typeof graph>, kinds: typeof INCIDENT_KINDS) => {
     const m = simulate(g, incidentTraffic(kinds, 0), { seed: 3, samples: 5000 });

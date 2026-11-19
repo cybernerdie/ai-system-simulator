@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import {  Check, ClipboardCheck, Circle, Share2, Star } from 'lucide-react';
-import {  type Lesson } from '../../content/learn';
+import { Check, ClipboardCheck, Circle, Share2, Star } from 'lucide-react';
+import { type Lesson } from '../../content/learn';
 import type { StarResult } from '../../engine/stars';
 import type { Scenario } from '../../engine/levels/scenarios';
 import type { QuizQuestion } from '../../content/quiz';

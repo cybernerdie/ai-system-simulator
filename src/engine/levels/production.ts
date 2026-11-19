@@ -12,7 +12,7 @@ export const PROD_LEVELS: Scenario[] = [
     title: '31 · The key was in the app',
     tagline: 'Per-user limits are on. The bill doubled anyway.',
     brief:
-      'Your mobile app calls the AI endpoint directly, with the key built into the app. Someone pulled it out, and now scripts all over the world use your endpoint as a free AI. They rotate thousands of accounts and addresses, so your per-user limits barely notice. Nearly half your traffic isn\'t your users.',
+      "Your mobile app calls the AI endpoint directly, with the key built into the app. Someone pulled it out, and now scripts all over the world use your endpoint as a free AI. They rotate thousands of accounts and addresses, so your per-user limits barely notice. Nearly half your traffic isn't your users.",
     traffic: { ...base, rps: 30, easyShare: 0.6, repeatShare: 0, unauthShare: 0.45 },
     goals: [
       { metric: 'costPer1k', op: '<=', value: 7 },
@@ -27,7 +27,7 @@ export const PROD_LEVELS: Scenario[] = [
     edges: chain('users', 'lim', 'llm'),
     hint: 'Per-user limits slow down users you know. What stops callers who should never have been let in at all?',
     lesson:
-      'Anything shipped to a user\'s device or browser is public, including keys. Put auth in front of your own endpoint so every call needs valid credentials, keep provider keys on your server, and use per-user limits for the users you do let in. Limits and auth answer different questions: how much, and who.',
+      "Anything shipped to a user's device or browser is public, including keys. Put auth in front of your own endpoint so every call needs valid credentials, keep provider keys on your server, and use per-user limits for the users you do let in. Limits and auth answer different questions: how much, and who.",
     solution: {
       nodes: [
         { id: 'users', type: 'users', x: 0, y: 120 },

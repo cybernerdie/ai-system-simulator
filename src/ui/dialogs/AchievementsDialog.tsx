@@ -1,4 +1,4 @@
-import {  useState } from 'react';
+import { useState } from 'react';
 import { Award, Download, Lock, Trophy, X } from 'lucide-react';
 import { ACHIEVEMENTS, type Progress } from '../../engine/modes/achievements';
 import { loadCertName, saveCertName } from '../../lib/progress';
