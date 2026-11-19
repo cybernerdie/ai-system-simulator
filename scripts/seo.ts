@@ -48,7 +48,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'What topics does AISim cover?',
-    a: 'Retrieval-augmented generation (RAG), chunking and hybrid search, reranking, conversation memory, rate limits and scaling, streaming and latency, caching, model routing, prompt injection and guardrails, evals, self-hosted inference on GPUs, provider outages and failover, multi-agent systems, reasoning budgets, structured outputs, fine-tuning versus RAG, model version drift, privacy and PII, voice pipelines and per-user abuse limits.',
+    a: 'Retrieval-augmented generation (RAG), chunking and hybrid search, reranking, conversation memory, rate limits and scaling, streaming and latency, caching, model routing, prompt injection (direct and indirect) and guardrails, agent permissions, temperature and sampling, evals and LLM-as-judge, self-hosted inference on GPUs, provider outages and failover, multi-agent systems, reasoning budgets, structured outputs, fine-tuning versus RAG, model version drift, privacy and PII, voice pipelines and per-user abuse limits.',
   },
   {
     q: 'When should I fine-tune a model instead of using RAG?',

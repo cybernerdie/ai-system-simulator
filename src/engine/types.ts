@@ -18,6 +18,8 @@ export type ComponentType =
   | 'validator'
   | 'batch_queue'
   | 'pii_redactor'
+  | 'content_sanitizer'
+  | 'action_approval'
   | 'stt'
   | 'tts'
   | 'user_limits';
@@ -90,6 +92,10 @@ export interface TrafficProfile {
   extractShare?: number;
   /** Share of requests that are open-ended writing (descriptions, ideas), where variety matters. */
   creativeShare?: number;
+  /** Share of requests whose content (a retrieved doc, an email, a tool result) hides instructions planted by an attacker. */
+  poisonShare?: number;
+  /** Share of tool requests that end in sending something outside (an email, a message, a payment). */
+  sendShare?: number;
 }
 
 export type Outcome =
@@ -127,7 +133,9 @@ export type Cause =
   | 'model_drift'
   | 'voice_pipeline'
   | 'sampling_noise'
-  | 'too_repetitive';
+  | 'too_repetitive'
+  | 'indirect_injection'
+  | 'no_permission';
 
 export type StepTone = 'ok' | 'bad' | 'warn' | 'neutral';
 
@@ -198,6 +206,10 @@ export interface Metrics {
   bigUncachedPrompt: boolean;
   /** Share of requests with personal data that reached a third-party model unredacted. */
   piiLeak: number;
+  /** Share of real requests where hidden instructions made the system take a harmful action (send, change, leak). */
+  harmfulActions: number;
+  /** Requests whose content carried hidden instructions that the model followed (any impact). */
+  indirectFollowed: number;
   /** What your Eval Harness reports (equals the real value when the evals are trustworthy). */
   measuredAccuracy: number;
   measuredHallucination: number;
@@ -220,6 +232,7 @@ export interface Metrics {
 export type GoalMetric =
   | 'piiLeak'
   | 'evalGap'
+  | 'harmfulActions'
   | 'accuracy'
   | 'hallucination'
   | 'injection'

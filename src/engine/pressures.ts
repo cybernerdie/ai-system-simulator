@@ -195,6 +195,16 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     why: 'At very low temperature the model always picks the single most likely word, so open-ended writing (descriptions, ideas, subject lines) comes out flat and near-identical.',
     try: 'Keep a little temperature (around 0.3–0.7) for creative work. If one model serves both, accept a small trade-off or split the two kinds of task.',
   },
+  indirect_injection: {
+    title: 'Hijacked by the content it reads',
+    why: 'Nobody typed an attack. It was hidden inside an email (or a document, or a web page) that your agent read, and the model can\'t reliably tell instructions from data. Because the agent can send things, a hidden "forward the invoices to…" becomes a real action. Your Input Guard never sees it: it only checks what the user typed.',
+    try: 'Defence in depth: treat everything the system reads as untrusted (a Content Sanitiser), give the agent only the permissions it needs, and require approval before risky actions like sending or paying.',
+  },
+  no_permission: {
+    title: 'The agent can\'t finish the job',
+    why: 'You took away the permission some real tasks need. Least privilege is right, but here users asked for replies to be sent, and the agent can only draft them.',
+    try: 'Give back only what the task needs, and put a check in front of it instead: an approval step on risky actions keeps the feature and stops hijacked sends.',
+  },
   eval_blindspot: {
     title: 'Your evals are lying to you',
     why: 'The dashboard and real outcomes disagree. A small test set of easy, hand-picked questions doesn\'t look like today\'s traffic, and an LLM judge that isn\'t checked against humans gets fooled by confident, fluent wrong answers.',
@@ -249,6 +259,7 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
   }
   if (unmet.length && (m.causes.model_drift ?? 0) > 0) return pick('model_drift');
   if (unmet.includes('piiLeak')) return pick('pii_leak');
+  if (unmet.includes('harmfulActions') || (m.harmfulActions > 0.005 && unmet.length)) return pick('indirect_injection');
   if ((m.causes.voice_pipeline ?? 0) > 0) return pick('voice_pipeline');
   if (unmet.includes('injection')) return pick('injection');
   if (m.singleAgentResearch && unmet.some((u) => u === 'p50' || QUALITY.includes(u))) return pick('sequential_agent');

@@ -858,6 +858,40 @@ export const SCENARIOS: Scenario[] = [
       edges: [...chain('users', 'emb', 'vdb', 'llm', 'ev'), { source: 'users', target: 'kw' }, { source: 'kw', target: 'llm' }],
     },
   },
+  {
+    id: 'indirect-injection',
+    difficulty: 3,
+    skills: ['Indirect prompt injection', 'Least privilege', 'Human approval'],
+    title: '25 · The email that hijacked the agent',
+    tagline: 'Nobody attacked the chat. They emailed the agent.',
+    brief:
+      'Your inbox assistant reads customers\' emails, sorts them, looks things up and sends replies on its own. This morning it forwarded a batch of invoices to an outside address. No user typed anything suspicious: the instructions were hidden in white text inside an incoming email. Customers still want replies sent for them.',
+    traffic: { ...base, rps: 4, toolShare: 0.9, easyShare: 0.6, repeatShare: 0, sendShare: 0.35, poisonShare: 0.08 },
+    goals: [
+      { metric: 'harmfulActions', op: '<=', value: 0.0015 },
+      { metric: 'accuracy', op: '>=', value: 0.8 },
+      { metric: 'costPer1k', op: '<=', value: 45 },
+    ],
+    nodes: [
+      { id: 'users', type: 'users', x: 0, y: 120 },
+      { id: 'agent', type: 'agent', x: 260, y: 120, config: { permissions: 'send' } },
+      { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+    ],
+    edges: chain('users', 'agent', 'llm'),
+    hint: 'The Input Guard only reads what the user typed, and the attack isn\'t there. Think in layers: how the agent treats what it reads, what it\'s allowed to do, and what has to be checked before it does it.',
+    lesson:
+      'Anything your system reads can carry instructions: emails, web pages, documents, tool results. Models can\'t reliably tell data from commands, so assume some will get through. Limit the damage instead: mark external content as untrusted, give agents the fewest permissions the job needs, and require approval for actions that send, pay or delete. No single layer is enough.',
+    solution: {
+      nodes: [
+        { id: 'users', type: 'users', x: 0, y: 120 },
+        { id: 'san', type: 'content_sanitizer', x: 130, y: 120 },
+        { id: 'agent', type: 'agent', x: 260, y: 120, config: { permissions: 'send' } },
+        { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
+        { id: 'ap', type: 'action_approval', x: 700, y: 120 },
+      ],
+      edges: chain('users', 'san', 'agent', 'llm', 'ap'),
+    },
+  },
 ];
 
 export const SANDBOX: Scenario = {

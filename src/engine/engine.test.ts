@@ -52,6 +52,7 @@ describe('scenarios', () => {
       abuse: 'abuse',
       temperature: 'sampling_noise',
       'eval-trust': 'eval_blindspot',
+      'indirect-injection': 'indirect_injection',
     };
     for (const s of SCENARIOS) {
       const m = run(s.nodes, s.edges, s.traffic);
@@ -264,5 +265,18 @@ describe('unmeasurable quality', () => {
     );
     expect(m.answered).toBe(0);
     expect(goalMet(m, { metric: 'hallucination', op: '<=', value: 0.25 })).toBe(false);
+  });
+});
+
+describe('indirect prompt injection', () => {
+  const s = SCENARIOS.find((x) => x.id === 'indirect-injection')!;
+  const node = (id: string, type: string, config: Record<string, unknown> = {}) => ({ id, type, x: 0, y: 0, config }) as never;
+  const chainOf = (...ids: string[]) => ids.slice(1).map((t, i) => ({ source: ids[i], target: t }));
+  it('is not stopped by the input guard, and read-only agents cause no harm but fail sends', () => {
+    const guarded = run([node('u', 'users'), node('g', 'input_guard'), node('a', 'agent'), node('l', 'llm')], chainOf('u', 'g', 'a', 'l'), s.traffic);
+    expect(guarded.harmfulActions).toBeGreaterThan(0.02);
+    const readOnly = run([node('u', 'users'), node('a', 'agent', { permissions: 'read' }), node('l', 'llm')], chainOf('u', 'a', 'l'), s.traffic);
+    expect(readOnly.harmfulActions).toBe(0);
+    expect(readOnly.accuracy).toBeLessThan(0.7);
   });
 });

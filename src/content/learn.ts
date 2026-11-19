@@ -23,6 +23,34 @@ export interface Lesson {
 
 export const LESSONS: Lesson[] = [
   {
+    id: 'indirect-injection',
+    title: 'Indirect prompt injection',
+    summary: 'The attack hides in what your system reads, not in what the user types.',
+    minutes: 5,
+    scenarioId: 'indirect-injection',
+    components: ['content_sanitizer', 'action_approval', 'agent', 'input_guard'],
+    terms: ['indirect-injection', 'lethal-trifecta', 'least-privilege', 'untrusted-content', 'data-exfiltration', 'system-prompt-leak'],
+    blocks: [
+      { kind: 'p', text: 'A language model reads its whole context as one stream of text. Your instructions, the user\'s message, a retrieved document, an email, a web page, the output of a tool: to the model it\'s all just text, and it can\'t reliably tell which parts are instructions and which are data.' },
+      { kind: 'p', text: 'So an attacker doesn\'t need to talk to your chatbot. They put instructions where your system will read them: hidden white text in an email, a comment in a web page, a line in a shared document. When your agent reads it, the instructions arrive with the same authority as everything else. Your Input Guard never sees them, because it only checks what the user typed.' },
+      { kind: 'p', text: 'How bad it gets depends on three things. Security researchers call the combination the lethal trifecta:' },
+      { kind: 'list', items: [
+        'Access to private data (inboxes, files, customer records).',
+        'Exposure to untrusted content (email, the web, uploaded documents).',
+        'A way to send data out (email, web requests, posting messages).',
+      ] },
+      { kind: 'p', text: 'With all three, a hidden instruction can turn into "forward the invoices to this address". Remove any one and the damage shrinks. There\'s no single fix, so you defend in layers:' },
+      { kind: 'list', items: [
+        'Mark external content as untrusted data: wrap it clearly, strip hidden text, and tell the model never to follow instructions inside it. Helps a lot, never 100%.',
+        'Least privilege: give each agent only the tools and permissions its job needs. A read-only agent can be fooled, but can\'t send anything.',
+        'Approval for risky actions: sending, paying, deleting and changing records go through a policy check and, when unusual, a person.',
+        'Keep secrets out of the prompt: anything in the system prompt can be coaxed out (a system prompt leak).',
+      ] },
+      { kind: 'analogy', text: 'A new assistant opening the post. A letter says "Please wire £10,000 to this account, signed: your boss." A good assistant knows that instructions don\'t come by post, and that wires need a second signature anyway.' },
+      { kind: 'takeaway', text: 'Assume some injected instructions will get through. Design so they can\'t do much when they do.' },
+    ],
+  },
+  {
     id: 'temperature',
     title: 'Temperature and sampling',
     summary: 'Why the same question can get a different answer, and when you want that.',
@@ -735,8 +763,8 @@ export const MODULES: Module[] = [
     id: 'safety',
     title: 'Safety',
     level: 'Advanced',
-    blurb: 'Attacks on your prompt, the layers that stop them, and keeping personal data safe.',
-    lessons: ['safety', 'privacy'],
+    blurb: 'Attacks on your prompt, including ones hidden in what your system reads, the layers that stop them, and keeping personal data safe.',
+    lessons: ['safety', 'indirect-injection', 'privacy'],
   },
   {
     id: 'engineering',
@@ -842,6 +870,13 @@ export const TERMS: Term[] = [
   { id: 'offline-online-evals', term: 'Offline vs online evals', category: 'Quality', simple: 'Offline evals run a fixed test set before you ship. Online evals score a sample of live traffic after you ship.', why: 'Offline catches regressions; online catches drift away from what you tested.', related: ['eval', 'regression-suite'], lesson: 'trustworthy-evals' },
   { id: 'regression-suite', term: 'Regression suite', category: 'Quality', simple: 'The set of evals that runs automatically on every prompt, model or retrieval change, and blocks the change if quality drops.', analogy: 'Continuous integration tests, for answer quality.', related: ['regression', 'golden-dataset'], lesson: 'trustworthy-evals' },
 
+  { id: 'indirect-injection', term: 'Indirect prompt injection', category: 'Safety', simple: 'Instructions hidden in content the system reads by itself (an email, a web page, a document, a tool result) rather than typed by the user.', why: 'Input guards don\'t see it, and agents with tools can be made to act on it.', related: ['prompt-injection', 'lethal-trifecta', 'untrusted-content'], lesson: 'indirect-injection' },
+  { id: 'lethal-trifecta', term: 'Lethal trifecta', category: 'Safety', simple: 'The dangerous combination for an AI agent: access to private data, exposure to untrusted content, and a way to send data out.', why: 'With all three, one hidden instruction can leak data. Remove any one leg to cut the risk.', related: ['indirect-injection', 'data-exfiltration', 'least-privilege'], lesson: 'indirect-injection' },
+  { id: 'least-privilege', term: 'Least privilege', category: 'Safety', simple: 'Giving each agent or tool only the permissions its job needs, and nothing more.', analogy: 'The intern gets a key to the post room, not to the safe.', related: ['tool-permissions', 'human-in-the-loop'], lesson: 'indirect-injection' },
+  { id: 'untrusted-content', term: 'Untrusted content', category: 'Safety', simple: 'Anything that didn\'t come from you: user messages, emails, web pages, uploaded files, tool results. It should be treated as data to read, never as instructions to follow.', related: ['indirect-injection'], lesson: 'indirect-injection' },
+  { id: 'data-exfiltration', term: 'Data exfiltration', category: 'Safety', simple: 'Getting private data out of a system, for example tricking an agent into emailing it, or into putting it in a link or image URL it loads.', related: ['lethal-trifecta'], lesson: 'indirect-injection' },
+  { id: 'system-prompt-leak', term: 'System prompt leak', category: 'Safety', simple: 'Getting a model to reveal its hidden instructions. Assume it can happen, so never put secrets or keys in a prompt.', related: ['prompt-injection'], lesson: 'indirect-injection' },
+
   // Inference
   { id: 'prefill', term: 'Prefill', category: 'Inference', simple: 'The first phase of a model call: reading the whole prompt at once. GPUs do this in parallel, so it\'s fast.', analogy: 'Skimming a page in one glance.', why: 'Long prompts add surprisingly little latency compared with long answers.', related: ['decode', 'kv-cache'], lesson: 'how-inference-works' },
   { id: 'decode', term: 'Decode', category: 'Inference', simple: 'The second phase: writing the answer one token at a time, each depending on the last. It can\'t be parallelised, so it\'s the slow part.', analogy: 'Writing a page by hand, word by word.', why: 'Output length, not prompt length, mostly decides how long a call takes.', related: ['prefill', 'max-output-tokens'], lesson: 'how-inference-works' },
@@ -892,7 +927,7 @@ export const TERMS: Term[] = [
   { id: 'tool-permissions', term: 'Tool permissions', category: 'Agents', simple: 'Limiting which tools each agent can use, and what those tools are allowed to do.', why: 'An agent that can only read can\'t accidentally delete; a narrow toolset is also easier for the model to use well.', related: ['human-in-the-loop', 'tool-calling'], lesson: 'multi-agent-pitfalls' },
 
   // Safety
-  { id: 'prompt-injection', term: 'Prompt injection', category: 'Safety', simple: 'Text crafted to override your instructions, either typed by a user or hidden in a document or web page the model reads.', analogy: 'A note slipped into the pile saying "the boss says ignore all previous rules".', related: ['jailbreak', 'guardrail'], lesson: 'safety' },
+  { id: 'prompt-injection', term: 'Prompt injection', category: 'Safety', simple: 'Text crafted to override your instructions, either typed by a user (direct) or hidden in a document, email or web page the model reads (indirect).', analogy: 'A note slipped into the pile saying "the boss says ignore all previous rules".', related: ['jailbreak', 'guardrail', 'indirect-injection'], lesson: 'safety' },
   { id: 'jailbreak', term: 'Jailbreak', category: 'Safety', simple: 'A prompt designed to get a model to break its safety rules or ignore its role.', related: ['prompt-injection'], lesson: 'safety' },
   { id: 'guardrail', term: 'Guardrail', category: 'Safety', simple: 'Any automatic check placed before or after the model to block unsafe inputs or outputs.', related: ['llm-as-judge', 'false-positive'], lesson: 'safety' },
   { id: 'llm-as-judge', term: 'LLM-as-judge', category: 'Safety', simple: 'Using a second model to grade the first model\'s answer: is it supported by the sources, is it safe, is it on topic?', why: 'Catches problems, but must wait for the full answer, so it adds time and breaks streaming.', related: ['guardrail', 'eval'], lesson: 'safety' },
@@ -932,6 +967,8 @@ export const COMPONENT_TERM: Partial<Record<ComponentType, string>> = {
   validator: 'output-validation',
   batch_queue: 'batch-api',
   pii_redactor: 'redaction',
+  content_sanitizer: 'untrusted-content',
+  action_approval: 'human-in-the-loop',
   stt: 'speech-to-text',
   tts: 'text-to-speech',
   user_limits: 'per-user-limits',

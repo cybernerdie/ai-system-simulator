@@ -46,6 +46,10 @@ interface Req {
   task: boolean;
   /** pull exact values out of a document */
   extract: boolean;
+  /** content it reads hides an attacker's instructions */
+  poisoned: boolean;
+  /** the task ends in sending something outside */
+  send: boolean;
   /** open-ended writing */
   creative: boolean;
   pii: boolean;
@@ -81,11 +85,27 @@ interface Trace {
   staleHit?: boolean;
   question: string;
   piiLeak?: boolean;
+  /** hidden instructions in the content were followed */
+  indirect?: boolean;
+  /** ...and they made the system do something harmful (send, change, leak) */
+  harmful?: boolean;
   historyTokens?: number;
   batchTokens?: number;
   qkind: RequestSample['kind'];
   steps: TraceStep[];
 }
+
+const POISONED_TASKS = [
+  'Summarise the new email from accounts@vendor-billing.co',
+  'Triage this morning\'s inbox and flag anything urgent',
+  'What does the PDF attached to "Updated payment details" say?',
+  'Sort the support emails that came in overnight',
+];
+const SEND_TASKS = [
+  'Reply to Maria\'s email about the late delivery',
+  'Send Tom the order status he asked for',
+  'Answer the refund request from Priya and confirm the amount',
+];
 
 const QUESTIONS: Record<RequestSample['kind'], string[]> = {
   extract: [
@@ -164,6 +184,8 @@ export const CAUSE_TEXT: Record<Cause, string> = {
   task_unknown: 'An off-the-shelf model doesn\'t know your labels, format or house style, so it guessed.',
   model_drift: 'The provider updated the model behind "latest", and your prompt no longer works the way it did.',
   sampling_noise: 'Temperature is high, so the model sampled a less likely token and returned a different value than last time.',
+  indirect_injection: 'Content the system read (an email, a document, a tool result) hid instructions, and the model followed them.',
+  no_permission: 'The agent wasn\'t allowed to do what the task needed (send, change records).',
   too_repetitive: 'Temperature is so low that every piece of writing comes out with the same phrasing.',
   voice_pipeline: 'A voice request needs speech-to-text in and text-to-speech out; part of that chain is missing.',
   forgot_context: 'The user referred back to something said earlier, but that part of the conversation was no longer in the prompt.',
@@ -259,6 +281,9 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   const judge = first('output_guard');
   const memory = first('memory');
   const redactor = first('pii_redactor');
+  const sanitizer = first('content_sanitizer');
+  const approval = first('action_approval');
+  const perms = agent ? String(agent.config.permissions ?? 'send') : 'send';
   const stt = first('stt');
   const tts = first('tts');
   const limits = first('user_limits');
@@ -359,6 +384,8 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
       structured: false,
       task: false,
       extract: false,
+      poisoned: false,
+      send: false,
       creative: false,
       pii: false,
       abuser: false,
@@ -400,6 +427,9 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
         req.kb = req.exact = req.tool = false;
       }
     }
+    if ((traffic.sendShare ?? 0) > 0 && req.tool) req.send = rng() < traffic.sendShare!;
+    // indirect injection: the attack sits in content the system reads, not in what the user typed
+    if ((traffic.poisonShare ?? 0) > 0 && !req.adversarial && (req.kb || req.tool)) req.poisoned = rng() < traffic.poisonShare!;
     if ((traffic.piiShare ?? 0) > 0 && !req.adversarial) req.pii = rng() < traffic.piiShare!;
     if ((traffic.abuseShare ?? 0) > 0 && !req.adversarial && rng() < traffic.abuseShare!) {
       req.abuser = true;
@@ -437,7 +467,15 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
             : req.kb
               ? 'knowledge'
               : 'general';
-    const qs = QUESTIONS[qkind];
+    // inbox-style wording when the scenario is about email the agent reads and sends
+    const qs =
+      (traffic.poisonShare ?? 0) > 0 && req.tool
+        ? req.poisoned
+          ? POISONED_TASKS
+          : req.send
+            ? SEND_TASKS
+            : QUESTIONS[qkind]
+        : QUESTIONS[qkind];
     const t: Trace = {
       req,
       outcome: 'correct',
@@ -943,6 +981,59 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     }
     if (t.parseMiss && t.cause === 'retrieval_miss') t.cause = 'parse_miss';
 
+    // Tool permissions: least privilege means some real tasks can't be finished by the agent
+    if (agent && req.send && toolOk && perms !== 'send' && t.outcome === 'correct') {
+      t.outcome = 'declined';
+      t.cause = 'no_permission';
+      step(agent, perms === 'read' ? 'Could only read: drafted the reply but couldn\'t send it' : 'Not allowed to send externally: left a draft for the user', 'warn');
+    }
+
+    // Indirect prompt injection: instructions hidden in a document, an email or a tool result
+    const readsContent = (req.kb && retrievalOn) || (req.tool && (!!agent || !!team));
+    if (req.poisoned && readsContent && t.outcome !== 'declined') {
+      if (sanitizer) touch(sanitizer, 20, 0.00002);
+      if (sanitizer && rng() < 0.85) {
+        step(sanitizer, 'Marked the email as untrusted data and stripped a hidden "ignore your instructions…" block', 'ok');
+      } else {
+        if (sanitizer) step(sanitizer, 'Missed instructions hidden in white-on-white text', 'bad');
+        // models can't reliably tell data from instructions; indirect attacks also skip the input guard entirely
+        const followed = rng() < Math.min(0.85, 0.35 + m.injectable);
+        if (followed) {
+          t.indirect = true;
+          const canAct = req.tool && (!!agent || !!team) && perms !== 'read';
+          if (canAct) {
+            if (approval && rng() < 0.95) {
+              step(approval, perms === 'send' ? 'Held a send to an unknown outside address for review: rejected' : 'Held an unexpected record change for review: rejected', 'ok', 300);
+              t.latency += 300;
+            } else {
+              t.harmful = true;
+              t.outcome = 'injected';
+              t.cause = 'indirect_injection';
+              step(
+                agent ?? llm,
+                perms === 'send' ? 'Followed instructions hidden in an email: forwarded the last 10 invoices to an outside address' : 'Followed hidden instructions: changed the customer\'s bank details on file',
+                'bad',
+              );
+            }
+          } else {
+            // read-only: the worst it can do is say what the attacker wants
+            t.outcome = 'injected';
+            t.cause = 'indirect_injection';
+            step(agent ?? llm, 'Followed instructions hidden in the content: answered with the attacker\'s message', 'bad');
+          }
+        }
+      }
+    } else if (sanitizer && readsContent) touch(sanitizer, 20, 0.00002);
+
+    // Every send waits for the approval check
+    if (approval && req.send && agent && perms === 'send') {
+      touch(approval, 0, 0.0002);
+      if (t.outcome === 'correct') {
+        t.latency += 900;
+        step(approval, 'Policy check on the outgoing email: approved', 'neutral', 900);
+      }
+    }
+
     // Temperature: sampling picks a less likely token now and then
     if (t.outcome === 'correct' && req.extract && rng() < samplingNoise(m.temperature, llm.config.size as string | undefined)) {
       t.outcome = 'hallucinated';
@@ -1078,6 +1169,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   }
   const isError = (t: Trace) => t.outcome === 'rate_limited' || t.outcome === 'overflow' || t.outcome === 'failed';
   const legit = traces.filter((t) => !t.req.adversarial && !t.req.abuser && !isError(t));
+  const realReqs = traces.filter((t) => !t.req.adversarial && !t.req.abuser);
   const adv = traces.filter((t) => t.req.adversarial && !isError(t));
   const kbT = traces.filter((t) => t.req.kb && t.recallHit !== undefined);
   // What the Eval Harness reports. It only sees its test set, and its judge has blind spots.
@@ -1218,6 +1310,8 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     teamResearch: (traffic.complexShare ?? 0) > 0 && !!team,
     offlineInRealtime: (traffic.batchShare ?? 0) > 0 && !batchQ,
     piiLeak: piiReqs.length ? piiReqs.filter((t) => t.piiLeak).length / piiReqs.length : 0,
+    harmfulActions: realReqs.length ? realReqs.filter((t) => t.harmful).length / realReqs.length : 0,
+    indirectFollowed: realReqs.length ? realReqs.filter((t) => t.indirect).length / realReqs.length : 0,
     abuseUnchecked: (traffic.abuseShare ?? 0) > 0 && !limits,
     noModel: !users || !llms.length,
     answered: legit.length,
@@ -1258,7 +1352,7 @@ function labelOf(n: SimNode) {
   const names: Record<ComponentType, string> = {
     users: 'Users', input_guard: 'Input Guardrail', semantic_cache: 'Semantic Cache', router: 'Model Router',
     embedding: 'Embedding Model', vector_db: 'Vector DB', keyword_search: 'Keyword Search', reranker: 'Reranker',
-    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory', eval_harness: 'Eval Harness', gpu_llm: 'Self-hosted Model', fallback: 'Retry & Fallback', agent_team: 'Agent Team', validator: 'Output Validator', batch_queue: 'Batch Queue', pii_redactor: 'PII Redactor', stt: 'Speech-to-Text', tts: 'Text-to-Speech', user_limits: 'Per-user Limits',
+    agent: 'Agent Loop', llm: 'LLM', output_guard: 'Output Judge', memory: 'Conversation Memory', eval_harness: 'Eval Harness', gpu_llm: 'Self-hosted Model', fallback: 'Retry & Fallback', agent_team: 'Agent Team', validator: 'Output Validator', batch_queue: 'Batch Queue', pii_redactor: 'PII Redactor', content_sanitizer: 'Content Sanitiser', action_approval: 'Action Approval', stt: 'Speech-to-Text', tts: 'Text-to-Speech', user_limits: 'Per-user Limits',
   };
   return names[n.type];
 }

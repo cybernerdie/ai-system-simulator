@@ -41,7 +41,7 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
     case 'reranker':
       return [`keep ${config.keep}`];
     case 'agent':
-      return [`≤ ${config.maxSteps} steps`];
+      return [`≤ ${config.maxSteps} steps`, { read: 'read only', write: 'can change records', send: 'can send' }[String(config.permissions ?? 'send')] ?? ''];
     case 'semantic_cache':
       return [`≥ ${Number(config.threshold).toFixed(2)} sim`];
     case 'memory':

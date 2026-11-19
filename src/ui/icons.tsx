@@ -21,8 +21,7 @@ import {
   TextSearch,
   Users,
   Zap,
-  type LucideIcon,
-} from 'lucide-react';
+  type LucideIcon, FileCheck, Hand } from 'lucide-react';
 import { COMPONENTS } from '../engine/components';
 import type { ComponentType } from '../engine/types';
 
@@ -46,6 +45,8 @@ export const ICONS: Record<ComponentType, LucideIcon> = {
   validator: Braces,
   batch_queue: Layers,
   pii_redactor: EyeOff,
+  content_sanitizer: FileCheck,
+  action_approval: Hand,
   stt: Mic,
   tts: Volume2,
   user_limits: Gauge,

@@ -17,6 +17,7 @@ export const usd = (v: number) => `$${v < 10 ? v.toFixed(2) : v.toFixed(0)}`;
 
 export const METRIC_META: Record<GoalMetric, { label: string; fmt: (v: number) => string }> = {
   piiLeak: { label: 'Personal data leaked', fmt: pct },
+  harmfulActions: { label: 'Hijacked actions', fmt: (v) => (v > 0 && v < 0.001 ? '<0.1%' : `${(v * 100).toFixed(1)}%`) },
   evalGap: { label: 'Evals off from reality by', fmt: (v) => `${Math.round(v * 100)} pts` },
   accuracy: { label: 'Accuracy', fmt: pct },
   hallucination: { label: 'Hallucination', fmt: pct },
@@ -115,7 +116,9 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
           series: history.map((h) => h.avgHistoryTokens),
         }
       : { key: 'rec', label: 'Recall', value: m.recall == null ? '—' : pct(m.recall), series: history.map((h) => h.recall ?? 0) },
-    goals.some((g) => g.metric === 'piiLeak')
+    goals.some((g) => g.metric === 'harmfulActions')
+      ? { key: 'harm', label: 'Hijacked', value: METRIC_META.harmfulActions.fmt(m.harmfulActions), series: history.map((h) => h.harmfulActions), metric: 'harmfulActions' as const }
+      : goals.some((g) => g.metric === 'piiLeak')
       ? { key: 'pii', label: 'PII leaked', value: pct(m.piiLeak), series: history.map((h) => h.piiLeak), metric: 'piiLeak' as const }
       : { key: 'inj', label: 'Injection', value: pct(m.injection), series: history.map((h) => h.injection), metric: 'injection' as const },
     { key: 'err', label: 'Errors', value: pct(m.errorRate), series: history.map((h) => h.errorRate), metric: 'errorRate' },
