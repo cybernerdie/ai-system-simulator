@@ -1675,19 +1675,20 @@ body, .topbar, .palette, .side, .canvas, .simnode, .telemetry, .pressure-window 
 /* command palette */
 .cmdk-overlay { align-items: flex-start; padding-top: 12vh; }
 .cmdk { width: min(560px, calc(100vw - 24px)); max-height: 70vh; display: flex; flex-direction: column; background: var(--surface); border-radius: 14px; box-shadow: var(--float); overflow: hidden; animation: rise 0.16s ease-out; }
-.cmdk-search { max-width: none; height: 48px; margin: 0; border-radius: 0; box-shadow: none; border-bottom: 1px solid var(--line); padding: 0 16px; }
+.cmdk-search { flex: 0 0 auto; min-width: 0; max-width: none; height: 52px; margin: 0; border-radius: 0; box-shadow: none; border-bottom: 1px solid var(--line); padding: 0 12px 0 20px; gap: 10px; }
 .cmdk-search:focus-within { box-shadow: none; }
 .cmdk-search input { font-size: 15px; }
-.cmdk-list { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 6px; list-style: none; }
-.cmdk-item { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+.cmdk-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0; padding: 8px; list-style: none; }
+.cmdk-item { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; font-size: 14px; cursor: pointer; }
 .cmdk-item.is-active { background: var(--subtle); }
 .cmdk-item.is-disabled { color: var(--ink-3); cursor: not-allowed; }
 .cmdk-group { font-size: 11.5px; color: var(--ink-3); }
 .cmdk-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cmdk-item em { font-size: 12px; font-style: normal; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
 .cmdk-empty { padding: 16px; font-size: 14px; color: var(--ink-3); }
-.cmdk-foot { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-3); }
-.cmdk-foot kbd, .cmdk-item kbd, .cmdk-search kbd { margin-right: 3px; }
+.cmdk-foot { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 20px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-3); }
+.cmdk-foot kbd { margin-right: 4px; }
+.cmdk-foot kbd + kbd { margin-left: -2px; }
 
 @media (prefers-reduced-motion: reduce) {
   .incident-banner, .ach-toast, .cmdk { animation: none; }

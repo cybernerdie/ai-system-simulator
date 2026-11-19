@@ -1104,11 +1104,13 @@ export default function App() {
   const commands: Command[] = useMemo(() => {
     const add: Command[] = PALETTE_ORDER.filter((t) => t !== 'users').map((t) => {
       const lvl = unlock?.locks.get(t);
-      return { id: `add-${t}`, group: 'Add', label: COMPONENTS[t].name, hint: COMPONENTS[t].short, disabled: lvl ? `Unlocks in level ${lvl}` : false, run: () => addNode(t) };
+      return { id: `add-${t}`, group: 'Add', label: COMPONENTS[t].name, disabled: lvl ? `Unlocks in level ${lvl}` : false, run: () => addNode(t) };
     });
     return [
       { id: 'run', group: 'Run', label: running ? 'Pause the simulation' : 'Run the simulation', keys: 'Space', run: () => setRunning((r) => !r) },
-      ...add,
+      // what you can add right now first, locked ones after
+      ...add.filter((c) => !c.disabled),
+      ...add.filter((c) => c.disabled),
       { id: 'compare', group: 'Design', label: pinHere ? 'Compare with the pinned design' : 'Pin this design to compare later', run: compare },
       { id: 'share', group: 'Design', label: 'Copy a link to this design', run: share },
       ...(scenario.id === SANDBOX.id ? [{ id: 'maker', group: 'Design', label: 'Make a level from this sandbox', run: () => setMakerOpen(true) }] : []),
