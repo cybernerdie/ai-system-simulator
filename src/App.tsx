@@ -5,6 +5,7 @@ import {
   BackgroundVariant,
   Controls,
   MarkerType,
+  NodeChangeset,
   ReactFlow,
   addEdge,
   useEdgesState,
@@ -1386,7 +1387,11 @@ export default function App() {
           edges={viewEdges}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          onNodesChange={onNodesChange}
+          onNodesChange={(changes) => {
+            // zones are drawn from the design, not part of it: their size reports must not feed back into it
+            const real = changes.toArray().filter((c) => !('id' in c) || !c.id.startsWith('zone-'));
+            if (real.length) onNodesChange(new NodeChangeset<SimFlowNode>(real));
+          }}
           onNodesDelete={(deleted) => {
             // keyboard delete: React Flow drops the attached edges; put the pipeline back together
             let es = edgesRef.current.map((e) => ({ source: e.source, target: e.target }));
