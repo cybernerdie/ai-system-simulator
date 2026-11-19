@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, Clock, Lightbulb, Play, Search, Sparkles, X } from 'lucide-react';
-import { LESSON_BY_ID, LESSON_ORDER, MODULES, MODULE_OF, TERMS, TERM_BY_ID, type Lesson, type TermCategory } from '../content/learn';
-import { loadRead, saveRead } from './persist';
-import { SCENARIOS } from '../engine/scenarios';
-import { KindIcon } from './icons';
-import { COMPONENTS } from '../engine/components';
+import { LESSON_BY_ID, LESSON_ORDER, MODULES, MODULE_OF, TERMS, TERM_BY_ID, type Lesson, type TermCategory } from '../../content/learn';
+import { loadRead, saveRead } from '../../lib/progress';
+import { SCENARIOS } from '../../engine/levels/scenarios';
+import { KindIcon } from '../canvas/icons';
+import { COMPONENTS } from '../../engine/components';
 
 // Phones: don't pop the keyboard up the moment a sheet opens
 const TOUCH = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;

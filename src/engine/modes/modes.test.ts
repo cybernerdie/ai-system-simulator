@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { simulate } from './simulate';
-import { goalMet } from './pressures';
-import { SCENARIOS, chain, withDefaults, type ScenarioNode } from './scenarios';
-import { BOSSES } from './bosses';
+import { simulate } from '../simulate';
+import { goalMet } from '../pressures';
+import { SCENARIOS, chain, withDefaults, type ScenarioNode } from '../levels/scenarios';
+import { BOSSES } from '../levels/bosses';
 import { dailyNumber, dailyScenario, dailyShareText, dailyStreak, todayKey } from './daily';
 import { INCIDENT_KINDS, INCIDENT_SCENARIO, incidentGoals, incidentTick, incidentTraffic, newIncidentRun } from './incident';
-import { findBuiltIn, levelTag, nextAfter, unlockCap } from './catalog';
+import { findBuiltIn, levelTag, nextAfter, unlockCap } from '../catalog';
 import { ACHIEVEMENTS, newlyEarned, type Progress } from './achievements';
-import { QUIZ } from '../content/quiz';
-import type { SimEdge } from './types';
+import { QUIZ } from '../../content/quiz';
+import type { SimEdge } from '../types';
 
 const graph = (nodes: ScenarioNode[], edges: SimEdge[]) => ({
   nodes: nodes.map(withDefaults).map((n) => ({ id: n.id, type: n.type, config: { ...n.config! } })),
@@ -167,7 +167,7 @@ describe('quiz and achievements', () => {
 
 describe('design review', () => {
   it('grades a broken start low and the reference design high, with notes that point at real components', async () => {
-    const { reviewDesign } = await import('./review');
+    const { reviewDesign } = await import('../review');
     for (const id of ['docs-bot', 'bug-reranker', 'boss-launch']) {
       const s = [...SCENARIOS, ...BOSSES].find((x) => x.id === id)!;
       const start = reviewDesign(s, graph(s.nodes, s.edges), s.traffic, s.goals);
@@ -180,7 +180,7 @@ describe('design review', () => {
     }
   });
   it('spots a component that does nothing', async () => {
-    const { reviewDesign } = await import('./review');
+    const { reviewDesign } = await import('../review');
     const s = SCENARIOS[0];
     const nodes = [...s.solution.nodes, { id: 'oj', type: 'pii_redactor' as const, x: 0, y: 0 }];
     const edges = [{ source: 'users', target: 'oj' }, { source: 'oj', target: 'emb' }, ...s.solution.edges.filter((e) => e.source !== 'users')];

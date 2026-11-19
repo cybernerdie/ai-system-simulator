@@ -7,6 +7,7 @@
  * The PostHog project key comes from VITE_POSTHOG_KEY (set in Vercel). Without it, no events are sent.
  */
 import { inject } from '@vercel/analytics';
+import { readString, writeString } from './storage';
 
 type Props = Record<string, string | number | boolean>;
 
@@ -15,16 +16,12 @@ const HOST = (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ?? 'https
 let enabled = false;
 
 function anonId(): string {
-  try {
-    let id = localStorage.getItem('aisim.anon.v1');
-    if (!id) {
-      id = crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-      localStorage.setItem('aisim.anon.v1', id);
-    }
-    return id;
-  } catch {
-    return 'anonymous';
+  let id = readString('analyticsId');
+  if (!id) {
+    id = crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    writeString('analyticsId', id);
   }
+  return id;
 }
 
 function send(event: string, props?: Props) {

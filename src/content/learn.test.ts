@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { COMPONENT_TERM, LESSONS, LESSON_BY_ID, LESSON_ORDER, MODULES, TERMS, TERM_BY_ID } from './learn';
-import { SCENARIOS } from '../engine/scenarios';
+import { SCENARIOS } from '../engine/levels/scenarios';
 
 describe('learn content', () => {
   it('has unique ids', () => {

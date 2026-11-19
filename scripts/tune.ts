@@ -1,5 +1,5 @@
 import { simulate } from '../src/engine/simulate';
-import { SCENARIOS, withDefaults } from '../src/engine/scenarios';
+import { SCENARIOS, withDefaults } from '../src/engine/levels/scenarios';
 import { bindingPressure, goalMet } from '../src/engine/pressures';
 const fmt = (m: any) => `acc ${(m.accuracy*100).toFixed(0)} hal ${(m.hallucination*100).toFixed(0)} inj ${(m.injection*100).toFixed(0)} err ${(m.errorRate*100).toFixed(1)} $${m.costPer1k.toFixed(2)} p50 ${m.p50.toFixed(0)} ttft ${m.ttftP50.toFixed(0)} rec ${m.recall==null?'-':(m.recall*100).toFixed(0)}`;
 for (const s of SCENARIOS) {

@@ -2,7 +2,7 @@
  * Chapter 6, "Find the bug": complete, sensible-looking systems with one wrong setting.
  * Nothing needs adding. The skill is reading the symptoms and finding the culprit.
  */
-import { base, chain, type Scenario } from './scenarioKit';
+import { base, chain, type Scenario } from './kit';
 
 export const BUG_LEVELS: Scenario[] = [
   {

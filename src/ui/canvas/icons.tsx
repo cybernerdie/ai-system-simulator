@@ -22,10 +22,10 @@ import {
   Users,
   Zap,
   type LucideIcon, FileCheck, Hand, KeyRound, Footprints, Scale } from 'lucide-react';
-import { COMPONENTS } from '../engine/components';
-import type { ComponentType } from '../engine/types';
+import { COMPONENTS } from '../../engine/components';
+import type { ComponentType } from '../../engine/types';
 
-export const ICONS: Record<ComponentType, LucideIcon> = {
+const ICONS: Record<ComponentType, LucideIcon> = {
   users: Users,
   input_guard: ShieldCheck,
   semantic_cache: Zap,

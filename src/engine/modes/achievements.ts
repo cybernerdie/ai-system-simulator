@@ -2,8 +2,8 @@
  * Achievements: small goals beyond clearing levels. Most are checked against saved progress;
  * a few depend on how a single win went (cheap, lean), and are recorded as flags when that happens.
  */
-import { SCENARIOS } from './scenarios';
-import { BOSSES } from './bosses';
+import { SCENARIOS } from '../levels/scenarios';
+import { BOSSES } from '../levels/bosses';
 import type { DailyResult } from './daily';
 import type { IncidentBest } from './incident';
 
@@ -55,48 +55,6 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'compare', title: 'Side by side', text: 'Compare two designs.', done: (p) => p.flags.has('compared') },
   { id: 'maker', title: 'Level designer', text: 'Make a level and share it.', done: (p) => p.flags.has('made-level') },
 ];
-
-/* ---------- storage ---------- */
-
-const KEY = 'aisim.achievements.v1';
-const FLAGS = 'aisim.flags.v1';
-
-export function loadUnlocked(): Record<string, number> {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-    return v && typeof v === 'object' ? v : {};
-  } catch {
-    return {};
-  }
-}
-
-export function saveUnlocked(u: Record<string, number>) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(u));
-  } catch {
-    /* ignore */
-  }
-}
-
-export function loadFlags(): Set<string> {
-  try {
-    const v = JSON.parse(localStorage.getItem(FLAGS) ?? '[]');
-    return new Set(Array.isArray(v) ? v : []);
-  } catch {
-    return new Set();
-  }
-}
-
-export function addFlag(f: string): Set<string> {
-  const s = loadFlags();
-  s.add(f);
-  try {
-    localStorage.setItem(FLAGS, JSON.stringify([...s]));
-  } catch {
-    /* ignore */
-  }
-  return s;
-}
 
 /** Achievements newly satisfied by this progress, in list order. */
 export function newlyEarned(p: Progress, unlocked: Record<string, number>): Achievement[] {

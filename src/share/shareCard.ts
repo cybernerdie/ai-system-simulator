@@ -2,9 +2,9 @@
  * A shareable result card (1200×630 PNG, the size LinkedIn and X preview well),
  * drawn in the browser with canvas: no server, no image service.
  */
-import type { Scenario } from '../engine/scenarios';
+import type { Scenario } from '../engine/levels/scenarios';
 import type { GoalMetric, Metrics } from '../engine/types';
-import { METRIC_META } from './Panels';
+import { METRIC_META } from '../ui/panels/Panels';
 
 export interface Improvement {
   label: string;

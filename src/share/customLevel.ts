@@ -2,11 +2,13 @@
  * Levels made by players in the sandbox, shared as a link (#l=...).
  * A level carries its story, traffic, goals, a starting design and a verified solution.
  */
-import { decodeDesign, encodeDesign, type SharedDesign } from './persist';
+import { decodeDesign, encodeDesign, type SharedDesign } from './designLink';
+import { fromBase64Url, toBase64Url } from '../lib/base64url';
+import { recallLevelCode } from '../lib/progress';
 import { simulate } from '../engine/simulate';
 import { goalMet } from '../engine/pressures';
-import { stripScenarioNumbers } from '../engine/scenarioKit';
-import type { Scenario, ScenarioNode } from '../engine/scenarioKit';
+import { stripScenarioNumbers } from '../engine/levels/kit';
+import type { Scenario, ScenarioNode } from '../engine/levels/kit';
 import type { Goal, GoalMetric, SimGraph, TrafficProfile } from '../engine/types';
 
 export interface CustomLevel {
@@ -18,19 +20,13 @@ export interface CustomLevel {
   solution: SharedDesign;
 }
 
-const toB64Url = (s: string) =>
-  btoa(String.fromCharCode(...new TextEncoder().encode(s)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-const fromB64Url = (s: string) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)));
 
 const METRICS: GoalMetric[] = ['accuracy', 'hallucination', 'injection', 'errorRate', 'costPer1k', 'p50', 'ttftP50', 'piiLeak', 'evalGap', 'harmfulActions'];
 const NUM_KEYS = ['rps', 'kbShare', 'exactTermShare', 'toolShare', 'adversarialShare', 'easyShare', 'repeatShare', 'chatTurns', 'recallShare', 'complexShare', 'structuredShare', 'staleShare', 'tableShare', 'systemPromptTokens', 'batchShare', 'taskShare', 'piiShare', 'abuseShare', 'extractShare', 'creativeShare', 'poisonShare', 'sendShare'] as const;
 const BOOL_KEYS = ['qualityHidden', 'driftLatest', 'voice'] as const;
 
 export function encodeLevel(l: CustomLevel): string {
-  return toB64Url(
+  return toBase64Url(
     JSON.stringify({ v: 1, t: l.title, b: l.brief, tr: l.traffic, g: l.goals.map((g) => [g.metric, g.op, g.value]), s: encodeDesign(l.start), x: encodeDesign(l.solution) }),
   );
 }
@@ -39,7 +35,7 @@ const clamp = (v: unknown, lo: number, hi: number, d: number) => (typeof v === '
 
 export function decodeLevel(code: string): CustomLevel | null {
   try {
-    const p = JSON.parse(fromB64Url(code));
+    const p = JSON.parse(fromBase64Url(code));
     if (p?.v !== 1) return null;
     const start = decodeDesign(String(p.s));
     const solution = decodeDesign(String(p.x));
@@ -100,28 +96,11 @@ export function customScenario(code: string, l: CustomLevel): Scenario {
   };
 }
 
-/* ---------- levels you've opened or made, so they survive a reload ---------- */
-
-const KEY = 'aisim.customLevels.v1';
-
-export function rememberLevel(id: string, code: string) {
-  try {
-    const all = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-    all[id] = code;
-    localStorage.setItem(KEY, JSON.stringify(all));
-  } catch {
-    /* ignore */
-  }
-}
-
+/** A player-made level saved earlier by id (see lib/progress), rebuilt for play. */
 export function recallLevel(id: string): Scenario | null {
-  try {
-    const code = JSON.parse(localStorage.getItem(KEY) ?? '{}')[id];
-    const l = typeof code === 'string' ? decodeLevel(code) : null;
-    return l ? customScenario(code, l) : null;
-  } catch {
-    return null;
-  }
+  const code = recallLevelCode(id);
+  const l = code ? decodeLevel(code) : null;
+  return l && code ? customScenario(code, l) : null;
 }
 
 export function readHashLevel(): { code: string; level: CustomLevel } | null {

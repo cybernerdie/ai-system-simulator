@@ -2,14 +2,14 @@
  * Finding any level by id, and how to label it: numbered levels, bosses, the daily, incident mode, the sandbox.
  * (Levels made by players are looked up by the app, which owns their storage.)
  */
-import { SANDBOX, SCENARIOS } from './scenarios';
-import { BOSSES } from './bosses';
-import { dailyScenario, isDailyId } from './daily';
-import { INCIDENT_SCENARIO } from './incident';
+import { SANDBOX, SCENARIOS } from './levels/scenarios';
+import { BOSSES } from './levels/bosses';
+import { dailyScenario, isDailyId } from './modes/daily';
+import { INCIDENT_SCENARIO } from './modes/incident';
 import { CHAPTERS } from '../content/chapters';
-import type { Scenario } from './scenarioKit';
+import type { Scenario } from './levels/kit';
 
-export const BUILT_IN: Scenario[] = [...SCENARIOS, ...BOSSES, SANDBOX, INCIDENT_SCENARIO];
+const BUILT_IN: Scenario[] = [...SCENARIOS, ...BOSSES, SANDBOX, INCIDENT_SCENARIO];
 
 export function findBuiltIn(id: string): Scenario | undefined {
   const s = BUILT_IN.find((x) => x.id === id);

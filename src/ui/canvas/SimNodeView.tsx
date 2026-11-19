@@ -1,6 +1,6 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
-import { COMPONENTS } from '../engine/components';
-import type { ComponentType, NodeConfig, NodeStat } from '../engine/types';
+import { COMPONENTS } from '../../engine/components';
+import type { ComponentType, NodeConfig, NodeStat } from '../../engine/types';
 import { KindIcon } from './icons';
 
 export type SimNodeData = {

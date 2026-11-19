@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, Pause } from 'lucide-react';
-import { CAUSE_TEXT } from '../engine/simulate';
-import type { Outcome, RequestSample } from '../engine/types';
-import { KindIcon } from './icons';
+import { CAUSE_TEXT } from '../../engine/simulate';
+import type { Outcome, RequestSample } from '../../engine/types';
+import { KindIcon } from '../canvas/icons';
 
-export const OUTCOME_META: Record<Outcome | 'unverified', { label: string; tone: 'ok' | 'bad' | 'warn' | 'neutral' }> = {
+const OUTCOME_META: Record<Outcome | 'unverified', { label: string; tone: 'ok' | 'bad' | 'warn' | 'neutral' }> = {
   unverified: { label: 'Unverified', tone: 'neutral' },
   correct: { label: 'Correct', tone: 'ok' },
   blocked: { label: 'Blocked attack', tone: 'ok' },

@@ -10,7 +10,7 @@ import { CAUSE_TEXT, simulate } from './simulate';
 import { PRESSURES, goalMet } from './pressures';
 import { removeAndHeal } from './autowire';
 import { COMPONENTS } from './components';
-import { withDefaults, type Scenario } from './scenarios';
+import { withDefaults, type Scenario } from './levels/scenarios';
 import type { Cause, ComponentType, Goal, GoalMetric, Metrics, SimGraph, SimNode, TrafficProfile } from './types';
 
 /** What a month of this traffic costs: cost per 1k requests × requests in 30 days. */

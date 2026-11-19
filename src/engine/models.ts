@@ -4,13 +4,13 @@ import type { SimNode } from './types';
 /** Where a model runs: provider A, provider B, or your own GPUs. */
 export type Host = 'A' | 'B' | 'self';
 
-export const OPEN_MODELS = {
+const OPEN_MODELS = {
   'open-8b': { label: 'Open 8B', streamTps: 120, accEasy: 0.94, accHard: 0.6, hallucinateWhenUnsure: 0.9, injectable: 0.62, context: 32_000 },
   'open-70b': { label: 'Open 70B', streamTps: 38, accEasy: 0.97, accHard: 0.84, hallucinateWhenUnsure: 0.78, injectable: 0.45, context: 128_000 },
 } as const;
 export type OpenModel = keyof typeof OPEN_MODELS;
 
-export const QUANT = {
+const QUANT = {
   fp16: { label: 'FP16 (full precision)', speed: 1, acc: 1 },
   int8: { label: 'INT8 (half the memory)', speed: 1.5, acc: 0.99 },
   int4: { label: 'INT4 (quarter the memory)', speed: 2.1, acc: 0.95 },
@@ -18,7 +18,7 @@ export const QUANT = {
 export type Quant = keyof typeof QUANT;
 
 /** Rental price of one inference GPU, per hour. */
-export const GPU_HOURLY = 2.4;
+const GPU_HOURLY = 2.4;
 /** Prompt tokens a GPU can prefill per second (reading is much faster than writing). */
 const PREFILL_TPS = 6000;
 
@@ -58,7 +58,7 @@ export interface ModelProfile {
 const TASK_ACC: Record<string, number> = { small: 0.55, medium: 0.7, large: 0.8, 'open-8b': 0.52, 'open-70b': 0.72 };
 const TASK_ACC_TUNED: Record<string, number> = { small: 0.94, medium: 0.95, large: 0.96, 'open-8b': 0.93, 'open-70b': 0.95 };
 
-export const THINKING = {
+const THINKING = {
   off: { label: 'Off', tokens: 0, hardGap: 0, easyGap: 0 },
   low: { label: 'Low budget (~500 tokens)', tokens: 500, hardGap: 0.5, easyGap: 0.3 },
   high: { label: 'High budget (~2,000 tokens)', tokens: 2000, hardGap: 0.7, easyGap: 0.5 },

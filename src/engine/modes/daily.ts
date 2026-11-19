@@ -3,11 +3,11 @@
  * The date seeds which level is remixed and how its traffic changes; goals are then set from what the
  * level's reference solution achieves on that traffic, so every daily is winnable and the starting design isn't.
  */
-import { mulberry32, simulate } from './simulate';
-import { goalMet } from './pressures';
-import { SCENARIOS, withDefaults } from './scenarios';
-import type { Scenario } from './scenarioKit';
-import type { Goal, Metrics, TrafficProfile } from './types';
+import { mulberry32, simulate } from '../simulate';
+import { goalMet } from '../pressures';
+import { SCENARIOS, withDefaults } from '../levels/scenarios';
+import type { Scenario } from '../levels/kit';
+import type { Goal, Metrics, TrafficProfile } from '../types';
 
 /** Daily #1 is this date. */
 const EPOCH = Date.UTC(2026, 10, 19);
@@ -138,27 +138,10 @@ export interface DailyResult {
   parts: number;
 }
 
-const KEY = 'aisim.daily.v1';
-
-export function loadDaily(): Record<string, DailyResult> {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-    return v && typeof v === 'object' ? v : {};
-  } catch {
-    return {};
-  }
-}
-
-export function saveDaily(key: string, r: DailyResult): Record<string, DailyResult> {
-  const all = loadDaily();
-  const prev = all[key];
-  if (!prev || r.stars > prev.stars || (r.stars === prev.stars && r.cost < prev.cost)) all[key] = r;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(all));
-  } catch {
-    /* ignore */
-  }
-  return all;
+/** More stars wins; on equal stars, the cheaper design. */
+export function bestDailyResult(prev: DailyResult | undefined, next: DailyResult): DailyResult {
+  if (!prev) return next;
+  return next.stars > prev.stars || (next.stars === prev.stars && next.cost < prev.cost) ? next : prev;
 }
 
 /** Consecutive days solved, counting back from today (or yesterday, if today isn't done yet). */

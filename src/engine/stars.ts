@@ -3,7 +3,7 @@
  * "Par" comes from the level's reference solution, so every level is fair and 3 stars is always possible.
  */
 import { simulate } from './simulate';
-import { withDefaults, type Scenario } from './scenarios';
+import { withDefaults, type Scenario } from './levels/scenarios';
 import type { Metrics } from './types';
 
 export interface Par {
@@ -15,7 +15,7 @@ export interface Par {
 
 const cache = new Map<string, Par>();
 
-export function parFor(s: Scenario): Par {
+function parFor(s: Scenario): Par {
   const hit = cache.get(s.id);
   if (hit) return hit;
   const graph = {

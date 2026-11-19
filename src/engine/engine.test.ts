@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { activeNodes, simulate } from './simulate';
-import { SCENARIOS, withDefaults, type ScenarioNode } from './scenarios';
-import { BOSSES } from './bosses';
+import { SCENARIOS, withDefaults, type ScenarioNode } from './levels/scenarios';
+import { BOSSES } from './levels/bosses';
 
 const PLAYABLE = [...SCENARIOS, ...BOSSES];
 import { bindingPressure, goalMet } from './pressures';

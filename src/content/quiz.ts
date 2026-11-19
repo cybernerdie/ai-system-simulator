@@ -252,27 +252,3 @@ export const QUIZ: Record<string, QuizQuestion> = {
     why: 'Averages blur three bugs into one bad number. Single requests show which component each failure came from.',
   },
 };
-
-/* ---------- answers (first try only counts) ---------- */
-
-const KEY = 'aisim.quiz.v1';
-
-export function loadQuiz(): Record<string, boolean> {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-    return v && typeof v === 'object' ? v : {};
-  } catch {
-    return {};
-  }
-}
-
-export function saveQuiz(id: string, correct: boolean): Record<string, boolean> {
-  const all = loadQuiz();
-  if (!(id in all)) all[id] = correct;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(all));
-  } catch {
-    /* ignore */
-  }
-  return all;
-}

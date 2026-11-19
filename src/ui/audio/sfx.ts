@@ -2,29 +2,20 @@
  * Small game sounds, synthesised with Web Audio (no files to download).
  * Off by default; the player turns them on in the top bar or on the welcome screen.
  */
+import { readFlag, writeFlag } from '../../lib/storage';
+
 
 export type Sfx = 'add' | 'run' | 'pause' | 'problem' | 'goal' | 'win' | 'star' | 'step';
 
-const KEY = 'aisim.sfx.v1';
 type Listener = (on: boolean) => void;
-let enabled = (() => {
-  try {
-    return localStorage.getItem(KEY) === 'on';
-  } catch {
-    return false;
-  }
-})();
+let enabled = readFlag('sfx', false);
 const listeners = new Set<Listener>();
 let ctx: AudioContext | null = null;
 
 export const sfxOn = () => enabled;
 export function setSfx(on: boolean) {
   enabled = on;
-  try {
-    localStorage.setItem(KEY, on ? 'on' : 'off');
-  } catch {
-    /* ignore */
-  }
+  writeFlag('sfx', on);
   listeners.forEach((l) => l(on));
   if (on) play('step');
 }

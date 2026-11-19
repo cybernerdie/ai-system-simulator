@@ -14,11 +14,11 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Plugin } from 'vite';
 import { LESSONS, MODULES, TERMS, type Lesson } from '../src/content/learn';
-import { SCENARIOS, type Scenario } from '../src/engine/scenarios';
-import { BOSSES } from '../src/engine/bosses';
+import { SCENARIOS, type Scenario } from '../src/engine/levels/scenarios';
+import { BOSSES } from '../src/engine/levels/bosses';
 import { CHAPTERS } from '../src/content/chapters';
 
-export const SITE = 'https://ai-system-simulator.vercel.app';
+const SITE = 'https://ai-system-simulator.vercel.app';
 const REPO = 'https://github.com/cybernerdie/ai-system-simulator';
 const NAME = 'AISim';
 const TITLE = 'AISim: AI System Design Simulator. Learn AI engineering by breaking things';

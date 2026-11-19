@@ -14,39 +14,43 @@ import {
   type Connection,
 } from '@xyflow/react';
 import { BookOpen, Check, CircleQuestionMark, Code, Command as CommandIcon, ExternalLink, GitCompareArrows, Link2, Moon, Music2, Pause, PencilRuler, Play, RotateCcw, Sun, Volume2, VolumeX } from 'lucide-react';
-import { COMPONENTS, PALETTE_ORDER } from './engine/components';
-import { simulate } from './engine/simulate';
-import { PATTERNS, TICK_SECONDS, trafficMultiplier, type Pattern } from './engine/patterns';
-import { bindingPressure, goalMet, type Pressure } from './engine/pressures';
-import { SANDBOX, SCENARIOS, withDefaults, type Scenario } from './engine/scenarios';
-import { BOSSES } from './engine/bosses';
-import { findBuiltIn, levelNumber, levelTag, nextAfter, unlockCap } from './engine/catalog';
-import { dailyNumber, dailyShareText, dailyStreak, loadDaily, saveDaily, todayKey, type DailyResult } from './engine/daily';
-import { INCIDENTS, INCIDENT_SCENARIO, formatDuration, incidentGoals, incidentTick, incidentTraffic, loadIncidentBest, newIncidentRun, saveIncidentBest, type IncidentState } from './engine/incident';
-import { ACHIEVEMENTS, addFlag, loadFlags, loadUnlocked, newlyEarned, saveUnlocked, type Progress } from './engine/achievements';
-import { QUIZ, loadQuiz, saveQuiz } from './content/quiz';
-import { customScenario, readHashLevel, recallLevel, rememberLevel, type CustomLevel } from './ui/customLevel';
-import { AchievementToast, AchievementsDialog, ReviewDialog, CommandPalette, CompareDialog, IncidentBanner, IncidentHud, IncidentOverDialog, LevelMakerDialog, ModeCards, type Command } from './ui/Modes';
-import { track } from './ui/track';
-import type { ComponentType, ConfigValue, Metrics, SimGraph, TrafficProfile } from './engine/types';
-import { SimNodeView, ZONE_LABEL, ZONE_OF, ZoneView, type SimFlowNode, type ZoneFlowNode, type ZoneKey } from './ui/SimNodeView';
-import type { Shown } from './ui/Requests';
-import { FlowEdge, type FlowEdgeType } from './ui/FlowEdge';
-import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
-import { LearnHub, firstUnreadLesson, type HubView } from './ui/LearnHub';
-import { loadStars, loadUnlockAll, saveStars, saveUnlockAll, clearDesign, encodeDesign, introSeen, loadCleared, loadDesign, loadLastScenario, loadRead, markIntroSeen, readHashDesign, saveCleared, saveDesign, saveLastScenario, savedTheme, saveTheme, systemTheme, type SharedDesign, type Theme } from './ui/persist';
-import { Tour, type TourStep } from './ui/Tour';
-import { autoWire, removeAndHeal, tidyLayout } from './engine/autowire';
-import { scoreStars, type StarResult } from './engine/stars';
-import { unlockLevels } from './engine/unlocks';
-import { reviewDesign, type Review } from './engine/review';
-import { COACH, hintLine, nudgeLine, pressureLine, showMeLine, winLine } from './content/guide';
-import { Complaints, Confetti, GuideCard, useVoice, VoiceMenu, WelcomeScreen } from './ui/Guide';
-import { speak, stopVoice } from './ui/voice';
-import { onSfxChange, play, setSfx, sfxOn } from './ui/sfx';
-import { drawCard, drawCertificate, improvements, shareText } from './ui/shareCard';
-import { LESSONS, TERMS } from './content/learn';
-import { Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from './ui/Panels';
+import { COMPONENTS, PALETTE_ORDER } from '../engine/components';
+import { simulate } from '../engine/simulate';
+import { PATTERNS, TICK_SECONDS, trafficMultiplier, type Pattern } from '../engine/patterns';
+import { bindingPressure, goalMet, type Pressure } from '../engine/pressures';
+import { SANDBOX, SCENARIOS, withDefaults, type Scenario } from '../engine/levels/scenarios';
+import { BOSSES } from '../engine/levels/bosses';
+import { findBuiltIn, levelNumber, levelTag, nextAfter, unlockCap } from '../engine/catalog';
+import { dailyNumber, dailyShareText, dailyStreak, todayKey, type DailyResult } from '../engine/modes/daily';
+import { INCIDENTS, INCIDENT_SCENARIO, formatDuration, incidentGoals, incidentTick, incidentTraffic, newIncidentRun, type IncidentState } from '../engine/modes/incident';
+import { ACHIEVEMENTS, newlyEarned, type Progress } from '../engine/modes/achievements';
+import { QUIZ } from '../content/quiz';
+import { customScenario, readHashLevel, recallLevel, type CustomLevel } from '../share/customLevel';
+import { AchievementToast, AchievementsDialog, ReviewDialog, CommandPalette, CompareDialog, IncidentBanner, IncidentHud, IncidentOverDialog, LevelMakerDialog, ModeCards, type Command } from '../ui/dialogs/Modes';
+import { track } from '../lib/analytics';
+import type { ComponentType, ConfigValue, Metrics, SimGraph, TrafficProfile } from '../engine/types';
+import { SimNodeView, ZONE_LABEL, ZONE_OF, ZoneView, type SimFlowNode, type ZoneFlowNode, type ZoneKey } from '../ui/canvas/SimNodeView';
+import type { Shown } from '../ui/panels/Requests';
+import { FlowEdge, type FlowEdgeType } from '../ui/canvas/FlowEdge';
+import { ScenarioPicker, ScenarioTrigger } from '../ui/dialogs/ScenarioPicker';
+import { LearnHub, firstUnreadLesson, type HubView } from '../ui/dialogs/LearnHub';
+import { addFlag, clearDesign, introSeen, loadCleared, loadDaily, loadDesign, loadFlags, loadIncidentBest, loadLastScenario, loadQuiz, loadRead, loadStars, loadUnlockAll, loadUnlocked, markIntroSeen, rememberLevel, saveCleared, saveDaily, saveDesign, saveIncidentBest, saveLastScenario, saveQuiz, saveStars, saveTheme, saveUnlockAll, saveUnlocked, savedTheme, type Theme } from '../lib/progress';
+import { encodeDesign, readHashDesign, type SharedDesign } from '../share/designLink';
+import { readFlag, writeFlag } from '../lib/storage';
+
+const systemTheme = (): Theme => (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+import { Tour, type TourStep } from '../ui/guide/Tour';
+import { autoWire, removeAndHeal, tidyLayout } from '../engine/autowire';
+import { scoreStars, type StarResult } from '../engine/stars';
+import { unlockLevels } from '../engine/unlocks';
+import { reviewDesign, type Review } from '../engine/review';
+import { COACH, hintLine, nudgeLine, pressureLine, showMeLine, winLine } from '../content/guide';
+import { Complaints, Confetti, GuideCard, useVoice, VoiceMenu, WelcomeScreen } from '../ui/guide/Guide';
+import { speak, stopVoice } from '../ui/audio/voice';
+import { onSfxChange, play, setSfx, sfxOn } from '../ui/audio/sfx';
+import { drawCard, drawCertificate, improvements, shareText } from '../share/shareCard';
+import { LESSONS, TERMS } from '../content/learn';
+import { Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from '../ui/panels/Panels';
 
 const TICK_MS = 700;
 const SITE = 'https://ai-system-simulator.vercel.app';
@@ -211,21 +215,10 @@ export default function App() {
   const [voice] = useVoice();
   const [voiceMenu, setVoiceMenu] = useState<DOMRect | null>(null);
   // the component list can collapse to a narrow rail of icons
-  const [palCollapsed, setPalCollapsed] = useState(() => {
-    if (EMBED) return true;
-    try {
-      return localStorage.getItem('aisim.palCollapsed.v1') === '1';
-    } catch {
-      return false;
-    }
-  });
+  const [palCollapsed, setPalCollapsed] = useState(() => EMBED || readFlag('paletteCollapsed', false));
   const togglePal = useCallback(() => {
     setPalCollapsed((v) => {
-      try {
-        localStorage.setItem('aisim.palCollapsed.v1', v ? '0' : '1');
-      } catch {
-        /* ignore */
-      }
+      writeFlag('paletteCollapsed', !v);
       return !v;
     });
     // the canvas width changes; let the diagram refit once the column has animated
@@ -808,20 +801,10 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked]);
   // labelled bands behind the components, grouped by what they do (entry, safety, retrieval, model...)
-  const [showZones, setShowZones] = useState(() => {
-    try {
-      return localStorage.getItem('aisim.zones.v1') !== '0';
-    } catch {
-      return true;
-    }
-  });
+  const [showZones, setShowZones] = useState(() => readFlag('zones', true));
   const toggleZones = useCallback(() => {
     setShowZones((v) => {
-      try {
-        localStorage.setItem('aisim.zones.v1', v ? '0' : '1');
-      } catch {
-        /* ignore */
-      }
+      writeFlag('zones', !v);
       return !v;
     });
   }, []);

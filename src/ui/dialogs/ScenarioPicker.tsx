@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Blocks, Code, Crown, Lock, Play, Search, Shapes, Star, X } from 'lucide-react';
-import { CHAPTERS } from '../content/chapters';
-import type { Scenario } from '../engine/scenarios';
+import { CHAPTERS } from '../../content/chapters';
+import type { Scenario } from '../../engine/levels/scenarios';
 
 // Phones: don't pop the keyboard up the moment a sheet opens
 const TOUCH = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
@@ -291,7 +291,7 @@ export function ScenarioTrigger({ scenario, tag, onOpen }: { scenario: Scenario;
   );
 }
 
-export function StarRow({ n, size = 12 }: { n: number; size?: number }) {
+function StarRow({ n, size = 12 }: { n: number; size?: number }) {
   return (
     <span className="star-row" aria-label={n ? `${n} of 3 stars` : undefined} aria-hidden={!n || undefined}>
       {[1, 2, 3].map((i) => (

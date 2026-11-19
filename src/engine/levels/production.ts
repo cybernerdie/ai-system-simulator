@@ -2,7 +2,7 @@
  * Chapter 7, "Production readiness": the controls a demo never needs and production always does.
  * Who may call you at all, seeing why an answer went wrong, and checking every group of users is served well.
  */
-import { base, chain, type Scenario } from './scenarioKit';
+import { base, chain, type Scenario } from './kit';
 
 export const PROD_LEVELS: Scenario[] = [
   {

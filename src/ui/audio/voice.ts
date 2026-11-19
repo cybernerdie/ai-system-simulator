@@ -6,17 +6,12 @@
  * shown by the caller, so the voice is a bonus, never the only way to get the message.
  * Run `npm run voice` to generate natural recorded clips for every line.
  */
+import { readFlag, readString, writeFlag, writeString } from '../../lib/storage';
 
-const KEY = 'aisim.voice.v1';
+
 type Listener = (on: boolean) => void;
 
-let enabled = (() => {
-  try {
-    return localStorage.getItem(KEY) !== 'off';
-  } catch {
-    return true;
-  }
-})();
+let enabled = readFlag('voice', true);
 const listeners = new Set<Listener>();
 let manifest: Record<string, string> | null = null;
 let manifestLoad: Promise<void> | null = null;
@@ -39,11 +34,7 @@ if (typeof window !== 'undefined') void loadManifest();
 export const voiceOn = () => enabled;
 export function setVoice(on: boolean) {
   enabled = on;
-  try {
-    localStorage.setItem(KEY, on ? 'on' : 'off');
-  } catch {
-    /* ignore */
-  }
+  writeFlag('voice', on);
   if (!on) stopVoice();
   listeners.forEach((l) => l(on));
 }
@@ -65,33 +56,17 @@ export function stopVoice() {
 
 /* ---------- choosing a voice and speed ---------- */
 
-const KEY_NAME = 'aisim.voiceName.v1';
-const KEY_RATE = 'aisim.voiceRate.v1';
-const read = (k: string) => {
-  try {
-    return localStorage.getItem(k);
-  } catch {
-    return null;
-  }
-};
-const write = (k: string, v: string) => {
-  try {
-    localStorage.setItem(k, v);
-  } catch {
-    /* ignore */
-  }
-};
-let chosen = read(KEY_NAME) ?? '';
-let rate = Number(read(KEY_RATE)) || 1;
+let chosen = readString('voiceName') ?? '';
+let rate = Number(readString('voiceRate')) || 1;
 export const voiceRate = () => rate;
 export const chosenVoice = () => chosen;
 export function setVoiceRate(r: number) {
   rate = Math.min(1.6, Math.max(0.7, r));
-  write(KEY_RATE, String(rate));
+  writeString('voiceRate', String(rate));
 }
 export function setChosenVoice(name: string) {
   chosen = name;
-  write(KEY_NAME, name);
+  writeString('voiceName', name);
 }
 
 /** Names that usually mean a natural-sounding voice, best first. */

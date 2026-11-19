@@ -3,9 +3,9 @@
  * a few at a time. Missing a service-level goal drains health; holding them all slowly heals.
  * Score is how long you last. Everything here is pure so it can be tested without the UI.
  */
-import { mulberry32 } from './simulate';
-import { base, chain, type Scenario } from './scenarioKit';
-import type { Goal, TrafficProfile } from './types';
+import { mulberry32 } from '../simulate';
+import { base, chain, type Scenario } from '../levels/kit';
+import type { Goal, TrafficProfile } from '../types';
 
 export type IncidentKind = 'spike' | 'outage' | 'jailbreaks' | 'poison' | 'budget' | 'pii' | 'stale' | 'json' | 'abuse';
 
@@ -80,12 +80,12 @@ export const INCIDENTS: Record<IncidentKind, IncidentDef> = {
 export const INCIDENT_KINDS = Object.keys(INCIDENTS) as IncidentKind[];
 
 /** Seconds of simulated time between incidents, and how long each one lasts. */
-export const INCIDENT_EVERY = 40;
-export const INCIDENT_LASTS = 120;
+const INCIDENT_EVERY = 40;
+const INCIDENT_LASTS = 120;
 const FIRST_AT = 16;
 const BUDGET = 22;
 
-export const INCIDENT_TRAFFIC: TrafficProfile = {
+const INCIDENT_TRAFFIC: TrafficProfile = {
   ...base,
   rps: 8,
   kbShare: 0.5,
@@ -197,26 +197,9 @@ export interface IncidentBest {
   incidents: number;
 }
 
-const KEY = 'aisim.incident.v1';
-
-export function loadIncidentBest(): IncidentBest | null {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? 'null');
-    return v && typeof v.seconds === 'number' ? v : null;
-  } catch {
-    return null;
-  }
-}
-
-export function saveIncidentBest(b: IncidentBest): IncidentBest {
-  const prev = loadIncidentBest();
-  const best = !prev || b.seconds > prev.seconds ? b : prev;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(best));
-  } catch {
-    /* ignore */
-  }
-  return best;
+/** The longer run is the better one. */
+export function betterRun(prev: IncidentBest | null, next: IncidentBest): IncidentBest {
+  return !prev || next.seconds > prev.seconds ? next : prev;
 }
 
 export const formatDuration = (sec: number) => {

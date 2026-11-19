@@ -1,4 +1,4 @@
-import type { ComponentType, Goal, NodeConfig, SimEdge, TrafficProfile } from './types';
+import type { ComponentType, Goal, NodeConfig, SimEdge, TrafficProfile } from '../types';
 
 export interface ScenarioNode {
   id: string;

@@ -1,11 +1,11 @@
-import { COMPONENTS } from './components';
+import { COMPONENTS } from '../components';
 
-import { base, chain, type Scenario, type ScenarioNode } from './scenarioKit';
-import { BUG_LEVELS } from './bugLevels';
-import { PROD_LEVELS } from './prodLevels';
+import { base, chain, type Scenario, type ScenarioNode } from './kit';
+import { BUG_LEVELS } from './bugs';
+import { PROD_LEVELS } from './production';
 
-export type { Scenario, ScenarioNode } from './scenarioKit';
-export { base, chain } from './scenarioKit';
+export type { Scenario, ScenarioNode } from './kit';
+export { chain } from './kit';
 
 const CORE: Scenario[] = [
   {

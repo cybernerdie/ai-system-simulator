@@ -68,7 +68,6 @@ export const MODEL_SPECS = {
 } as const;
 
 export type ModelSize = keyof typeof MODEL_SPECS;
-export const MODEL_RANK: Record<ModelSize, number> = { small: 0, medium: 1, large: 2 };
 
 export const CHUNK_SPECS = {
   small: { tokens: 150, cap: 0.93, completeness: 0.82 },

@@ -5,8 +5,8 @@ import '@xyflow/react/dist/style.css';
 import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
 import './styles.css';
-import App from './App';
-import { initAnalytics } from './ui/track';
+import App from './app/App';
+import { initAnalytics } from './lib/analytics';
 
 initAnalytics();
 

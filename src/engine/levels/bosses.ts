@@ -2,7 +2,7 @@
  * Boss levels: one at the end of each chapter. Each one mixes that chapter's problems into a single system,
  * so you have to use everything you just learned at once. They unlock when the chapter is cleared.
  */
-import { base, chain, type Scenario } from './scenarioKit';
+import { base, chain, type Scenario } from './kit';
 
 const boss = (s: Omit<Scenario, 'kind'>): Scenario => ({ ...s, kind: 'boss' });
 

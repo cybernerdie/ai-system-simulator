@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { BookOpen, Check, ClipboardCheck, ChevronDown, Circle, Lightbulb, Lock, PanelLeftClose, PanelLeftOpen, Share2, Star, Trash2, TriangleAlert, X } from 'lucide-react';
-import { COMPONENT_TERM, TERM_BY_ID, type Lesson } from '../content/learn';
-import type { StarResult } from '../engine/stars';
-import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../engine/components';
-import { QUALITY_METRICS, goalMet, type Pressure } from '../engine/pressures';
-import type { Scenario } from '../engine/scenarios';
-import type { ComponentType, ConfigValue, Goal, GoalMetric, Metrics, NodeConfig, TrafficProfile } from '../engine/types';
-import type { QuizQuestion } from '../content/quiz';
-import { WHY } from '../content/why';
-import { money, monthlyCost } from '../engine/review';
-import { QuizBlock } from './Modes';
-import { KindIcon } from './icons';
-import { profileOf } from '../engine/models';
+import { COMPONENT_TERM, TERM_BY_ID, type Lesson } from '../../content/learn';
+import type { StarResult } from '../../engine/stars';
+import { COMPONENTS, MODEL_SPECS, PALETTE_ORDER, type ModelSize } from '../../engine/components';
+import { QUALITY_METRICS, goalMet, type Pressure } from '../../engine/pressures';
+import type { Scenario } from '../../engine/levels/scenarios';
+import type { ComponentType, ConfigValue, Goal, GoalMetric, Metrics, NodeConfig, TrafficProfile } from '../../engine/types';
+import type { QuizQuestion } from '../../content/quiz';
+import { WHY } from '../../content/why';
+import { money, monthlyCost } from '../../engine/review';
+import { QuizBlock } from '../dialogs/Modes';
+import { KindIcon } from '../canvas/icons';
+import { profileOf } from '../../engine/models';
 import { RequestsPanel, type Shown } from './Requests';
 
 /* ---------- formatting ---------- */
@@ -620,74 +620,6 @@ function Inspector({
 }
 
 /* ---------- dialogs ---------- */
-
-const INTRO = [
-  {
-    title: 'Build an AI system. Watch where it breaks.',
-    body: 'Every AI product is a pipeline of retrieval, models, caches, agents and guardrails. Each scenario hands you a broken one and realistic traffic. Your job is to fix it.',
-  },
-  {
-    title: 'AI systems fail two ways at once',
-    body: 'They hit load walls like rate limits, latency and cost. They also fail on quality: hallucinations, missed retrieval, prompt injection. The dock at the bottom tracks both.',
-  },
-  {
-    title: 'Name the binding pressure',
-    body: 'At any moment one limit hurts more than the rest. The floating window names it. Fix that one thing, run again, and find the next wall. That habit is the real skill.',
-  },
-  {
-    title: 'Want a quick tour?',
-    body: 'In about a minute we\'ll point at each part of the screen and explain what it\'s for. You can replay it any time with the ? button at the top.',
-  },
-];
-
-export function IntroDialog({ step, setStep, onClose, onTour }: { step: number; setStep: (n: number) => void; onClose: () => void; onTour: () => void }) {
-  const s = INTRO[step];
-  const last = step === INTRO.length - 1;
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-  return (
-    <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="intro-title">
-      <div className="dialog">
-        <div className="dialog-art" aria-hidden>
-          {(['vector_db', 'llm', 'agent', 'input_guard'] as ComponentType[]).map((k) => (
-            <KindIcon key={k} kind={k} size="lg" />
-          ))}
-        </div>
-        <h2 id="intro-title">{s.title}</h2>
-        <p>{s.body}</p>
-        <div className="dialog-actions">
-          <div className="steps" aria-label={`Step ${step + 1} of ${INTRO.length}`}>
-            {INTRO.map((_, i) => (
-              <i key={i} className={i === step ? 'on' : ''} />
-            ))}
-          </div>
-          <button className="btn btn-ghost" onClick={onClose}>
-            {last ? 'I\'ll explore myself' : 'Skip'}
-          </button>
-          <button className="btn btn-primary" autoFocus onClick={() => (last ? onTour() : setStep(step + 1))}>
-            {last ? 'Show me around' : 'Next'}
-          </button>
-        </div>
-        <p className="dialog-credit">
-          Built by{' '}
-          <a href="https://joshuapaul.me" target="_blank" rel="author noreferrer">
-            Joshua Paul
-          </a>{' '}
-          (
-          <a href="https://github.com/cybernerdie" target="_blank" rel="noreferrer">
-            cybernerdie
-          </a>
-          )
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export function WinDialog({
   s,

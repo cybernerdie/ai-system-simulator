@@ -4,9 +4,9 @@
  * Every line has a stable id so `npm run voice` can record it once.
  */
 import { PRESSURES, type PressureKey } from '../engine/pressures';
-import { SCENARIOS, type Scenario } from '../engine/scenarios';
+import { SCENARIOS, type Scenario } from '../engine/levels/scenarios';
 import type { ComponentType, Cause, Outcome } from '../engine/types';
-import { lineId } from '../ui/voice';
+import { lineId } from '../ui/audio/voice';
 
 export interface Line {
   id: string;
@@ -15,7 +15,7 @@ export interface Line {
 
 /* ---------------- welcome ---------------- */
 
-export const WELCOME: Line = {
+const WELCOME: Line = {
   id: 'welcome',
   text: 'Welcome to AISim. Every level hands you an AI app with a problem. Find it, fix it, and watch the numbers turn green. Ready?',
 };

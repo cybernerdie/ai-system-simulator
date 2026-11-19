@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios';
+import { SCENARIOS } from './levels/scenarios';
 import type { ComponentType } from './types';
 
 /**

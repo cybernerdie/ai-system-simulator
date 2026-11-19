@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Award, CalendarDays, Check, Copy, Download, Flame, GitCompareArrows, HeartPulse, Lock, Pin, Search, Siren, Trophy, X } from 'lucide-react';
-import { simulate } from '../engine/simulate';
-import { goalMet } from '../engine/pressures';
-import { INCIDENTS, formatDuration, type IncidentBest, type IncidentState } from '../engine/incident';
-import { ACHIEVEMENTS, type Progress } from '../engine/achievements';
-import type { QuizQuestion } from '../content/quiz';
-import type { Goal, GoalMetric, Metrics, SimGraph, TrafficProfile } from '../engine/types';
-import type { SharedDesign } from './persist';
-import { encodeLevel, verifyLevel, type CustomLevel } from './customLevel';
-import { METRIC_META } from './Panels';
+import { Award, CalendarDays, Check, Copy, Download, Flame, HeartPulse, Lock, Pin, Search, Siren, Trophy, X } from 'lucide-react';
+import { simulate } from '../../engine/simulate';
+import { goalMet } from '../../engine/pressures';
+import { INCIDENTS, formatDuration, type IncidentBest, type IncidentState } from '../../engine/modes/incident';
+import { ACHIEVEMENTS, type Progress } from '../../engine/modes/achievements';
+import type { QuizQuestion } from '../../content/quiz';
+import type { Goal, GoalMetric, Metrics, SimGraph, TrafficProfile } from '../../engine/types';
+import type { SharedDesign } from '../../share/designLink';
+import { loadCertName, saveCertName } from '../../lib/progress';
+import { encodeLevel, verifyLevel, type CustomLevel } from '../../share/customLevel';
+import { METRIC_META } from '../panels/Panels';
 
 /* ---------- quiz after a win ---------- */
 
@@ -417,13 +418,7 @@ export function AchievementsDialog({
   useEsc(onClose);
   const got = ACHIEVEMENTS.filter((a) => unlocked[a.id]).length;
   const eligible = levelsCleared >= levelsTotal;
-  const [name, setName] = useState(() => {
-    try {
-      return localStorage.getItem('aisim.certName.v1') ?? '';
-    } catch {
-      return '';
-    }
-  });
+  const [name, setName] = useState(loadCertName);
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="ach-title" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="dialog achievements">
@@ -469,11 +464,7 @@ export function AchievementsDialog({
                     className="btn btn-primary"
                     disabled={!name.trim()}
                     onClick={() => {
-                      try {
-                        localStorage.setItem('aisim.certName.v1', name.trim());
-                      } catch {
-                        /* ignore */
-                      }
+                      saveCertName(name.trim());
                       onCertificate(name.trim());
                     }}
                   >
@@ -661,9 +652,6 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
   );
 }
 
-/** Small icon button for the top bar to open Compare. */
-export const CompareIcon = GitCompareArrows;
-
 function useEsc(onClose: () => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -674,7 +662,7 @@ function useEsc(onClose: () => void) {
 
 /* ---------- design review ---------- */
 
-export function ReviewDialog({ review, onFocusNode, onClose }: { review: import('../engine/review').Review | null; onFocusNode: (id: string) => void; onClose: () => void }) {
+export function ReviewDialog({ review, onFocusNode, onClose }: { review: import('../../engine/review').Review | null; onFocusNode: (id: string) => void; onClose: () => void }) {
   useEsc(onClose);
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="review-title" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>

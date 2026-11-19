@@ -49,7 +49,7 @@ const RANK: Record<ComponentType, number> = {
 const isModel = (t: ComponentType) => t === 'llm' || t === 'gpu_llm';
 
 /** The main line from Users onwards, following the first non-side branch at each step. */
-export function mainPath(nodes: WNode[], edges: WEdge[]): WNode[] {
+function mainPath(nodes: WNode[], edges: WEdge[]): WNode[] {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const start = nodes.find((n) => n.type === 'users');
   if (!start) return [];

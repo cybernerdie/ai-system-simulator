@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { Blocks, Compass, Music2, Play, Volume2, VolumeX, X } from 'lucide-react';
-import type { RequestSample } from '../engine/types';
-import { complaintFor, SLOW_COMPLAINT } from '../content/guide';
+import type { RequestSample } from '../../engine/types';
+import { complaintFor, SLOW_COMPLAINT } from '../../content/guide';
 import { measure, place } from './Tour';
-import { chosenVoice, listVoices, onVoiceChange, onVoicesChanged, previewVoice, setChosenVoice, setVoice, setVoiceRate, voiceOn, voiceRate } from './voice';
-import { onSfxChange, setSfx, sfxOn } from './sfx';
+import { chosenVoice, listVoices, onVoiceChange, onVoicesChanged, previewVoice, setChosenVoice, setVoice, setVoiceRate, voiceOn, voiceRate } from '../audio/voice';
+import { onSfxChange, setSfx, sfxOn } from '../audio/sfx';
 
 /* ---------- voice toggle state ---------- */
 
