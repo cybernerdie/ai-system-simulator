@@ -4,8 +4,6 @@ import { ACHIEVEMENTS, type Progress } from '../../engine/modes/achievements';
 import { loadCertName, saveCertName } from '../../lib/progress';
 import { useEscape } from '../hooks/useEscape';
 
-/* ---------- achievements and certificate ---------- */
-
 export function AchievementsDialog({
   progress,
   unlocked,
@@ -92,18 +90,6 @@ export function AchievementsDialog({
             )}
           </div>
         </section>
-      </div>
-    </div>
-  );
-}
-
-export function AchievementToast({ title }: { title: string }) {
-  return (
-    <div className="ach-toast" role="status">
-      <Trophy size={16} aria-hidden />
-      <div>
-        <span>Achievement</span>
-        <strong>{title}</strong>
       </div>
     </div>
   );

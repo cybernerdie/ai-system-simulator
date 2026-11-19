@@ -1,6 +1,6 @@
 import { COMPONENTS } from '../engine/components';
 import type { ComponentType, NodeConfig } from '../engine/types';
-import { fromBase64Url, toBase64Url } from '../lib/base64url';
+import { fromBase64Url, toBase64Url } from './base64url';
 
 /** A design as it travels in a link (#d=...) or sits in storage. */
 export interface SharedDesign {

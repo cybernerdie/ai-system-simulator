@@ -2,7 +2,7 @@
  * Levels made by players in the sandbox, shared as a link (#l=...).
  * A level carries its story, traffic, goals, a starting design and a verified solution.
  */
-import { decodeDesign, encodeDesign, type SharedDesign } from './designLink';
+import { decodeDesign, encodeDesign, type SharedDesign } from '../lib/designLink';
 import { fromBase64Url, toBase64Url } from '../lib/base64url';
 import { recallLevelCode } from '../lib/progress';
 import { simulate } from '../engine/simulate';

@@ -6,7 +6,14 @@
 import { PRESSURES, type PressureKey } from '../engine/pressures';
 import { SCENARIOS, type Scenario } from '../engine/levels/scenarios';
 import type { ComponentType, Cause, Outcome } from '../engine/types';
-import { lineId } from '../ui/audio/voice';
+
+/** Stable ids for lines, shared with the clip generator. */
+export const lineId = (...parts: string[]) =>
+  parts
+    .join('-')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 
 export interface Line {
   id: string;

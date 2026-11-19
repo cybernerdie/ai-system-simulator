@@ -16,7 +16,7 @@ import type { Plugin } from 'vite';
 import { LESSONS, MODULES, TERMS, type Lesson } from '../src/content/learn';
 import { SCENARIOS, type Scenario } from '../src/engine/levels/scenarios';
 import { BOSSES } from '../src/engine/levels/bosses';
-import { CHAPTERS } from '../src/content/chapters';
+import { CHAPTERS } from '../src/engine/levels/chapters';
 
 const SITE = 'https://ai-system-simulator.vercel.app';
 const REPO = 'https://github.com/cybernerdie/ai-system-simulator';

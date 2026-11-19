@@ -141,33 +141,34 @@ This writes `public/voice/*.mp3` and a manifest. The app plays a clip when one e
 
 ```bash
 npm install
-npm run dev     # local dev server
-npm test        # engine tests: every scenario starts broken and its reference solution wins
-npm run tune    # prints metrics for each scenario's start vs. solution (handy when tuning)
-npm run build   # static build in dist/
+npm run dev        # local dev server
+npm run check      # typecheck, lint, formatting and tests: what CI runs
+npm test           # tests only: every level starts broken and its reference solution wins
+npm run tune       # metrics for each level's start vs. solution (handy when tuning)
+npm run build      # static build in dist/, including a page per level
 ```
 
-The build is a static site. It's deployed on Vercel (every push to `main` redeploys), and it works as-is on Cloudflare Pages, Netlify or GitHub Pages too (build command `npm run build`, output `dist`).
+How the code is organised, and why, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-### Adding a scenario
+The build is a static site. It's deployed on Vercel (every push to `main` redeploys) and works as-is on Cloudflare Pages, Netlify or GitHub Pages (build command `npm run build`, output `dist`). GitHub Actions runs `npm run check` and the build on every push and pull request.
 
-Add an entry to `SCENARIOS` in `src/engine/scenarios.ts` with:
+### Adding a level
+
+Add an entry to `src/engine/levels/` (core levels in `scenarios.ts`, debugging levels in `bugs.ts`, production levels in `production.ts`, bosses in `bosses.ts`) with:
 
 - a traffic profile
 - goals
-- a broken starting graph
+- a broken starting design
 - a hint and a lesson
-- a `solution` graph
+- a `solution` design
 
-The test suite checks that the start fails and the solution clears every goal, so scenarios can't silently become unwinnable when the engine changes.
+Then place it in a chapter in `src/engine/levels/chapters.ts` and give it a quiz question in `src/content/quiz.ts`. The tests check that the start fails, the solution clears every goal and every level has a question, so a level can't silently become unwinnable when the engine changes.
 
 ## Roadmap ideas
 
-- More scenarios: long documents (context overflow), latency SLOs and streaming, multi-tenant rate limits, eval-driven prompt changes
-- Request inspector: click a failed request to see its path and why it failed
-- Charts over time and traffic spikes
-- "Real mode": swap one node for a real embedding model or vector search over a sample corpus
-- Shareable designs via URL
+- More levels: latency SLOs and streaming, multi-tenant rate limits, eval-driven prompt changes
+- Charts over a longer run, beyond the last 40 ticks
+- "Real mode": swap one component for a real embedding model or vector search over a sample corpus
 
 ## Credits
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { readFlag } from './storage';
-import type { SharedDesign } from '../share/designLink';
+import type { SharedDesign } from './designLink';
 import { addFlag, loadCleared, loadDaily, loadDesign, loadIncidentBest, loadQuiz, loadStars, saveDaily, saveDesign, saveIncidentBest, saveQuiz } from './progress';
 
 /** A tiny in-memory localStorage, so these tests run in plain Node. */

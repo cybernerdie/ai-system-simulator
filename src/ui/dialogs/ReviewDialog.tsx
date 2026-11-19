@@ -1,9 +1,10 @@
 import { Check, X } from 'lucide-react';
 import { useEscape } from '../hooks/useEscape';
+import type { Review } from '../../engine/review';
 
 /* ---------- design review ---------- */
 
-export function ReviewDialog({ review, onFocusNode, onClose }: { review: import('../../engine/review').Review | null; onFocusNode: (id: string) => void; onClose: () => void }) {
+export function ReviewDialog({ review, onFocusNode, onClose }: { review: Review | null; onFocusNode: (id: string) => void; onClose: () => void }) {
   useEscape(onClose);
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="review-title" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>

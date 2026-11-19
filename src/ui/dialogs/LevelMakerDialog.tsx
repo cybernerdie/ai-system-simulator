@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, Copy, X } from 'lucide-react';
 import { simulate } from '../../engine/simulate';
 import type { Goal, GoalMetric, TrafficProfile } from '../../engine/types';
-import type { SharedDesign } from '../../share/designLink';
+import type { SharedDesign } from '../../lib/designLink';
 import { encodeLevel, verifyLevel, type CustomLevel } from '../../share/customLevel';
-import { METRIC_META } from '../format';
+import { METRIC_META } from '../../lib/format';
 import { useEscape } from '../hooks/useEscape';
 
 /* ---------- make your own level (sandbox) ---------- */

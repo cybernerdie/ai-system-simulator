@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Blocks, Code, Crown, Lock, Play, Search, Shapes, Star, X } from 'lucide-react';
-import { CHAPTERS } from '../../content/chapters';
+import { CHAPTERS } from '../../engine/levels/chapters';
 import type { Scenario } from '../../engine/levels/scenarios';
 
 // Phones: don't pop the keyboard up the moment a sheet opens

@@ -2,7 +2,7 @@
  * Everything the player's browser remembers: progress, work in progress, mode results and preferences.
  * Built on lib/storage; the engine never touches storage itself.
  */
-import { decodeDesign, encodeDesign, type SharedDesign } from '../share/designLink';
+import { decodeDesign, encodeDesign, type SharedDesign } from './designLink';
 import { bestDailyResult, type DailyResult } from '../engine/modes/daily';
 import { betterRun, type IncidentBest } from '../engine/modes/incident';
 import { isRecord, readFlag, readJson, readString, recordOf, stringSet, writeFlag, writeJson, writeString } from './storage';

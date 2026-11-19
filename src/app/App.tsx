@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Background, BackgroundVariant, Controls, MarkerType, NodeChangeset, ReactFlow, addEdge, useEdgesState, useNodesState, useReactFlow, type Connection } from '@xyflow/react';
 import { COMPONENTS } from '../engine/components';
 import { SANDBOX, SCENARIOS } from '../engine/levels/scenarios';
@@ -10,12 +10,12 @@ import { ACHIEVEMENTS, type Progress } from '../engine/modes/achievements';
 import { autoWire, removeAndHeal, tidyLayout } from '../engine/autowire';
 import { scoreStars, type StarResult } from '../engine/stars';
 import { paletteLocks } from '../engine/unlocks';
-import { reviewDesign, type Review } from '../engine/review';
+import type { Review } from '../engine/review';
 import type { ComponentType, ConfigValue, Metrics, TrafficProfile } from '../engine/types';
 import { COACH } from '../content/guide';
 import { LESSONS, firstUnreadLesson } from '../content/learn';
 import { QUIZ } from '../content/quiz';
-import { tourSteps } from '../content/tour';
+import { tourSteps } from '../ui/guide/tourSteps';
 import { track } from '../lib/analytics';
 import { copyWithFallback, downloadBlob, shareOrCopy } from '../lib/clipboard';
 import {
@@ -43,28 +43,19 @@ import {
   saveUnlockAll,
 } from '../lib/progress';
 import { customScenario, readHashLevel, type CustomLevel } from '../share/customLevel';
-import { encodeDesign, readHashDesign, type SharedDesign } from '../share/designLink';
-import { drawCard, drawCertificate, improvements, shareText } from '../share/shareCard';
+import { encodeDesign, readHashDesign, type SharedDesign } from '../lib/designLink';
 import { FlowEdge, type FlowEdgeType } from '../ui/canvas/FlowEdge';
 import { SimNodeView, ZoneView, type SimFlowNode } from '../ui/canvas/SimNodeView';
 import { isZoneId, zoneNodes } from '../ui/canvas/zones';
-import { AchievementToast, AchievementsDialog } from '../ui/dialogs/AchievementsDialog';
-import { CommandPalette } from '../ui/dialogs/CommandPalette';
-import { CompareDialog } from '../ui/dialogs/CompareDialog';
-import { IncidentOverDialog } from '../ui/dialogs/IncidentOverDialog';
-import { LearnHub, type HubView } from '../ui/dialogs/LearnHub';
-import { LevelMakerDialog } from '../ui/dialogs/LevelMakerDialog';
+import { AchievementToast } from '../ui/dialogs/AchievementToast';
+import type { HubView } from '../ui/dialogs/LearnHub';
 import { ModeCards } from '../ui/dialogs/ModeCards';
-import { ReviewDialog } from '../ui/dialogs/ReviewDialog';
 import { ScenarioPicker } from '../ui/dialogs/ScenarioPicker';
 import { WinDialog } from '../ui/dialogs/WinDialog';
 import { Complaints } from '../ui/guide/Complaints';
 import { Confetti } from '../ui/guide/Confetti';
 import { GuideCard } from '../ui/guide/GuideCard';
-import { Tour } from '../ui/guide/Tour';
-import { WelcomeScreen } from '../ui/guide/WelcomeScreen';
 import { useVoice } from '../ui/audio/useVoice';
-import { VoiceMenu } from '../ui/audio/VoiceMenu';
 import { speak, stopVoice } from '../ui/audio/voice';
 import { onSfxChange, play, setSfx, sfxOn } from '../ui/audio/sfx';
 import { IncidentBanner, IncidentHud } from '../ui/panels/IncidentHud';
@@ -75,6 +66,7 @@ import { SidePanel, type Tab } from '../ui/panels/SidePanel';
 import { Telemetry } from '../ui/panels/Telemetry';
 import { Toast } from '../ui/Toast';
 import { TopBar } from '../ui/TopBar';
+import { AchievementsDialog, CommandPalette, CompareDialog, IncidentOverDialog, LearnHub, LevelMakerDialog, ReviewDialog, Tour, VoiceMenu, WelcomeScreen } from '../ui/lazy';
 import { buildCommands } from './commands';
 import { EMBED, HOLD_TICKS, PHONE_QUERY, PLAY_ID, SITE } from './config';
 import { buildFlow, designGraph, designSignature, designToFlow, edgeOf, flowGraph, packDesign, reuseEdges } from './flow';
@@ -418,6 +410,7 @@ export default function App() {
     }
     const num = levelNumber(scenario);
     const label = num ? `Level ${num}` : scenario.kind === 'boss' ? 'Boss level' : 'Level';
+    const { drawCard, improvements, shareText } = await import('../share/shareCard');
     const imps = improvements(scenario, sim.refs.baseline.current, after);
     const text = shareText(scenario, label, earned, imps);
     try {
@@ -464,6 +457,7 @@ export default function App() {
   const downloadCertificate = useCallback(
     async (name: string) => {
       try {
+        const { drawCertificate } = await import('../share/shareCard');
         const blob = await drawCertificate({
           name,
           levels: SCENARIOS.length,
@@ -576,7 +570,12 @@ export default function App() {
     setRunning(false);
     track('review', { level: scenario.kind ?? scenario.id });
     // let the dialog paint first: the review reruns the design once per component
-    window.setTimeout(() => setReview(reviewDesign(scenario, graph, sim.testTraffic, goals)), 60);
+    window.setTimeout(async () => {
+      const { reviewDesign } = await import('../engine/review');
+      const done = reviewDesign(scenario, graph, sim.testTraffic, goals);
+      // closed while it was working: don't reopen it
+      setReview((r) => (r === 'loading' ? done : r));
+    }, 60);
   }, [scenario, graph, sim.testTraffic, goals, setRunning]);
 
   const compare = useCallback(() => {
@@ -815,240 +814,242 @@ export default function App() {
         onReview={EMBED ? undefined : openReview}
       />
 
-      {intro !== null && (
-        <WelcomeScreen
-          onPlay={startPlaying}
-          onBrowse={() => {
-            closeIntro();
-            setPicker(true);
-          }}
-          onFree={() => {
-            closeIntro();
-            loadScenario(SANDBOX.id);
-          }}
-          onClose={closeIntro}
-        />
-      )}
-      {coach !== null && (
-        <GuideCard
-          key={COACH[coach].id}
-          target={COACH[coach].target}
-          kicker={`Level 1 · step ${coach + 1} of ${COACH.length}`}
-          title={COACH[coach].title}
-          text={COACH[coach].text}
-          actions={COACH[coach].wait.kind === 'next' ? [{ label: 'Got it', primary: true, onClick: () => setCoach(coach + 1) }] : undefined}
-          onClose={() => {
-            setCoach(null);
-            stopVoice();
-          }}
-          closeLabel="Skip the tutorial"
-        />
-      )}
-      {coach === null && stuck > 0 && running && !won && !isIncident && (
-        <GuideCard
-          key={`stuck-${stuck}`}
-          target={stuck === 1 ? '.pressure-window' : stuck === 3 && missing ? `[data-palette="${missing.type}"]` : undefined}
-          kicker={stuck === 1 ? 'Stuck?' : stuck === 2 ? 'Hint' : 'Show me'}
-          text={
-            stuck === 1
-              ? `The panel at the top names the one problem hurting you most right now: ${pressure ? pressure.title.toLowerCase() : 'see the top panel'}. Its suggestion is a good place to start.`
-              : stuck === 2
-                ? scenario.hint
-                : missing
-                  ? `Try adding ${missing.name}. It's glowing in the components list.`
-                  : 'You have all the right components. Open each one and look at its settings.'
-          }
-          actions={stuck < 3 ? [{ label: stuck === 1 ? 'Give me a hint' : 'Show me', onClick: () => setStuck(stuck === 1 ? 2 : 3) }] : undefined}
-          onClose={() => {
-            setStuck(-1);
-            stopVoice();
-          }}
-          closeLabel="Hide hints"
-        />
-      )}
-      {guide.celebrate && <Confetti />}
-      {voiceMenu && <VoiceMenu anchor={voiceMenu} onClose={() => setVoiceMenu(null)} />}
-      {touring && (
-        <Tour
-          steps={tour}
-          onClose={() => {
-            setTouring(false);
-            setTab(selectedRef.current ? 'component' : 'mission');
-          }}
-        />
-      )}
-      {picker && (
-        <ScenarioPicker
-          scenarios={SCENARIOS}
-          bosses={BOSSES}
-          onEmbed={copyEmbed}
-          modes={
-            <ModeCards
-              dailyNumber={dailyNumber(todayKey())}
-              dailyDone={daily[todayKey()]?.stars ?? null}
-              streak={dayStreak}
-              incidentBest={incidentBest}
-              achievements={[Object.keys(achievements.unlocked).filter((id) => ACHIEVEMENTS.some((a) => a.id === id)).length, ACHIEVEMENTS.length]}
-              onDaily={() => {
-                setPicker(false);
-                loadScenario(`daily-${todayKey()}`);
-              }}
-              onIncident={() => {
-                setPicker(false);
-                loadScenario(INCIDENT_SCENARIO.id);
-              }}
-              onAchievements={() => {
-                setPicker(false);
-                setAchOpen(true);
-              }}
-            />
-          }
-          sandbox={SANDBOX}
-          currentId={scenario.id}
-          cleared={cleared}
-          stars={stars}
-          unlockAll={unlockAll}
-          onUnlockAll={(on) => {
-            setUnlockAll(on);
-            saveUnlockAll(on);
-          }}
-          onClose={() => setPicker(false)}
-          onPick={(id) => {
-            setPicker(false);
-            loadScenario(id);
-          }}
-        />
-      )}
-      {hub && (
-        <LearnHub
-          view={hub}
-          setView={setHub}
-          onClose={() => {
-            setHub(null);
-            setReadCount(loadRead().size);
-          }}
-          onReplayIntro={() => {
-            setHub(null);
-            setIntro(0);
-          }}
-          onTryScenario={(id) => {
-            setHub(null);
-            loadScenario(id);
-          }}
-        />
-      )}
-      {toast && <Toast toast={toast} onDismiss={dismissToast} />}
-      {won && (
-        <WinDialog
-          s={scenario}
-          kicker={winKicker}
-          result={result}
-          best={stars[scenario.id] ?? 0}
-          nextLabel={nextLabel}
-          quiz={QUIZ[scenario.id]}
-          quizPick={quizPick}
-          onQuiz={answerQuiz}
-          shareLabel={scenario.kind === 'daily' ? 'Share your score' : 'Share result'}
-          lesson={LESSONS.find((l) => l.scenarioId === scenario.id)}
-          onLesson={(id) => {
-            setWon(false);
-            setHub({ tab: 'lessons', lessonId: id });
-          }}
-          onStay={() => setWon(false)}
-          onShare={shareResult}
-          onReview={openReview}
-          onNext={goNext}
-        />
-      )}
-      {incidentOver && (
-        <IncidentOverDialog
-          seconds={incidentOver.t}
-          incidents={incidentOver.count}
-          best={incidentBest}
-          onRetry={restartIncident}
-          onShare={() =>
-            copyText(
-              `I kept an AI system alive for ${formatDuration(incidentOver.t)} through ${incidentOver.count} incidents in AISim's incident mode. ${SITE}/`,
-              'Result copied, ready to paste.',
-            )
-          }
-          onLevels={() => {
-            setIncidentOver(null);
-            setPicker(true);
-          }}
-        />
-      )}
-      {compareOpen && pinHere && (
-        <CompareDialog
-          pinned={{ graph: designGraph(pinHere), parts: pinHere.nodes.filter((n) => n.type !== 'users').length }}
-          current={{ graph, parts: partsOf(nodes) }}
-          traffic={sim.testTraffic}
-          goals={goals}
-          onRestore={() => {
-            showFlow(pinHere);
-            setCompareOpen(false);
-            showToast('Back to the pinned design.');
-          }}
-          onPinCurrent={() => {
-            setPin(packDesign(scenario.id, nodes, edges));
-            setCompareOpen(false);
-            showToast('Pinned the current design.');
-          }}
-          onClear={() => {
-            setPin(null);
-            setCompareOpen(false);
-          }}
-          onClose={() => setCompareOpen(false)}
-        />
-      )}
-      {makerOpen && (
-        <LevelMakerDialog
-          traffic={{ ...traffic, rps: sim.rps }}
-          solution={packDesign(SANDBOX.id, nodes, edges)}
-          pinned={pin?.scenarioId === SANDBOX.id ? pin : null}
-          onPublish={publishLevel}
-          onClose={() => setMakerOpen(false)}
-        />
-      )}
-      {achOpen && (
-        <AchievementsDialog
-          progress={progress}
-          unlocked={achievements.unlocked}
-          levelsTotal={SCENARIOS.length}
-          levelsCleared={SCENARIOS.filter((x) => cleared.has(x.id)).length}
-          totalStars={totalStars(stars)}
-          onCertificate={downloadCertificate}
-          onClose={() => setAchOpen(false)}
-        />
-      )}
-      {review && <ReviewDialog review={review === 'loading' ? null : review} onFocusNode={focusNode} onClose={() => setReview(null)} />}
-      {cmdk && (
-        <CommandPalette
-          commands={buildCommands(
-            { running, pinned: !!pinHere, inSandbox, showZones, theme, sfx, locks: unlock?.locks },
-            {
-              toggleRun,
-              add: (t) => addNode(t),
-              review: openReview,
-              compare,
-              share,
-              makeLevel: () => setMakerOpen(true),
-              reset: resetScenario,
-              levels: () => setPicker(true),
-              daily: () => loadScenario(`daily-${todayKey()}`),
-              incident: () => loadScenario(INCIDENT_SCENARIO.id),
-              sandbox: () => loadScenario(SANDBOX.id),
-              learn: openLearn,
-              achievements: () => setAchOpen(true),
-              toggleZones,
-              toggleTheme,
-              toggleSfx,
-              tour: () => setTouring(true),
-            },
-          )}
-          onClose={() => setCmdk(false)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {intro !== null && (
+          <WelcomeScreen
+            onPlay={startPlaying}
+            onBrowse={() => {
+              closeIntro();
+              setPicker(true);
+            }}
+            onFree={() => {
+              closeIntro();
+              loadScenario(SANDBOX.id);
+            }}
+            onClose={closeIntro}
+          />
+        )}
+        {coach !== null && (
+          <GuideCard
+            key={COACH[coach].id}
+            target={COACH[coach].target}
+            kicker={`Level 1 · step ${coach + 1} of ${COACH.length}`}
+            title={COACH[coach].title}
+            text={COACH[coach].text}
+            actions={COACH[coach].wait.kind === 'next' ? [{ label: 'Got it', primary: true, onClick: () => setCoach(coach + 1) }] : undefined}
+            onClose={() => {
+              setCoach(null);
+              stopVoice();
+            }}
+            closeLabel="Skip the tutorial"
+          />
+        )}
+        {coach === null && stuck > 0 && running && !won && !isIncident && (
+          <GuideCard
+            key={`stuck-${stuck}`}
+            target={stuck === 1 ? '.pressure-window' : stuck === 3 && missing ? `[data-palette="${missing.type}"]` : undefined}
+            kicker={stuck === 1 ? 'Stuck?' : stuck === 2 ? 'Hint' : 'Show me'}
+            text={
+              stuck === 1
+                ? `The panel at the top names the one problem hurting you most right now: ${pressure ? pressure.title.toLowerCase() : 'see the top panel'}. Its suggestion is a good place to start.`
+                : stuck === 2
+                  ? scenario.hint
+                  : missing
+                    ? `Try adding ${missing.name}. It's glowing in the components list.`
+                    : 'You have all the right components. Open each one and look at its settings.'
+            }
+            actions={stuck < 3 ? [{ label: stuck === 1 ? 'Give me a hint' : 'Show me', onClick: () => setStuck(stuck === 1 ? 2 : 3) }] : undefined}
+            onClose={() => {
+              setStuck(-1);
+              stopVoice();
+            }}
+            closeLabel="Hide hints"
+          />
+        )}
+        {guide.celebrate && <Confetti />}
+        {voiceMenu && <VoiceMenu anchor={voiceMenu} onClose={() => setVoiceMenu(null)} />}
+        {touring && (
+          <Tour
+            steps={tour}
+            onClose={() => {
+              setTouring(false);
+              setTab(selectedRef.current ? 'component' : 'mission');
+            }}
+          />
+        )}
+        {picker && (
+          <ScenarioPicker
+            scenarios={SCENARIOS}
+            bosses={BOSSES}
+            onEmbed={copyEmbed}
+            modes={
+              <ModeCards
+                dailyNumber={dailyNumber(todayKey())}
+                dailyDone={daily[todayKey()]?.stars ?? null}
+                streak={dayStreak}
+                incidentBest={incidentBest}
+                achievements={[Object.keys(achievements.unlocked).filter((id) => ACHIEVEMENTS.some((a) => a.id === id)).length, ACHIEVEMENTS.length]}
+                onDaily={() => {
+                  setPicker(false);
+                  loadScenario(`daily-${todayKey()}`);
+                }}
+                onIncident={() => {
+                  setPicker(false);
+                  loadScenario(INCIDENT_SCENARIO.id);
+                }}
+                onAchievements={() => {
+                  setPicker(false);
+                  setAchOpen(true);
+                }}
+              />
+            }
+            sandbox={SANDBOX}
+            currentId={scenario.id}
+            cleared={cleared}
+            stars={stars}
+            unlockAll={unlockAll}
+            onUnlockAll={(on) => {
+              setUnlockAll(on);
+              saveUnlockAll(on);
+            }}
+            onClose={() => setPicker(false)}
+            onPick={(id) => {
+              setPicker(false);
+              loadScenario(id);
+            }}
+          />
+        )}
+        {hub && (
+          <LearnHub
+            view={hub}
+            setView={setHub}
+            onClose={() => {
+              setHub(null);
+              setReadCount(loadRead().size);
+            }}
+            onReplayIntro={() => {
+              setHub(null);
+              setIntro(0);
+            }}
+            onTryScenario={(id) => {
+              setHub(null);
+              loadScenario(id);
+            }}
+          />
+        )}
+        {toast && <Toast toast={toast} onDismiss={dismissToast} />}
+        {won && (
+          <WinDialog
+            s={scenario}
+            kicker={winKicker}
+            result={result}
+            best={stars[scenario.id] ?? 0}
+            nextLabel={nextLabel}
+            quiz={QUIZ[scenario.id]}
+            quizPick={quizPick}
+            onQuiz={answerQuiz}
+            shareLabel={scenario.kind === 'daily' ? 'Share your score' : 'Share result'}
+            lesson={LESSONS.find((l) => l.scenarioId === scenario.id)}
+            onLesson={(id) => {
+              setWon(false);
+              setHub({ tab: 'lessons', lessonId: id });
+            }}
+            onStay={() => setWon(false)}
+            onShare={shareResult}
+            onReview={openReview}
+            onNext={goNext}
+          />
+        )}
+        {incidentOver && (
+          <IncidentOverDialog
+            seconds={incidentOver.t}
+            incidents={incidentOver.count}
+            best={incidentBest}
+            onRetry={restartIncident}
+            onShare={() =>
+              copyText(
+                `I kept an AI system alive for ${formatDuration(incidentOver.t)} through ${incidentOver.count} incidents in AISim's incident mode. ${SITE}/`,
+                'Result copied, ready to paste.',
+              )
+            }
+            onLevels={() => {
+              setIncidentOver(null);
+              setPicker(true);
+            }}
+          />
+        )}
+        {compareOpen && pinHere && (
+          <CompareDialog
+            pinned={{ graph: designGraph(pinHere), parts: pinHere.nodes.filter((n) => n.type !== 'users').length }}
+            current={{ graph, parts: partsOf(nodes) }}
+            traffic={sim.testTraffic}
+            goals={goals}
+            onRestore={() => {
+              showFlow(pinHere);
+              setCompareOpen(false);
+              showToast('Back to the pinned design.');
+            }}
+            onPinCurrent={() => {
+              setPin(packDesign(scenario.id, nodes, edges));
+              setCompareOpen(false);
+              showToast('Pinned the current design.');
+            }}
+            onClear={() => {
+              setPin(null);
+              setCompareOpen(false);
+            }}
+            onClose={() => setCompareOpen(false)}
+          />
+        )}
+        {makerOpen && (
+          <LevelMakerDialog
+            traffic={{ ...traffic, rps: sim.rps }}
+            solution={packDesign(SANDBOX.id, nodes, edges)}
+            pinned={pin?.scenarioId === SANDBOX.id ? pin : null}
+            onPublish={publishLevel}
+            onClose={() => setMakerOpen(false)}
+          />
+        )}
+        {achOpen && (
+          <AchievementsDialog
+            progress={progress}
+            unlocked={achievements.unlocked}
+            levelsTotal={SCENARIOS.length}
+            levelsCleared={SCENARIOS.filter((x) => cleared.has(x.id)).length}
+            totalStars={totalStars(stars)}
+            onCertificate={downloadCertificate}
+            onClose={() => setAchOpen(false)}
+          />
+        )}
+        {review && <ReviewDialog review={review === 'loading' ? null : review} onFocusNode={focusNode} onClose={() => setReview(null)} />}
+        {cmdk && (
+          <CommandPalette
+            commands={buildCommands(
+              { running, pinned: !!pinHere, inSandbox, showZones, theme, sfx, locks: unlock?.locks },
+              {
+                toggleRun,
+                add: (t) => addNode(t),
+                review: openReview,
+                compare,
+                share,
+                makeLevel: () => setMakerOpen(true),
+                reset: resetScenario,
+                levels: () => setPicker(true),
+                daily: () => loadScenario(`daily-${todayKey()}`),
+                incident: () => loadScenario(INCIDENT_SCENARIO.id),
+                sandbox: () => loadScenario(SANDBOX.id),
+                learn: openLearn,
+                achievements: () => setAchOpen(true),
+                toggleZones,
+                toggleTheme,
+                toggleSfx,
+                tour: () => setTouring(true),
+              },
+            )}
+            onClose={() => setCmdk(false)}
+          />
+        )}
+      </Suspense>
       {achievements.showing && <AchievementToast key={achievements.showing} title={achievements.showing} />}
     </div>
   );

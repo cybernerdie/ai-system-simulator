@@ -3,7 +3,7 @@ import { Pin, X } from 'lucide-react';
 import { simulate } from '../../engine/simulate';
 import { goalMet } from '../../engine/pressures';
 import type { Goal, GoalMetric, Metrics, SimGraph, TrafficProfile } from '../../engine/types';
-import { METRIC_META } from '../format';
+import { METRIC_META } from '../../lib/format';
 import { useEscape } from '../hooks/useEscape';
 
 /* ---------- compare two designs ---------- */

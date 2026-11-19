@@ -326,7 +326,7 @@ describe('tap-to-add auto-wiring', () => {
 
 describe('stars and chapters', () => {
   it('every level is in exactly one chapter, in journey order', async () => {
-    const { CHAPTERS } = await import('../content/chapters');
+    const { CHAPTERS } = await import('./levels/chapters');
     const ids = CHAPTERS.flatMap((c) => c.ids);
     expect(ids).toEqual(SCENARIOS.map((s) => s.id));
     expect(CHAPTERS.map((c) => c.boss)).toEqual(BOSSES.map((b) => b.id));

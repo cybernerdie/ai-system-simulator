@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { customScenario, decodeLevel, encodeLevel, verifyLevel, type CustomLevel } from './customLevel';
 import { SANDBOX, SCENARIOS, withDefaults } from '../engine/levels/scenarios';
-import type { SharedDesign } from './designLink';
+import type { SharedDesign } from '../lib/designLink';
 
 const design = (nodes: (typeof SCENARIOS)[number]['nodes'], edges: { source: string; target: string }[]): SharedDesign => ({
   scenarioId: 'sandbox',

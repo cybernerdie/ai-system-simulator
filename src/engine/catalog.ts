@@ -6,7 +6,7 @@ import { SANDBOX, SCENARIOS } from './levels/scenarios';
 import { BOSSES } from './levels/bosses';
 import { dailyScenario, isDailyId } from './modes/daily';
 import { INCIDENT_SCENARIO } from './modes/incident';
-import { CHAPTERS } from '../content/chapters';
+import { CHAPTERS } from './levels/chapters';
 import type { Scenario } from './levels/kit';
 
 const BUILT_IN: Scenario[] = [...SCENARIOS, ...BOSSES, SANDBOX, INCIDENT_SCENARIO];

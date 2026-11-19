@@ -2,7 +2,7 @@
 import { MarkerType } from '@xyflow/react';
 import { withDefaults, type Scenario } from '../engine/levels/scenarios';
 import type { SimGraph } from '../engine/types';
-import type { SharedDesign } from '../share/designLink';
+import type { SharedDesign } from '../lib/designLink';
 import type { SimFlowNode } from '../ui/canvas/SimNodeView';
 import type { FlowEdgeType } from '../ui/canvas/FlowEdge';
 

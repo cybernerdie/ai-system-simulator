@@ -3,7 +3,7 @@ import { Check, ClipboardCheck, Lightbulb, TriangleAlert, X } from 'lucide-react
 import { QUALITY_METRICS, goalMet } from '../../engine/pressures';
 import type { Scenario } from '../../engine/levels/scenarios';
 import type { Metrics, TrafficProfile } from '../../engine/types';
-import { METRIC_META } from '../format';
+import { METRIC_META } from '../../lib/format';
 import { Group } from './Group';
 
 const MIX_FIELDS: { key: keyof TrafficProfile; label: string; help: string; max?: number; step?: number; unit?: 'pct' | 'turns' }[] = [

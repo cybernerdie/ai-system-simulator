@@ -156,11 +156,3 @@ function fallbackSpeak(id: string, text: string) {
   u.pitch = 1;
   speechSynthesis.speak(u);
 }
-
-/** Stable ids for lines, shared with the clip generator. */
-export const lineId = (...parts: string[]) =>
-  parts
-    .join('-')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');

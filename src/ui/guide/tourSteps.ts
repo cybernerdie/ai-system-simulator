@@ -1,7 +1,7 @@
-import { SCENARIOS } from '../engine/levels/scenarios';
-import { LESSONS, TERMS } from './learn';
-import type { TourStep } from '../ui/guide/Tour';
-import type { Tab } from '../ui/panels/SidePanel';
+import { SCENARIOS } from '../../engine/levels/scenarios';
+import { LESSONS, TERMS } from '../../content/learn';
+import type { TourStep } from './Tour';
+import type { Tab } from '../panels/SidePanel';
 
 /** The guided tour of the interface. Steps can switch tabs or start the run as they open. */
 export function tourSteps({ setTab, run }: { setTab: (t: Tab) => void; run: () => void }): TourStep[] {

@@ -1,7 +1,7 @@
 import { goalMet } from '../../engine/pressures';
 import type { Goal, GoalMetric, Metrics } from '../../engine/types';
-import { money, monthlyCost } from '../../engine/review';
-import { METRIC_META, ms, pct, usd } from '../format';
+import { money, monthlyCost } from '../../engine/cost';
+import { METRIC_META, ms, pct, usd } from '../../lib/format';
 
 /* ---------- telemetry dock ---------- */
 
