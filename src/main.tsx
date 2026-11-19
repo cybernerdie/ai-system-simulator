@@ -4,7 +4,7 @@ import { ReactFlowProvider } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
-import './styles.css';
+import './styles/index.css';
 import App from './app/App';
 import { initAnalytics } from './lib/analytics';
 

@@ -1,0 +1,200 @@
+/* Design review dialog. */
+
+.review-loading {
+  margin: var(--sp-6) 0;
+  font-size: 14px;
+  color: var(--ink-2);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.review-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+  padding-right: 28px;
+}
+
+.review-head h2 {
+  margin: 2px 0 0;
+  font-size: 17px;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.review-grade {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  font: 700 34px/1 var(--sans);
+  color: #fff;
+}
+
+.review-grade.is-a {
+  background: var(--ok);
+}
+
+.review-grade.is-b {
+  background: #2563eb;
+}
+
+.review-grade.is-c {
+  background: var(--warn);
+}
+
+.review-grade.is-d,
+.review-grade.is-f {
+  background: var(--hot);
+}
+
+.review-scores {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 var(--sp-4);
+  padding: var(--sp-4);
+  border-radius: 12px;
+  background: var(--subtle);
+  list-style: none;
+}
+
+.review-scores li {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 32px;
+  grid-template-areas: 'label bar num' 'note note note';
+  align-items: center;
+  gap: 2px 10px;
+}
+
+.review-score-label {
+  grid-area: label;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.review-bar {
+  grid-area: bar;
+  height: 6px;
+  border-radius: 6px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.review-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+}
+
+.review-bar i.is-ok {
+  background: var(--ok);
+}
+
+.review-bar i.is-warn {
+  background: var(--warn);
+}
+
+.review-bar i.is-hot {
+  background: var(--hot);
+}
+
+.review-scores em {
+  grid-area: num;
+  font: 600 12.5px var(--mono);
+  font-style: normal;
+  text-align: right;
+}
+
+.review-score-note {
+  grid-area: note;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.review-notes {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 var(--sp-3);
+  padding: 0;
+  list-style: none;
+}
+
+.review-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  box-shadow: var(--ring);
+}
+
+.review-note strong {
+  display: block;
+  font-size: 14px;
+}
+
+.review-note > div > span {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.review-note-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 50%;
+  font: 700 12px/1 var(--sans);
+  color: #fff;
+}
+
+.review-note.is-good .review-note-icon {
+  background: var(--ok);
+}
+
+.review-note.is-warn .review-note-icon {
+  background: var(--warn);
+}
+
+.review-note.is-bad .review-note-icon {
+  background: var(--hot);
+}
+
+.review-note.is-bad {
+  background: var(--hot-bg);
+  box-shadow: none;
+}
+
+.review-show {
+  margin-top: 6px;
+  font-size: 12.5px;
+}
+
+.review-btn {
+  margin-top: var(--sp-2);
+}
+
+@media (max-width: 900px) {
+  .review-scores li {
+    grid-template-columns: minmax(0, 1fr) 90px 28px;
+  }
+
+  .review-grade {
+    width: 52px;
+    height: 52px;
+    font-size: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .review-loading {
+    animation: none;
+  }
+}

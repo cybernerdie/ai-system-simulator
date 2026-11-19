@@ -1,0 +1,236 @@
+/* Design tokens, light and dark themes, resets and shared animations. */
+
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --subtle: #f4f4f5;
+  --line: #ececee;
+  --ink: #18181b;
+  --ink-2: #52525b;
+  --ink-3: #a1a1aa;
+  --ok: #059669;
+  --warn: #d97706;
+  --hot: #e11d48;
+  --on-ink: #ffffff;
+  --ink-body: #27272a;
+  --ink-hover: #27272a;
+  --surface-2: #fcfcfc;
+  --track: #e4e4e7;
+  --edge: #d4d4d8;
+  --edge-live: #a1a1aa;
+  --handle: #c4c4cc;
+  --ok-bg: #ecfdf5;
+  --hot-bg: #fff1f3;
+  --warn-bg: #fffaeb;
+  --warn-line: #fdecc8;
+  --violet-bg: #f5f3ff;
+  --violet-line: #ede9fe;
+  --violet-fg: #7c3aed;
+  --blue-bg: #eff6ff;
+  --lvl-beginner: #047857;
+  --lvl-intermediate: #1d4ed8;
+  --lvl-advanced: #6d28d9;
+  --takeaway-label: #fcd34d;
+  --toast-check: #6ee7b7;
+  --scrim: rgba(24, 24, 27, 0.22);
+  --ring-strong: 0 0 0 1px rgba(24, 24, 27, 0.14);
+  --sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --mono: 'Geist Mono Variable', ui-monospace, monospace;
+  --ring: 0 0 0 1px rgba(24, 24, 27, 0.07);
+  --lift:
+    0 0 0 1px rgba(24, 24, 27, 0.07), 0 1px 1px -0.5px rgba(0, 0, 0, 0.04), 0 3px 3px -1.5px rgba(0, 0, 0, 0.04), 0 6px 6px -3px rgba(0, 0, 0, 0.03),
+    0 12px 12px -6px rgba(0, 0, 0, 0.03), 0 24px 24px -12px rgba(0, 0, 0, 0.03);
+  --float: 0 0 0 1px rgba(24, 24, 27, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.04), 0 12px 24px -8px rgba(0, 0, 0, 0.08), 0 32px 48px -24px rgba(0, 0, 0, 0.1);
+  color-scheme: light;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+[data-theme='dark'] {
+  --bg: #0c0c0e;
+  --surface: #161618;
+  --subtle: #212124;
+  --line: #27272a;
+  --ink: #fafafa;
+  --ink-2: #a1a1aa;
+  --ink-3: #71717a;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --hot: #fb7185;
+  --on-ink: #18181b;
+  --ink-body: #d4d4d8;
+  --ink-hover: #e4e4e7;
+  --surface-2: #19191c;
+  --track: #3f3f46;
+  --edge: #3f3f46;
+  --edge-live: #71717a;
+  --handle: #52525b;
+  --ok-bg: rgba(52, 211, 153, 0.12);
+  --hot-bg: rgba(251, 113, 133, 0.12);
+  --warn-bg: rgba(251, 191, 36, 0.1);
+  --warn-line: rgba(251, 191, 36, 0.22);
+  --violet-bg: rgba(167, 139, 250, 0.1);
+  --violet-line: rgba(167, 139, 250, 0.24);
+  --violet-fg: #c4b5fd;
+  --blue-bg: rgba(96, 165, 250, 0.12);
+  --lvl-beginner: #6ee7b7;
+  --lvl-intermediate: #93c5fd;
+  --lvl-advanced: #c4b5fd;
+  --takeaway-label: #b45309;
+  --toast-check: #059669;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --ring-strong: 0 0 0 1px rgba(255, 255, 255, 0.16);
+  --ring: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --lift: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 12px -6px rgba(0, 0, 0, 0.5);
+  --float: 0 0 0 1px rgba(255, 255, 255, 0.09), 0 2px 4px -1px rgba(0, 0, 0, 0.4), 0 16px 40px -12px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font: 400 14px/1.5 var(--sans);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+kbd {
+  font: 500 11px/1 var(--mono);
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: var(--subtle);
+  color: var(--ink-2);
+  box-shadow: var(--ring);
+}
+
+input[type='range'] {
+  appearance: none;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--track);
+}
+
+input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--track);
+}
+
+input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.14),
+    0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.14),
+    0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.dot-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  margin: 0 4px;
+}
+
+/* switching theme is instant: no element fades between the two palettes */
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+
+html,
+body {
+  background: var(--bg);
+}
+
+.only-touch {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .only-keys {
+    display: none !important;
+  }
+
+  .only-touch {
+    display: inline;
+  }
+}
+
+@media (max-width: 900px) {
+  /* iOS zooms the page into any input under 16px; keep everything at 16 so it never shifts */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+@keyframes wa-pulse {
+  50% {
+    transform: scale(1.08);
+  }
+}

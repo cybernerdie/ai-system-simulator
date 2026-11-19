@@ -1,0 +1,103 @@
+/* Comparing two designs. */
+
+.diff {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.diff i {
+  width: 14px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--track);
+}
+
+.diff i.on {
+  background: var(--ink);
+}
+
+.diff-label {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.compare-table {
+  width: 100%;
+  margin: var(--sp-4) 0 var(--sp-3);
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.compare-table thead th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.compare-table thead th svg {
+  vertical-align: -1px;
+}
+
+.compare-table tbody th {
+  font-weight: 500;
+}
+
+.compare-table tbody th em {
+  display: block;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.compare-table td {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.compare-table td.is-better {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.compare-table td.is-miss {
+  color: var(--hot);
+}
+
+.compare-table td.is-better.is-miss {
+  color: var(--hot);
+}
+
+.compare-goals th,
+.compare-goals td {
+  font-weight: 600;
+}
+
+.compare .dialog-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .compare-table th,
+  .compare-table td {
+    padding: 7px 6px;
+    font-size: 13px;
+  }
+
+  .compare .dialog-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .compare .dialog-actions .btn {
+    justify-content: center;
+  }
+}

@@ -1,0 +1,372 @@
+/* Top bar: brand, level switcher, traffic controls, tools and the Run button. */
+
+/* top bar: three clear groups — context, tools, primary action */
+.topbar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  gap: var(--sp-3);
+  padding: 0 var(--sp-4) 0 var(--sp-5);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 15.5px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  margin: 0 var(--sp-1);
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.traffic {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: 32px;
+  padding: 0 var(--sp-3);
+  border-radius: 8px;
+  box-shadow: var(--ring);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.traffic input {
+  width: 120px;
+}
+
+.traffic output {
+  font: 500 12.5px var(--mono);
+  color: var(--ink);
+  min-width: 66px;
+}
+
+.scenario-trigger {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 32px;
+  max-width: 380px;
+  padding: 0 6px 0 11px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--lift);
+  cursor: pointer;
+}
+
+.scenario-trigger:hover {
+  box-shadow:
+    var(--ring-strong),
+    0 4px 10px -4px rgba(0, 0, 0, 0.12);
+}
+
+.scenario-trigger svg {
+  flex: none;
+  color: var(--ink-3);
+}
+
+.scenario-trigger-num {
+  font: 500 12px var(--mono);
+  color: var(--ink-3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.scenario-trigger-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.scenario-trigger-all {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--subtle);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.theme-toggle svg {
+  transition: transform 300ms;
+}
+
+[data-theme='dark'] .theme-toggle svg {
+  transform: rotate(-30deg);
+}
+
+.traffic-rate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.traffic-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--line);
+}
+
+.traffic-pattern select {
+  appearance: none;
+  height: 24px;
+  padding: 0 20px 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--subtle)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m2 3.5 3 3 3-3'/%3E%3C/svg%3E")
+    no-repeat right 6px center;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.sim-clock {
+  font: 500 11.5px var(--mono);
+  color: var(--ink-3);
+  min-width: 44px;
+}
+
+.topbar-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.topbar-tools .btn {
+  padding: 0 var(--sp-3);
+}
+
+.topbar-tools .btn-icon:not(:has(span:not(.sr-only))) {
+  width: 32px;
+  padding: 0;
+}
+
+.scenario-trigger.is-static {
+  cursor: default;
+}
+
+.theme-toggle.is-off svg {
+  opacity: 0.45;
+}
+
+@media (max-width: 900px) {
+  /* top bar: brand + tools / scenario + Run / traffic */
+  .topbar {
+    flex-wrap: wrap;
+    padding: var(--sp-3);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'head head' 'scenario run' 'traffic traffic';
+    gap: var(--sp-2);
+    height: auto;
+  }
+
+  .topbar-divider,
+  .topbar-spacer {
+    display: none;
+  }
+
+  .scenario-trigger {
+    max-width: none;
+    order: 1;
+    flex: 1 1 100%;
+  }
+
+  .scenario-trigger-all {
+    display: none;
+  }
+
+  .traffic {
+    order: 2;
+    flex: 1 1 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 40px;
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .traffic-rate {
+    min-width: 0;
+    flex: 1 1 200px;
+  }
+
+  .traffic-rate input {
+    flex: 1;
+    min-width: 60px;
+    width: auto;
+  }
+
+  .theme-toggle {
+    order: 3;
+  }
+
+  .topbar-divider {
+    display: none;
+  }
+
+  .topbar-tools {
+    order: 3;
+  }
+
+  .traffic-sep {
+    display: none;
+  }
+
+  /* brand and tools share the first row: brand on the left, tools on the right */
+  .topbar > .brand {
+    grid-area: head;
+    justify-self: start;
+    align-self: center;
+  }
+
+  .topbar > .topbar-tools {
+    grid-area: head;
+    order: 0;
+    justify-self: end;
+    gap: 0;
+  }
+
+  .topbar > .scenario-trigger {
+    grid-area: scenario;
+    min-width: 0;
+    width: 100%;
+    max-width: none;
+    height: 40px;
+  }
+
+  .topbar > .scenario-trigger .scenario-trigger-title {
+    flex: 1;
+    text-align: left;
+  }
+
+  .topbar > .btn-run {
+    grid-area: run;
+    height: 40px;
+    min-width: 0;
+    padding: 0 var(--sp-4);
+  }
+
+  .topbar > .traffic {
+    grid-area: traffic;
+  }
+
+  /* phones: bigger, easier-to-hit top bar icons; no sticky hover highlight after a tap */
+  .topbar-tools .btn-icon,
+  .topbar-tools .theme-toggle {
+    width: 40px;
+    height: 40px;
+  }
+
+  .topbar-tools svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .brand {
+    font-size: 17px;
+  }
+
+  /* the top bar holds one more button now; the GitHub link lives in the README and the lessons */
+  .topbar-tools a.btn-icon[href*='github.com'] {
+    display: none;
+  }
+
+  .topbar-tools [data-tour='help'] {
+    display: none;
+  }
+}
+
+@media (min-width: 901px) {
+  .brand,
+  .topbar-tools {
+    flex-shrink: 0;
+  }
+
+  .scenario-trigger {
+    min-width: 170px;
+    flex: 0 1 auto;
+  }
+
+  /* when space runs out the slider gives way; the readout and pattern keep their size */
+  .traffic {
+    flex: 0 1 auto;
+  }
+
+  .traffic-rate input {
+    flex: 0 1 120px;
+    width: 0;
+    min-width: 56px;
+  }
+}
+
+@media (max-width: 1400px) and (min-width: 901px) {
+  .topbar-tools .btn-icon span:not(.sr-only) {
+    display: none;
+  }
+
+  .topbar-tools .btn-icon {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 1180px) and (min-width: 901px) {
+  .brand > span,
+  .scenario-trigger-all {
+    display: none;
+  }
+
+  .traffic-rate > span {
+    display: none;
+  }
+}
+
+@media (max-width: 1060px) and (min-width: 901px) {
+  /* small laptops: the command palette is still on '/', the source link is in the README */
+  .topbar-tools .only-keys,
+  .topbar-tools a[href*='github'] {
+    display: none;
+  }
+
+  .topbar-tools {
+    gap: 0;
+  }
+
+  .topbar-tools .btn {
+    width: 30px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 380px) {
+  .topbar > .brand span {
+    display: none;
+  }
+
+  .topbar-tools .btn-icon,
+  .topbar-tools .theme-toggle {
+    width: 36px;
+    height: 36px;
+  }
+}

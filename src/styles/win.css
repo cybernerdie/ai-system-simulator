@@ -1,0 +1,226 @@
+/* The level-cleared dialog, stars and the quiz. */
+
+.win-stars {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 0 0 var(--sp-4);
+  color: var(--track);
+}
+
+.win-stars svg {
+  fill: currentColor;
+}
+
+.win-stars .on {
+  color: #f59e0b;
+  animation: star-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+.win-criteria {
+  margin: var(--sp-4) 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--ink-3);
+}
+
+.win-criteria li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.win-criteria li svg {
+  flex-shrink: 0;
+  position: relative;
+  top: 2px;
+}
+
+.win-criteria li.is-met {
+  color: var(--ink);
+}
+
+.win-criteria li.is-met svg {
+  color: var(--ok);
+}
+
+.win-learned {
+  margin: 0 0 var(--sp-2);
+  padding: var(--sp-4);
+  border-radius: 12px;
+  background: var(--subtle);
+}
+
+.win-learned-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.win-learned p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.win-learned .win-learned-more {
+  margin-top: var(--sp-2);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.win-learned .link-btn {
+  margin-top: var(--sp-3);
+  font-size: 13px;
+}
+
+/* quiz in the win dialog */
+.quiz {
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: 12px;
+  background: var(--subtle);
+}
+
+.quiz-q {
+  margin: 0 0 var(--sp-3);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.quiz-options {
+  display: grid;
+  gap: 6px;
+}
+
+.quiz-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--ring);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.quiz-option:hover:not(:disabled) {
+  box-shadow: var(--ring-strong);
+}
+
+.quiz-option:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
+
+.quiz-letter {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--subtle);
+  font: 600 12px/1 var(--mono);
+  color: var(--ink-2);
+}
+
+.quiz-option.is-right {
+  box-shadow: 0 0 0 1.5px var(--ok);
+  background: var(--ok-bg);
+}
+
+.quiz-option.is-right .quiz-letter {
+  background: var(--ok);
+  color: #fff;
+}
+
+.quiz-option.is-wrong {
+  box-shadow: 0 0 0 1.5px var(--hot);
+  background: var(--hot-bg);
+}
+
+.quiz-option.is-wrong .quiz-letter {
+  background: var(--hot);
+  color: #fff;
+}
+
+.quiz-option.is-dim,
+.quiz-option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.quiz > :last-child {
+  margin-bottom: 0;
+}
+
+.quiz-why {
+  margin: var(--sp-3) 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.quiz-why strong {
+  color: var(--hot);
+}
+
+.quiz-why.is-right strong {
+  color: var(--ok);
+}
+
+.win-review {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 var(--sp-3);
+  font-size: 13px;
+}
+
+.win-criteria em {
+  font-style: normal;
+  color: var(--ink-3);
+}
+
+.win-actions .win-share {
+  margin-right: auto;
+  gap: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .win-stars .on {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .win-learned .win-learned-more {
+    display: none;
+  }
+}
+
+@keyframes star-pop {
+  from {
+    transform: scale(0.2) rotate(-30deg);
+    opacity: 0;
+  }
+}

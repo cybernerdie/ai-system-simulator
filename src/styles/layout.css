@@ -1,0 +1,109 @@
+/* The app grid: top bar, palette, canvas and side panel, and how it stacks on phones. */
+
+.app {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr) 352px;
+  grid-template-rows: 56px minmax(0, 1fr);
+  grid-template-areas: 'top top top' 'pal canvas side';
+  height: 100vh;
+}
+
+.canvas {
+  grid-area: canvas;
+  position: relative;
+  min-height: 0;
+  background: var(--bg);
+}
+
+.app.is-embed .topbar-spacer {
+  flex: 1;
+}
+
+.sheet-bar,
+.sheet-backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .app {
+    grid-template-areas: 'top' 'pal' 'canvas' 'side';
+    height: auto;
+    overflow-x: clip;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto;
+  }
+
+  /* canvas stacks: pressure, diagram, telemetry */
+  .canvas {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    padding: var(--sp-3);
+    gap: var(--sp-3);
+  }
+
+  .canvas > .react-flow {
+    order: 1;
+    height: 56vh !important;
+    min-height: 320px;
+    border-radius: 12px;
+    box-shadow: var(--ring);
+    background: var(--bg);
+  }
+
+  .app > * {
+    min-width: 0;
+  }
+
+  /* React Flow zoom buttons are hidden on phones (pinch to zoom); give the canvas a sensible height */
+  .canvas .react-flow {
+    min-height: 260px;
+  }
+
+  /* component settings as a bottom sheet */
+  .sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 59;
+    background: rgba(9, 9, 11, 0.45);
+  }
+
+  .sheet-grip {
+    position: absolute;
+    left: 50%;
+    top: 8px;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 4px;
+    background: var(--track);
+  }
+}
+
+@media (min-width: 901px) {
+  .app {
+    grid-template-columns: 288px minmax(0, 1fr) 352px;
+    transition: grid-template-columns 0.2s ease;
+  }
+
+  .app.pal-collapsed {
+    grid-template-columns: 64px minmax(0, 1fr) 352px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1280px) {
+  .app {
+    grid-template-columns: 264px minmax(0, 1fr) 320px;
+  }
+
+  .app.pal-collapsed {
+    grid-template-columns: 64px minmax(0, 1fr) 320px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app {
+    transition: none;
+  }
+}
