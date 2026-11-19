@@ -12,7 +12,7 @@ import {
   useReactFlow,
   type Connection,
 } from '@xyflow/react';
-import { BookOpen, Check, CircleQuestionMark, Code, Link2, Moon, Pause, Play, RotateCcw, Sun } from 'lucide-react';
+import { BookOpen, Check, CircleQuestionMark, Code, Link2, Moon, Pause, Play, RotateCcw, Sun, Volume2, VolumeX } from 'lucide-react';
 import { COMPONENTS } from './engine/components';
 import { simulate } from './engine/simulate';
 import { PATTERNS, TICK_SECONDS, trafficMultiplier, type Pattern } from './engine/patterns';
@@ -26,8 +26,12 @@ import { ScenarioPicker, ScenarioTrigger } from './ui/ScenarioPicker';
 import { LearnHub, firstUnreadLesson, type HubView } from './ui/LearnHub';
 import { clearDesign, encodeDesign, introSeen, loadCleared, loadDesign, loadLastScenario, markIntroSeen, readHashDesign, saveCleared, saveDesign, saveLastScenario, savedTheme, saveTheme, systemTheme, type SharedDesign, type Theme } from './ui/persist';
 import { Tour, type TourStep } from './ui/Tour';
+import { autoWire, removeAndHeal, tidyLayout } from './engine/autowire';
+import { COACH, hintLine, nudgeLine, pressureLine, showMeLine, winLine } from './content/guide';
+import { Complaints, Confetti, GuideCard, useVoice, WelcomeScreen } from './ui/Guide';
+import { speak, stopVoice } from './ui/voice';
 import { LESSONS, TERMS } from './content/learn';
-import { IntroDialog, Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from './ui/Panels';
+import { Palette, PressureWindow, SidePanel, Telemetry, WinDialog, type Tab } from './ui/Panels';
 
 const ALL = [...SCENARIOS, SANDBOX];
 const TICK_MS = 700;
@@ -95,6 +99,9 @@ function startingPoint(): { id: string; restored: boolean; flow: ReturnType<type
   return { id: s.id, restored: !!saved, flow: saved ? designToFlow(saved) : buildFlow(s) };
 }
 
+/** How long you've been stuck, in seconds, for a given hint stage. */
+const stuckSeconds = (stage: number) => [0, 25, 50, 80][Math.max(0, stage)] ?? 0;
+
 /** Exponential smoothing so the numbers settle instead of flickering. */
 function smooth(prev: Metrics | null, next: Metrics, a = 0.35): Metrics {
   if (!prev) return next;
@@ -144,6 +151,17 @@ export default function App() {
   const [cleared, setCleared] = useState<Set<string>>(() => loadCleared());
   const [intro, setIntro] = useState<number | null>(() => (introSeen() || readHashDesign() ? null : 0));
   const [touring, setTouring] = useState(false);
+  // coached first level: index into COACH, or null when not coaching
+  const [coach, setCoach] = useState<number | null>(null);
+  const [celebrate, setCelebrate] = useState(false);
+  const [voice, setVoiceOn] = useVoice();
+  const [showAll, setShowAll] = useState(() => {
+    try {
+      return localStorage.getItem('aisim.showAll.v1') === '1';
+    } catch {
+      return false;
+    }
+  });
   const [toast, setToast] = useState<{ text: string; action?: { label: string; run: () => void } } | null>(null);
   const [picker, setPicker] = useState(false);
   const [hub, setHub] = useState<HubView | null>(null);
@@ -405,6 +423,130 @@ export default function App() {
     return () => clearInterval(t);
   }, [running, rps, scenario, cleared, pattern]);
 
+  /* ---------- guide: coaching, hints, voice, celebration ---------- */
+
+  // Coached first level: each step waits for the player to do the thing, then moves on
+  useEffect(() => {
+    if (coach === null) return;
+    const w = COACH[coach].wait;
+    const done =
+      w.kind === 'running'
+        ? running
+        : w.kind === 'has'
+          ? nodes.some((n) => n.data.kind === w.type)
+          : w.kind === 'won'
+            ? won || streak >= HOLD_TICKS
+            : false;
+    if (done) setCoach(coach + 1 < COACH.length ? coach + 1 : null);
+  }, [coach, running, nodes, won, streak]);
+  useEffect(() => {
+    if (coach !== null) speak(COACH[coach].id, COACH[coach].text);
+  }, [coach]);
+  useEffect(() => {
+    if (scenario.id !== SCENARIOS[0].id) setCoach(null);
+  }, [scenario.id]);
+
+  // Hint ladder: if you're stuck (running, not winning, nothing changed for a while), help step by step
+  const designSig = useMemo(
+    () => JSON.stringify([nodes.map((n) => [n.data.kind, n.data.config]), edges.map((e) => [e.source, e.target])]),
+    [nodes, edges],
+  );
+  const lastEdit = useRef(Date.now());
+  const [stuck, setStuck] = useState(0);
+  useEffect(() => {
+    lastEdit.current = Date.now();
+    setStuck(0);
+  }, [designSig, scenario.id]);
+  useEffect(() => {
+    if (running) lastEdit.current = Date.now() - stuckSeconds(stuck) * 1000;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
+  useEffect(() => {
+    if (!running || coach !== null || won || !scenario.goals.length) return;
+    const id = window.setInterval(() => {
+      if (streakRef.current > 0) return; // on track
+      const idle = (Date.now() - lastEdit.current) / 1000;
+      const stage = idle > 80 ? 3 : idle > 50 ? 2 : idle > 25 ? 1 : 0;
+      setStuck((s) => (s < 0 ? s : stage > s ? stage : s));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [running, coach, won, scenario]);
+  const missing = useMemo(() => {
+    const t = scenario.solution.nodes.map((n) => n.type).find((type) => !nodes.some((n) => n.data.kind === type));
+    return t ? COMPONENTS[t] : null;
+  }, [scenario, nodes]);
+  useEffect(() => {
+    if (stuck === 1 && pressure) {
+      const l = nudgeLine(pressure.key);
+      if (l) speak(l.id, l.text);
+    } else if (stuck === 2) {
+      const l = hintLine(scenario);
+      speak(l.id, l.text);
+    } else if (stuck === 3 && missing) {
+      const l = showMeLine(missing.name);
+      speak(l.id, l.text);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stuck]);
+
+  // The voice names each new problem as it appears (after it settles for a moment)
+  const spokenPressure = useRef('');
+  useEffect(() => {
+    spokenPressure.current = '';
+  }, [scenario.id]);
+  useEffect(() => {
+    if (!running || coach !== null || !pressure || stuck > 0) return;
+    const k = pressure.key;
+    if (k === spokenPressure.current) return;
+    const t = window.setTimeout(() => {
+      const l = pressureLine(k);
+      spokenPressure.current = k;
+      if (l) speak(l.id, l.text);
+    }, 1500);
+    return () => window.clearTimeout(t);
+  }, [pressure, running, coach, stuck]);
+
+  // Level cleared: celebrate
+  useEffect(() => {
+    if (!won) return;
+    const l = winLine(scenario);
+    speak(l.id, l.text);
+    setCelebrate(true);
+    const t = window.setTimeout(() => setCelebrate(false), 2600);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [won]);
+
+  // Components unlock level by level; Sandbox (or "show all") has everything
+  const unlock = useMemo(() => {
+    const idx = SCENARIOS.findIndex((x) => x.id === scenario.id);
+    if (showAll || idx < 0) return null;
+    const typesOf = (list: typeof SCENARIOS) => new Set(list.flatMap((x) => [...x.nodes, ...x.solution.nodes].map((n) => n.type)));
+    const set = typesOf(SCENARIOS.slice(0, idx + 1));
+    nodes.forEach((n) => set.add(n.data.kind));
+    const before = typesOf(SCENARIOS.slice(0, idx));
+    const startHere = new Set(scenario.nodes.map((n) => n.type));
+    const fresh = new Set([...set].filter((t) => !before.has(t) && !startHere.has(t)));
+    return { set, fresh };
+  }, [scenario, showAll, nodes]);
+  const toggleShowAll = useCallback(() => {
+    setShowAll((v) => {
+      try {
+        localStorage.setItem('aisim.showAll.v1', v ? '0' : '1');
+      } catch {
+        /* ignore */
+      }
+      return !v;
+    });
+  }, []);
+
+  const startPlaying = useCallback(() => {
+    setIntro(null);
+    markIntroSeen();
+    loadScenario(SCENARIOS[0].id, { fresh: true });
+    setCoach(0);
+  }, [loadScenario]);
+
   // Push live stats into nodes, light up active edges
   const active = useMemo(() => new Set(metrics?.activeNodeIds ?? []), [metrics]);
   const traced = useMemo(() => (picked ? picked.steps.map((s) => s.nodeId).filter(Boolean) as string[] : null), [picked]);
@@ -445,26 +587,38 @@ export default function App() {
   const addNode = useCallback(
     (type: ComponentType, position?: { x: number; y: number }) => {
       const id = `${type}-${Math.random().toString(36).slice(2, 7)}`;
-      let pos = position;
-      if (!pos) {
-        // drop it into a free slot in a row below the current diagram, then keep it in view
-        const ns = nodesRef.current;
-        const minX = Math.min(0, ...ns.map((n) => n.position.x));
-        const maxY = Math.max(0, ...ns.map((n) => n.position.y));
-        const taken = (p: { x: number; y: number }) =>
-          ns.some((n) => Math.abs(n.position.x - p.x) < 210 && Math.abs(n.position.y - p.y) < 110);
-        pos = { x: minX + 220, y: maxY + 160 };
-        while (taken(pos)) pos = { x: pos.x + 230, y: pos.y };
+      const ns = nodesRef.current;
+      const es = edgesRef.current;
+      // connect it where it belongs in the pipeline, so nobody has to drag wires to see an effect
+      const wired = autoWire(
+        ns.map((n) => ({ id: n.id, type: n.data.kind })),
+        es.map((e) => ({ source: e.source, target: e.target })),
+        { id, type },
+      );
+      // phones: don't pop the settings sheet over everything; just add it and say so
+      const phone = window.matchMedia('(max-width: 900px)').matches;
+      const fresh: SimFlowNode = { id, type: 'sim', position: position ?? { x: 0, y: 0 }, selected: !phone, data: { kind: type, config: { ...COMPONENTS[type].defaults } } };
+      let next = [...ns.map((n) => ({ ...n, selected: false })), fresh];
+      if (!position) {
+        // tapped from the palette: tidy the whole diagram into columns along the flow
+        const at = tidyLayout(
+          next.map((n) => ({ id: n.id, type: n.data.kind })),
+          wired,
+        );
+        next = next.map((n) => (at.has(n.id) ? { ...n, position: at.get(n.id)! } : n));
+        userMoved.current = false;
         setTimeout(() => flow.fitView({ ...fitOptions(), duration: 300 }), 30);
       }
-      setNodes((ns) => [
-        ...ns.map((n) => ({ ...n, selected: false })),
-        { id, type: 'sim', position: pos!, selected: true, data: { kind: type, config: { ...COMPONENTS[type].defaults } } },
-      ]);
-      setSelectedId(id);
-      setTab('component');
+      setNodes(next);
+      setEdges(wired.map((e) => es.find((x) => x.source === e.source && x.target === e.target) ?? edgeOf(e.source, e.target)));
+      if (phone) {
+        showToast(`Added ${COMPONENTS[type].name}. Tap it to change its settings.`);
+      } else {
+        setSelectedId(id);
+        setTab('component');
+      }
     },
-    [flow, setNodes, setTab],
+    [flow, setNodes, setEdges, setTab, showToast],
   );
 
   const updateConfig = useCallback(
@@ -475,7 +629,8 @@ export default function App() {
   const deleteNode = useCallback(
     (id: string) => {
       setNodes((ns) => ns.filter((n) => n.id !== id));
-      setEdges((es) => es.filter((e) => e.source !== id && e.target !== id));
+      // reconnect its neighbours so deleting the middle of a pipeline doesn't cut it in two
+      setEdges((es) => removeAndHeal(es.map((e) => ({ source: e.source, target: e.target })), id).map((e) => es.find((x) => x.source === e.source && x.target === e.target) ?? edgeOf(e.source, e.target)));
       setSelectedId(null);
       setTab('mission');
     },
@@ -626,6 +781,15 @@ export default function App() {
         >
           {theme === 'dark' ? <Sun size={15} aria-hidden /> : <Moon size={15} aria-hidden />}
         </button>
+        <button
+          className="btn btn-ghost theme-toggle"
+          onClick={() => setVoiceOn(!voice)}
+          title={voice ? 'Mute the voice guide' : 'Turn the voice guide on'}
+          aria-label={voice ? 'Mute the voice guide' : 'Turn the voice guide on'}
+          aria-pressed={voice}
+        >
+          {voice ? <Volume2 size={15} aria-hidden /> : <VolumeX size={15} aria-hidden />}
+        </button>
         <button className="btn btn-ghost theme-toggle" data-tour="help" onClick={() => setTouring(true)} title="Take the tour" aria-label="Take the tour">
           <CircleQuestionMark size={15} aria-hidden />
         </button>
@@ -642,7 +806,7 @@ export default function App() {
         </button>
       </header>
 
-      <Palette onAdd={(t) => addNode(t)} />
+      <Palette onAdd={(t) => addNode(t)} unlocked={unlock?.set ?? null} fresh={unlock?.fresh} showAll={showAll} onToggleAll={scenario.id === SANDBOX.id ? undefined : toggleShowAll} />
 
       <main
         className="canvas"
@@ -662,6 +826,17 @@ export default function App() {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
+          onNodesDelete={(deleted) => {
+            // keyboard delete: React Flow drops the attached edges; put the pipeline back together
+            let es = edgesRef.current.map((e) => ({ source: e.source, target: e.target }));
+            for (const d of deleted) es = removeAndHeal(es, d.id);
+            const gone = new Set(deleted.map((d) => d.id));
+            setEdges((cur) => {
+              const keep = cur.filter((e) => !gone.has(e.source) && !gone.has(e.target));
+              for (const e of es) if (!keep.some((x) => x.source === e.source && x.target === e.target)) keep.push(edgeOf(e.source, e.target));
+              return keep;
+            });
+          }}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onSelectionChange={({ nodes: sel }) => {
@@ -698,6 +873,7 @@ export default function App() {
         </ReactFlow>
         <PressureWindow p={pressure} running={running} hasRun={!!metrics} />
         <Telemetry m={metrics} history={history} goals={scenario.goals} />
+        <Complaints samples={metrics?.samples} running={running && !celebrate} />
       </main>
 
       {isPhone && sheetOpen && selected && <div className="sheet-backdrop" onClick={() => setSheetOpen(false)} aria-hidden />}
@@ -724,20 +900,62 @@ export default function App() {
       />
 
       {intro !== null && (
-        <IntroDialog
-          step={intro}
-          setStep={setIntro}
+        <WelcomeScreen
+          onPlay={startPlaying}
+          onBrowse={() => {
+            setIntro(null);
+            markIntroSeen();
+            setPicker(true);
+          }}
+          onFree={() => {
+            setIntro(null);
+            markIntroSeen();
+            loadScenario(SANDBOX.id);
+          }}
           onClose={() => {
             setIntro(null);
             markIntroSeen();
           }}
-          onTour={() => {
-            setIntro(null);
-            markIntroSeen();
-            setTouring(true);
-          }}
         />
       )}
+      {coach !== null && (
+        <GuideCard
+          key={COACH[coach].id}
+          target={COACH[coach].target}
+          kicker={`Level 1 · step ${coach + 1} of ${COACH.length}`}
+          title={COACH[coach].title}
+          text={COACH[coach].text}
+          actions={COACH[coach].wait.kind === 'next' ? [{ label: 'Got it', primary: true, onClick: () => setCoach(coach + 1) }] : undefined}
+          onClose={() => {
+            setCoach(null);
+            stopVoice();
+          }}
+          closeLabel="Skip the tutorial"
+        />
+      )}
+      {coach === null && stuck > 0 && running && !won && (
+        <GuideCard
+          key={`stuck-${stuck}`}
+          target={stuck === 1 ? '.pressure-window' : stuck === 3 && missing ? `[data-palette="${missing.type}"]` : undefined}
+          kicker={stuck === 1 ? 'Stuck?' : stuck === 2 ? 'Hint' : 'Show me'}
+          text={
+            stuck === 1
+              ? `The panel at the top names the one problem hurting you most right now: ${pressure ? pressure.title.toLowerCase() : 'see the top panel'}. Its suggestion is a good place to start.`
+              : stuck === 2
+                ? scenario.hint
+                : missing
+                  ? `Try adding ${missing.name}. It's glowing in the components list.`
+                  : 'You have all the right components. Open each one and look at its settings.'
+          }
+          actions={stuck < 3 ? [{ label: stuck === 1 ? 'Give me a hint' : 'Show me', onClick: () => setStuck(stuck + 1) }] : undefined}
+          onClose={() => {
+            setStuck(-1);
+            stopVoice();
+          }}
+          closeLabel="Hide hints"
+        />
+      )}
+      {celebrate && <Confetti />}
       {touring && (
         <Tour
           steps={tourSteps}

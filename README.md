@@ -86,6 +86,27 @@ No real models are called. The engine (`src/engine/simulate.ts`) is a determinis
 
 The numbers are calibrated to be *directionally* right (relative prices, latencies, failure modes) so the lessons hold up in real systems. They're not benchmarks.
 
+## Playing it
+
+New visitors land on a welcome screen with **Play level 1**. Level 1 is coached step by step: the guide points at what to do next and waits until you do it (press Run, add a component, watch it improve). After that you're on your own, with help if you need it:
+
+- **Tap to add:** tapping a component in the list connects it where it belongs in the pipeline. Deleting one reconnects its neighbours. You can still drag and rewire by hand.
+- **Components unlock as you play.** Each level shows only what you've met so far, plus what's new (marked *New*). "Show all" lifts the limit; Sandbox always has everything.
+- **Customer complaints** pop up over the canvas while things are failing ("Same invoice, two different totals?!"), so problems read as people, not just numbers.
+- **Hints when you're stuck:** after 25 seconds without progress the guide points at the binding pressure, then shows the level's hint, then highlights a component to try.
+- **Voice guide:** the guide reads its messages aloud (mute in the top bar). Captions are always shown.
+
+### Natural voice clips
+
+Out of the box the voice uses the browser's built-in speech. To use a natural recorded voice instead, generate a clip for every line once:
+
+```bash
+OPENAI_API_KEY=sk-... npm run voice                  # OpenAI TTS (VOICE=nova by default)
+ELEVENLABS_API_KEY=... ELEVENLABS_VOICE_ID=... npm run voice
+```
+
+This writes `public/voice/*.mp3` and a manifest. The app plays a clip when one exists and falls back to the browser voice otherwise. Re-running only records lines whose text changed.
+
 ## Development
 
 ```bash

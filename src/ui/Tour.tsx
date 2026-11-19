@@ -22,7 +22,7 @@ const GAP = 14;
 const CARD_W = 340;
 const MOBILE = 900;
 
-function measure(selector: string): Rect | null {
+export function measure(selector: string): Rect | null {
   const els = [...document.querySelectorAll<HTMLElement>(selector)].filter((el) => {
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
@@ -45,7 +45,7 @@ function measure(selector: string): Rect | null {
 }
 
 /** Put the card on whichever side of the spotlight has the most room. */
-function place(r: Rect, cardH: number): { top: number; left: number } {
+export function place(r: Rect, cardH: number): { top: number; left: number } {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const w = Math.min(CARD_W, vw - 24);

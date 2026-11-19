@@ -32,31 +32,61 @@ export const METRIC_META: Record<GoalMetric, { label: string; fmt: (v: number) =
 
 const GROUPS = ['Retrieval', 'Memory', 'Generation', 'Inference', 'Voice', 'Efficiency', 'Safety', 'Quality'] as const;
 
-export function Palette({ onAdd }: { onAdd: (t: ComponentType) => void }) {
+export function Palette({
+  onAdd,
+  unlocked = null,
+  fresh,
+  showAll,
+  onToggleAll,
+}: {
+  onAdd: (t: ComponentType) => void;
+  /** components available on this level; null = all of them */
+  unlocked?: Set<ComponentType> | null;
+  /** components that are new on this level */
+  fresh?: Set<ComponentType>;
+  showAll?: boolean;
+  onToggleAll?: () => void;
+}) {
+  const visible = PALETTE_ORDER.filter((t) => !unlocked || unlocked.has(t));
+  const locked = PALETTE_ORDER.length - visible.length;
   return (
     <aside className="palette" aria-label="Components">
-      {GROUPS.map((g) => (
-        <section key={g}>
-          <h3>{g}</h3>
-          {PALETTE_ORDER.filter((t) => COMPONENTS[t].group === g).map((t) => (
-            <button
-              key={t}
-              className="palette-item"
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('application/aisim', t);
-                e.dataTransfer.effectAllowed = 'move';
-              }}
-              onClick={() => onAdd(t)}
-              title={COMPONENTS[t].blurb}
-            >
-              <KindIcon kind={t} size="sm" />
-              <span>{COMPONENTS[t].name}</span>
-            </button>
-          ))}
-        </section>
-      ))}
-      <p className="palette-help">Click or drag onto the canvas. Connect from a node's right edge to the next node.</p>
+      {GROUPS.map((g) => {
+        const items = visible.filter((t) => COMPONENTS[t].group === g);
+        if (!items.length) return null;
+        return (
+          <section key={g}>
+            <h3>{g}</h3>
+            {items.map((t) => (
+              <button
+                key={t}
+                className="palette-item"
+                data-palette={t}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('application/aisim', t);
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onClick={() => onAdd(t)}
+                title={COMPONENTS[t].blurb}
+              >
+                <KindIcon kind={t} size="sm" />
+                <span>{COMPONENTS[t].name}</span>
+                {fresh?.has(t) && <em className="palette-new">New</em>}
+              </button>
+            ))}
+          </section>
+        );
+      })}
+      <p className="palette-help">Tap a component to add it: it connects itself where it belongs. You can also drag it, and rewire from a node's right edge.</p>
+      {onToggleAll && (locked > 0 || showAll) && (
+        <div className="palette-locked">
+          {!showAll && <span>{locked} more unlock as you play.</span>}
+          <button className="link-btn" onClick={onToggleAll}>
+            {showAll ? 'Only show unlocked' : 'Show all'}
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

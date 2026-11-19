@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { activeNodes, simulate } from './simulate';
 import { SCENARIOS, withDefaults, type ScenarioNode } from './scenarios';
 import { bindingPressure, goalMet } from './pressures';
+import { autoWire, removeAndHeal } from './autowire';
 import type { SimEdge } from './types';
 
 const toGraph = (nodes: ScenarioNode[], edges: SimEdge[]) => ({
@@ -279,4 +280,33 @@ describe('indirect prompt injection', () => {
     expect(readOnly.harmfulActions).toBe(0);
     expect(readOnly.accuracy).toBeLessThan(0.7);
   });
+});
+
+describe('tap-to-add auto-wiring', () => {
+  // A beginner taps the solution's missing components in the palette, in order, and tunes settings.
+  // Auto-wiring alone should produce a design that clears the scenario.
+  for (const s of SCENARIOS) {
+    it(`${s.id}: tapping in the solution's components wins`, () => {
+      let nodes: ScenarioNode[] = s.nodes.map((n) => ({ ...n }));
+      let edges: SimEdge[] = s.edges.map((e) => ({ ...e }));
+      const have = (type: string) => nodes.filter((n) => n.type === type).length;
+      const want = (type: string) => s.solution.nodes.filter((n) => n.type === type).length;
+      for (const sn of s.solution.nodes) {
+        if (nodes.some((n) => n.id === sn.id) || have(sn.type) >= want(sn.type)) continue;
+        const added = { ...sn, id: `${sn.id}-tap` };
+        edges = autoWire(nodes, edges, added);
+        nodes = [...nodes, added];
+      }
+      // apply the solution's settings to the matching components
+      nodes = nodes.map((n) => {
+        const match = s.solution.nodes.find((sn) => sn.type === n.type && (sn.id === n.id || `${sn.id}-tap` === n.id)) ?? s.solution.nodes.find((sn) => sn.type === n.type);
+        return match ? { ...n, config: { ...(n.config ?? {}), ...(match.config ?? {}) } } : n;
+      });
+      // delete start components the solution doesn't use (deleting reconnects their neighbours)
+      for (const n of nodes.filter((n) => !s.solution.nodes.some((sn) => sn.type === n.type))) edges = removeAndHeal(edges, n.id);
+      nodes = nodes.filter((n) => s.solution.nodes.some((sn) => sn.type === n.type));
+      const m = run(nodes, edges, s.traffic);
+      for (const g of s.goals) expect({ metric: g.metric, met: goalMet(m, g) }).toMatchObject({ met: true });
+    });
+  }
 });
