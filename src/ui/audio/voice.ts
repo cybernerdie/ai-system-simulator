@@ -105,6 +105,26 @@ export function onVoicesChanged(cb: () => void) {
   return () => speechSynthesis.removeEventListener('voiceschanged', cb);
 }
 
+/** Android reports languages as en_NG; utterances need the standard en-NG. */
+export const voiceLang = (v: SpeechSynthesisVoice) => v.lang.replace(/_/g, '-');
+
+/** Voices that sound natural enough to recommend. On Android none match: there it's one voice per accent. */
+export const isRecommended = (v: SpeechSynthesisVoice) => score(v) < NATURAL.length;
+
+/**
+ * Apply a voice. Chrome on Android ignores \`voice\` and picks the speaker from \`lang\`, so both are
+ * set: without the language every Android voice sounds like the system default.
+ */
+function applyVoice(u: SpeechSynthesisUtterance, v: SpeechSynthesisVoice | undefined) {
+  if (!v) return;
+  u.lang = voiceLang(v);
+  try {
+    u.voice = v;
+  } catch {
+    // some browsers reject voices from a stale list; the language alone still picks the accent
+  }
+}
+
 /** The player's choice if it's on this device, otherwise the most natural English voice. */
 function bestVoice(): SpeechSynthesisVoice | undefined {
   const voices = listVoices();
@@ -117,11 +137,7 @@ export function previewVoice(name?: string) {
   stopVoice();
   const u = new SpeechSynthesisUtterance("Hi! I'll guide you through each level. This is how I sound.");
   const v = listVoices().find((x) => x.name === (name ?? chosen)) ?? bestVoice();
-  try {
-    if (v) u.voice = v;
-  } catch {
-    /* some browsers reject voices from a stale list; the default voice still speaks */
-  }
+  applyVoice(u, v);
   u.rate = rate;
   speechSynthesis.speak(u);
 }
@@ -147,11 +163,7 @@ function fallbackSpeak(id: string, text: string) {
   if (typeof speechSynthesis === 'undefined' || current !== id) return;
   const u = new SpeechSynthesisUtterance(text);
   const v = bestVoice();
-  try {
-    if (v) u.voice = v;
-  } catch {
-    /* some browsers reject voices from a stale list; the default voice still speaks */
-  }
+  applyVoice(u, v);
   u.rate = rate;
   u.pitch = 1;
   speechSynthesis.speak(u);

@@ -1,11 +1,23 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Volume2 } from 'lucide-react';
-import { chosenVoice, listVoices, onVoicesChanged, previewVoice, setChosenVoice, setVoiceRate, voiceRate } from './voice';
+import { chosenVoice, isRecommended, listVoices, onVoicesChanged, previewVoice, setChosenVoice, setVoiceRate, voiceLang, voiceRate } from './voice';
 import { useVoice } from './useVoice';
 
 /* ---------- voice settings ---------- */
 
 /** A small panel to turn the guide on or off, pick one of the device's voices, set the speed and hear a sample. */
+/** "Google UK English Female" → "UK English Female · GB"; Android's "English Nigeria" already names its accent. */
+function voiceLabel(v: SpeechSynthesisVoice) {
+  const name = v.name
+    .replace(/^(Microsoft|Google)\s/, '')
+    .replace(/\s*[-–]\s*English.*$/i, '')
+    .replace(/\s*Online\s*/, ' ')
+    .trim();
+  if (/^English\s/.test(name)) return name;
+  const region = voiceLang(v).split('-')[1];
+  return region ? `${name} · ${region}` : name;
+}
+
 export function VoiceMenu({ anchor, onClose }: { anchor: DOMRect | null; onClose: () => void }) {
   const [on, setOn] = useVoice();
   const [voices, setVoices] = useState(() => listVoices());
@@ -58,12 +70,8 @@ export function VoiceMenu({ anchor, onClose }: { anchor: DOMRect | null; onClose
             >
               {voices.map((v, i) => (
                 <option key={v.name + v.lang} value={v.name}>
-                  {v.name
-                    .replace(/^(Microsoft|Google)\s/, '')
-                    .replace(/\s*[-–]\s*English.*$/i, '')
-                    .replace(/\s*Online\s*/, ' ')}{' '}
-                  · {v.lang.replace('en-', '')}
-                  {i === 0 ? ' (recommended)' : ''}
+                  {voiceLabel(v)}
+                  {i === 0 && isRecommended(v) ? ' (recommended)' : ''}
                 </option>
               ))}
             </select>
