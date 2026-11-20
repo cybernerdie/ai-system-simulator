@@ -27,7 +27,7 @@ export function goalParts(goals: Goal[], now: Metrics, voice = false): GoalPart[
     const from = tidy(now[g.metric]);
     const target = tidy(g.value);
     const atLeast = g.op === '>=';
-    if (!now.qualityVisible && QUALITY_METRICS.includes(g.metric)) {
+    if ((!now.qualityVisible && QUALITY_METRICS.includes(g.metric)) || (!now.fairnessVisible && g.metric === 'fairnessGap')) {
       return { verb: atLeast ? 'raise' : 'cut', what, unmeasured: true, to: atLeast ? `at least ${target}` : `${target} or less` };
     }
     if (goalMet(now, g) || from === target) return { verb: 'keep', what, to: `${target} or ${atLeast ? 'more' : 'less'}` };

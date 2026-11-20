@@ -470,6 +470,38 @@ export const BOSSES: Scenario[] = [
     ],
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: 'Four sign-offs, four separate problems: who is calling, what leaves your systems, what you record, and who gets worse answers.',
+    case: {
+      job: "Get four teams' sign-off for launch: the bill, personal data, traceable complaints, and equal answers in every language.",
+      chat: {
+        userLabel: 'Customer (Spanish)',
+        user: 'Soy Luc\u00eda P\u00e9rez, pedido 7731. \u00bfPuedo devolver la cafetera?',
+        bot: 'Something went wrong. Please try again.',
+        lie: 'Something went wrong.',
+        truthLabel: 'Behind the scenes',
+        truth:
+          "Strangers are using your leaked app key, so the bill is three times budget and many requests fail. Luc\u00eda's name and order number go to the AI provider. Nothing is recorded when an answer goes wrong. And search was built for English, so Spanish questions find the wrong pages.",
+        fixed: 'S\u00ed, Luc\u00eda: el pedido 7731 est\u00e1 dentro de los 30 d\u00edas. Te enviamos la etiqueta de devoluci\u00f3n.',
+      },
+      predict: {
+        question: 'Support wants every failed prompt recorded. Compliance wants no personal data in your logs. Who gets their way?',
+        options: [
+          {
+            text: 'Support: record full prompts',
+            why: "Complaints become traceable, but every customer's name and order number now sits in your logs as well as at the provider.",
+          },
+          { text: 'Compliance: record nothing', why: 'No personal data in the logs, but every complaint goes back to two days of guessing.' },
+          {
+            text: 'Both: remove personal data first, then record',
+            right: true,
+            why: 'Redact personal details at the start of the pipeline, before the prompt leaves or gets logged. Then traces can keep full prompts with placeholders like [NAME], and both teams sign off.',
+          },
+        ],
+      },
+      named: {
+        term: 'Ready for production',
+        text: 'Shipping means answering four questions: who may call (authentication), what leaves your systems (redaction), what you record (tracing), and who gets worse answers (per-group evals). Order matters: redact before anything is sent or logged.',
+      },
+    },
     lesson:
       'Production readiness is mostly controls around the model: auth at the door, personal data redacted before it leaves (for the model and for your logs), traces of every failure, and quality measured per group. None of them makes a demo better. All of them decide whether you can run it for real.',
     solution: {
