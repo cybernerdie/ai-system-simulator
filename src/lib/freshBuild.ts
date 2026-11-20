@@ -6,7 +6,7 @@
 const KEY = 'aisim.reloadedForBuild';
 const WINDOW_MS = 30_000;
 
-export function reloadForNewBuild(): boolean {
+function reloadForNewBuild(): boolean {
   try {
     if (Date.now() - Number(sessionStorage.getItem(KEY) ?? 0) < WINDOW_MS) return false;
     sessionStorage.setItem(KEY, String(Date.now()));
