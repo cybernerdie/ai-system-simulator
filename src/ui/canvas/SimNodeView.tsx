@@ -1,3 +1,5 @@
+import { useContext } from 'react';
+import { PortraitContext } from './portrait';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { COMPONENTS } from '../../engine/components';
 import type { ComponentType, NodeConfig, NodeStat } from '../../engine/types';
@@ -77,12 +79,13 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
 }
 
 export function SimNodeView({ data, selected }: NodeProps<SimFlowNode>) {
+  const portrait = useContext(PortraitContext);
   const spec = COMPONENTS[data.kind];
   const status = data.running ? (data.stat?.status ?? 'idle') : 'idle';
   const tags = chips(data.kind, data.config);
   return (
     <div className={`simnode status-${status}${selected ? ' is-selected' : ''}`}>
-      {data.kind !== 'users' && <Handle type="target" position={Position.Left} />}
+      {data.kind !== 'users' && <Handle type="target" position={portrait ? Position.Top : Position.Left} />}
       <div className="simnode-head">
         <KindIcon kind={data.kind} />
         <span className="simnode-name">{spec.name}</span>
@@ -98,7 +101,7 @@ export function SimNodeView({ data, selected }: NodeProps<SimFlowNode>) {
         <span className="dot" />
         <span>{data.running ? (data.stat?.label ?? 'idle') : 'idle'}</span>
       </div>
-      <Handle type="source" position={Position.Right} />
+      <Handle type="source" position={portrait ? Position.Bottom : Position.Right} />
     </div>
   );
 }

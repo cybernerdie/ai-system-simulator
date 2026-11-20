@@ -46,6 +46,10 @@ Built-in levels are data in `engine/levels/`. `engine/catalog.ts` finds any leve
 
 Numbered levels and bosses have their own URL, `/play/<id>`. At build time `scripts/seo.ts` writes a page per level with its own title, description and structured data, plus oEmbed files, so a shared link previews properly. `?embed=1` gives a stripped-down layout for iframes.
 
+## Phones
+
+Designs are stored left to right: levels, saved designs and share links all use that one form. Phones show the same design top to bottom (`ui/canvas/portrait.ts`): positions are transposed on the way into the canvas and the cards' connection points move to the top and bottom. Phones don't drag cards, so nothing has to be mapped back. The phone canvas is sized to the diagram at the zoom that fits the screen width, rather than a fixed share of the screen.
+
 ## Styles
 
 Plain CSS, one file per part of the interface in `src/styles/` (`topbar.css`, `canvas.css`, `picker.css` and so on), imported in a fixed order by `src/styles/index.css`: tokens and controls first, then the layout, then each component. Within a file, each selector is defined once and its media queries come together at the end, so a component's phone and laptop variants sit next to it. Colours, spacing and shadows come from the custom properties in `base.css`, which is also where the dark theme swaps them.

@@ -213,3 +213,10 @@
 .tele-more:hover {
   color: var(--ink);
 }
+
+@media (max-width: 900px) {
+  /* an odd number of goals: the last one takes the whole row rather than leaving a hole */
+  .telemetry.is-collapsed .tele:nth-last-child(2):nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}

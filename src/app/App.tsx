@@ -50,6 +50,7 @@ import { encodeDesign, readHashDesign, type SharedDesign } from '../lib/designLi
 import { FlowEdge, type FlowEdgeType } from '../ui/canvas/FlowEdge';
 import { SimNodeView, ZoneView, type SimFlowNode } from '../ui/canvas/SimNodeView';
 import { isZoneId, zoneNodes } from '../ui/canvas/zones';
+import { PortraitContext, portraitHeight, toPortrait } from '../ui/canvas/portrait';
 import { AchievementToast } from '../ui/dialogs/AchievementToast';
 import type { HubView } from '../ui/dialogs/LearnHub';
 import { ModeCards } from '../ui/dialogs/ModeCards';
@@ -79,7 +80,7 @@ import { buildFlow, requestPath, designGraph, designSignature, designToFlow, edg
 import { analyticsLevel, lookup, pathFor, registerCustomLevel, startingPoint } from './levels';
 import { useAchievements } from './hooks/useAchievements';
 import { useAutoClear } from './hooks/useAutoClear';
-import { MIN_ZOOM, fitOptions, useCanvasFit } from './hooks/useCanvasFit';
+import { MIN_ZOOM, PHONE_PAD, fitOptions, useCanvasFit } from './hooks/useCanvasFit';
 import { useGuide } from './hooks/useGuide';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { useShortcuts } from './hooks/useShortcuts';
@@ -637,18 +638,27 @@ export default function App() {
     return ids.filter((id, i) => ids.indexOf(id) === i);
   }, [picked]);
 
-  const zones = useMemo(() => (showZones ? zoneNodes(nodes) : []), [nodes, showZones]);
+  const shown = useMemo(() => (isPhone ? toPortrait(nodes) : nodes), [nodes, isPhone]);
+  const zones = useMemo(() => (showZones ? zoneNodes(shown) : []), [shown, showZones]);
+  const [canvasWidth, setCanvasWidth] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setCanvasWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  // the phone canvas is page width minus the main column's padding on each side
+  const phoneCanvasHeight = useMemo(() => (isPhone ? portraitHeight(shown, canvasWidth - 24, PHONE_PAD) : undefined), [isPhone, shown, canvasWidth]);
   const viewNodes = useMemo(
     () =>
       [
         ...zones,
-        ...nodes.map((n) => ({
+        ...shown.map((n) => ({
           ...n,
           className: traced ? (traced.includes(n.id) ? 'is-traced' : 'is-dimmed') : undefined,
           data: { ...n.data, running, stat: metrics?.nodeStats[n.id] },
         })),
       ] as unknown as SimFlowNode[],
-    [zones, nodes, metrics, running, traced],
+    [zones, shown, metrics, running, traced],
   );
 
   const active = useMemo(() => new Set(metrics?.activeNodeIds ?? []), [metrics]);
@@ -762,51 +772,56 @@ export default function App() {
         }}
       >
         <h1 className="sr-only">{`AISim: ${displayTitle(scenario)}`}</h1>
-        <ReactFlow
-          nodes={viewNodes}
-          edges={viewEdges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodesChange={(changes) => {
-            // zones are drawn from the design, not part of it: their size reports must not feed back into it
-            const real = changes.toArray().filter((c) => !('id' in c) || !isZoneId(c.id));
-            if (real.length) onNodesChange(new NodeChangeset<SimFlowNode>(real));
-          }}
-          onNodesDelete={(deleted) => healAfterDelete(deleted.map((d) => d.id))}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onSelectionChange={({ nodes: sel }) => {
-            const id = sel[0]?.id ?? null;
-            // React Flow re-reports the selection whenever node data updates; only react to real changes
-            if (id === selectedRef.current) return;
-            selectedRef.current = id;
-            setSelectedId(id);
-            setSheetOpen(!!id);
-            if (id) setTab('component');
-            else if (tab === 'component') setTab('mission');
-          }}
-          deleteKeyCode={['Backspace', 'Delete']}
-          // phones: one-finger swipes scroll the page; pinch still zooms and the fit button recentres
-          panOnDrag={!isPhone}
-          preventScrolling={!isPhone}
-          nodesDraggable={!isPhone}
-          fitView
-          fitViewOptions={fitOptions()}
-          minZoom={MIN_ZOOM}
-          onMoveStart={(e) => {
-            // e is null for programmatic moves like fitView; only the player's own pans and zooms count
-            if (e) canvas.markMoved();
-          }}
-          proOptions={{ hideAttribution: true }}
-          connectionLineStyle={{ stroke: 'var(--ink)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
-        >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color={theme === 'dark' ? '#2a2a2e' : '#d4d4d8'} />
-          {isPhone ? (
-            <Controls showInteractive={false} showZoom={false} position="top-right" fitViewOptions={fitOptions()} />
-          ) : (
-            <Controls showInteractive={false} position="bottom-right" orientation="horizontal" />
-          )}
-        </ReactFlow>
+        <PortraitContext.Provider value={isPhone}>
+          <ReactFlow
+            // handles move between the sides and the top and bottom, so remount rather than re-measure
+            key={isPhone ? 'portrait' : 'landscape'}
+            style={phoneCanvasHeight ? ({ '--canvas-h': `${phoneCanvasHeight}px` } as React.CSSProperties) : undefined}
+            nodes={viewNodes}
+            edges={viewEdges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodesChange={(changes) => {
+              // zones are drawn from the design, not part of it: their size reports must not feed back into it
+              const real = changes.toArray().filter((c) => !('id' in c) || !isZoneId(c.id));
+              if (real.length) onNodesChange(new NodeChangeset<SimFlowNode>(real));
+            }}
+            onNodesDelete={(deleted) => healAfterDelete(deleted.map((d) => d.id))}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onSelectionChange={({ nodes: sel }) => {
+              const id = sel[0]?.id ?? null;
+              // React Flow re-reports the selection whenever node data updates; only react to real changes
+              if (id === selectedRef.current) return;
+              selectedRef.current = id;
+              setSelectedId(id);
+              setSheetOpen(!!id);
+              if (id) setTab('component');
+              else if (tab === 'component') setTab('mission');
+            }}
+            deleteKeyCode={['Backspace', 'Delete']}
+            // phones: one-finger swipes scroll the page; pinch still zooms and the fit button recentres
+            panOnDrag={!isPhone}
+            preventScrolling={!isPhone}
+            nodesDraggable={!isPhone}
+            fitView
+            fitViewOptions={fitOptions()}
+            minZoom={MIN_ZOOM}
+            onMoveStart={(e) => {
+              // e is null for programmatic moves like fitView; only the player's own pans and zooms count
+              if (e) canvas.markMoved();
+            }}
+            proOptions={{ hideAttribution: true }}
+            connectionLineStyle={{ stroke: 'var(--ink)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color={theme === 'dark' ? '#2a2a2e' : '#d4d4d8'} />
+            {isPhone ? (
+              <Controls showInteractive={false} showZoom={false} position="top-right" fitViewOptions={fitOptions()} />
+            ) : (
+              <Controls showInteractive={false} position="bottom-right" orientation="horizontal" />
+            )}
+          </ReactFlow>
+        </PortraitContext.Provider>
         <PressureWindow
           p={pressure}
           running={running}

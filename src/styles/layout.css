@@ -44,8 +44,9 @@
 
   .canvas > .react-flow {
     order: 1;
-    height: 56vh !important;
-    min-height: 320px;
+    /* sized to the diagram (see portraitHeight), so it's neither shrunk nor floating in space */
+    height: var(--canvas-h, 56vh) !important;
+    min-height: 280px;
     border-radius: 12px;
     box-shadow: var(--ring);
     background: var(--bg);
