@@ -44,7 +44,7 @@ export function SidePanel({
   streak: number;
   needed: number;
   warnings: string[];
-  selected?: { id: string; kind: ComponentType; config: NodeConfig };
+  selected?: { id: string; kind: ComponentType; config: NodeConfig; hidden?: Set<string> | null };
   onChange: (id: string, key: string, v: ConfigValue) => void;
   onDelete: (id: string) => void;
   tab: Tab;

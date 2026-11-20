@@ -28,6 +28,7 @@ const KEYS = {
   sfx: 'aisim.sfx.v1',
   paletteCollapsed: 'aisim.palCollapsed.v1',
   zones: 'aisim.zones.v1',
+  allNumbers: 'aisim.allNumbers.v1',
   analyticsId: 'aisim.anon.v1',
 } as const;
 

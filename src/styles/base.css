@@ -7,7 +7,11 @@
   --line: #ececee;
   --ink: #18181b;
   --ink-2: #52525b;
-  --ink-3: #a1a1aa;
+  /* faint text still needs 4.5:1 on white and on --subtle */
+  --ink-3: #6f6f78;
+  --ok-text: #047857;
+  --blue-text: #1d4ed8;
+  --hot-text: #be123c;
   --ok: #059669;
   --warn: #d97706;
   --hot: #e11d48;
@@ -61,7 +65,10 @@
   --line: #27272a;
   --ink: #fafafa;
   --ink-2: #a1a1aa;
-  --ink-3: #71717a;
+  --ink-3: #8e8e98;
+  --ok-text: #34d399;
+  --blue-text: #93c5fd;
+  --hot-text: #fb7185;
   --ok: #34d399;
   --warn: #fbbf24;
   --hot: #fb7185;

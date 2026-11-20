@@ -6,8 +6,18 @@ import { type Pressure } from '../../engine/pressures';
  * The single biggest problem right now, and why it's happening. What to try is held back until the
  * player asks, so the panel points them at the problem without solving the level for them.
  */
-export function PressureWindow({ p, running, hasRun, hud }: { p: Pressure | null; running: boolean; hasRun: boolean; hud?: React.ReactNode }) {
-  const state = !hasRun || !p ? 'idle' : p.key === 'stable' ? 'stable' : 'binding';
+interface Props {
+  p: Pressure | null;
+  running: boolean;
+  hasRun: boolean;
+  /** On a level: how many ticks every goal has held, out of how many it takes to clear. */
+  hold?: { streak: number; needed: number };
+  hud?: React.ReactNode;
+}
+
+export function PressureWindow({ p, running, hasRun, hold, hud }: Props) {
+  const met = !!hold && hold.streak > 0;
+  const state = !hasRun || !p ? 'idle' : met ? 'met' : p.key === 'stable' ? 'stable' : 'binding';
   const [showFix, setShowFix] = useState(false);
   useEffect(() => setShowFix(false), [p?.key]);
   return (
@@ -25,6 +35,19 @@ export function PressureWindow({ p, running, hasRun, hud }: { p: Pressure | null
       <div className="pressure-body">
         {state === 'idle' ? (
           <p className="pressure-why">Press Run to send customers' requests through your system. The biggest problem it has will show up here.</p>
+        ) : state === 'met' ? (
+          <>
+            <p className="pressure-title">
+              <span className="pressure-dot" aria-hidden />
+              Every goal is met
+            </p>
+            <p className="pressure-why">Keep it running. The level clears once the numbers hold for a few seconds.</p>
+            <div className="hold pressure-hold" role="progressbar" aria-label="Holding every goal" aria-valuemin={0} aria-valuemax={hold!.needed} aria-valuenow={hold!.streak}>
+              <div className="hold-track">
+                <div className="hold-bar" style={{ width: `${(hold!.streak / hold!.needed) * 100}%` }} />
+              </div>
+            </div>
+          </>
         ) : (
           <>
             <p className="pressure-title">

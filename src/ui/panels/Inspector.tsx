@@ -11,6 +11,7 @@ export function Inspector({
   id,
   kind,
   config,
+  hidden,
   onChange,
   onDelete,
   onLearn,
@@ -18,6 +19,8 @@ export function Inspector({
   id: string;
   kind: ComponentType;
   config: NodeConfig;
+  /** Settings a later level teaches, as `type.key`. Still shown if this node already uses them. */
+  hidden?: Set<string> | null;
   onChange: (id: string, key: string, v: ConfigValue) => void;
   onDelete: (id: string) => void;
   onLearn: (termId: string) => void;
@@ -25,6 +28,8 @@ export function Inspector({
   const spec = COMPONENTS[kind];
   const size = config.size as ModelSize | undefined;
   const termId = COMPONENT_TERM[kind];
+  const fields = spec.fields.filter((f) => !hidden?.has(`${kind}.${f.key}`) || config[f.key] !== spec.defaults[f.key]);
+  const later = spec.fields.length - fields.length;
   return (
     <div className="inspector">
       <div className="inspector-head">
@@ -39,7 +44,7 @@ export function Inspector({
       )}
       {spec.fields.length > 0 && (
         <Group title="Settings">
-          {spec.fields.map((f) => (
+          {fields.map((f) => (
             <label key={f.key} className="field">
               <span className="field-label">
                 {f.label}
@@ -66,6 +71,7 @@ export function Inspector({
               <span className="field-help">{f.help}</span>
             </label>
           ))}
+          {later > 0 && <p className="field-later">{later === 1 ? 'One more setting opens up' : `${later} more settings open up`} in later levels.</p>}
         </Group>
       )}
       {WHY[kind] && (

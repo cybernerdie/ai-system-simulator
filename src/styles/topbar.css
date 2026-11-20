@@ -341,8 +341,8 @@
   }
 }
 
-@media (max-width: 1060px) and (min-width: 901px) {
-  /* small laptops: the command palette is still on '/', the source link is in the README */
+@media (max-width: 1060px) {
+  /* small laptops and narrow windows: the command palette is still on '/', the source link is in the README */
   .topbar-tools .only-keys,
   .topbar-tools a[href*='github'] {
     display: none;
@@ -368,5 +368,16 @@
   .topbar-tools .theme-toggle {
     width: 36px;
     height: 36px;
+  }
+}
+
+@media (max-width: 400px) {
+  /* small phones: the logo alone, so seven tool buttons still fit beside it */
+  .brand span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
   }
 }

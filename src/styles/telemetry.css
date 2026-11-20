@@ -38,11 +38,14 @@
 }
 
 .tele-label {
-  font-size: 11.5px;
-  color: var(--ink-3);
-  white-space: nowrap;
+  /* two lines rather than "Right ans…": a cut-off label is a number nobody can read */
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 11.5px;
+  line-height: 1.25;
+  color: var(--ink-3);
 }
 
 .tele-row {
@@ -173,21 +176,20 @@
     right: auto;
     width: min(560px, calc(100% - 2 * var(--sp-4)));
   }
-  /* expanded on laptops: the toggle takes its own row under the two rows of four */
+  /* expanded: two rows of four, so every label is readable, and the toggle on its own row */
+  .telemetry.is-focused:not(.is-collapsed) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .telemetry.is-focused:not(.is-collapsed) .tele:nth-child(5) {
+    border-left: 0;
+  }
+  .telemetry.is-focused:not(.is-collapsed) .tele:nth-child(n + 5) {
+    border-top: 1px solid var(--line);
+  }
   .telemetry.is-focused:not(.is-collapsed) .tele-more {
     grid-column: 1 / -1;
     padding: var(--sp-2);
     border-top: 1px solid var(--line);
-  }
-}
-
-@media (min-width: 1421px) {
-  .telemetry.is-focused:not(.is-collapsed) {
-    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
-  }
-  .telemetry.is-focused:not(.is-collapsed) .tele-more {
-    grid-column: auto;
-    border-top: 0;
   }
 }
 

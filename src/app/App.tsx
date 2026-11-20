@@ -10,7 +10,7 @@ import { INCIDENTS, INCIDENT_SCENARIO, formatDuration, type IncidentState } from
 import { ACHIEVEMENTS, type Progress } from '../engine/modes/achievements';
 import { autoWire, removeAndHeal, tidyLayout } from '../engine/autowire';
 import { scoreStars, type StarResult } from '../engine/stars';
-import { paletteLocks } from '../engine/unlocks';
+import { hiddenSettings, paletteLocks } from '../engine/unlocks';
 import type { Review } from '../engine/review';
 import type { ComponentType, ConfigValue, Metrics, TrafficProfile } from '../engine/types';
 import { COACH } from '../content/guide';
@@ -79,7 +79,7 @@ import { buildFlow, requestPath, designGraph, designSignature, designToFlow, edg
 import { analyticsLevel, lookup, pathFor, registerCustomLevel, startingPoint } from './levels';
 import { useAchievements } from './hooks/useAchievements';
 import { useAutoClear } from './hooks/useAutoClear';
-import { fitOptions, useCanvasFit } from './hooks/useCanvasFit';
+import { MIN_ZOOM, fitOptions, useCanvasFit } from './hooks/useCanvasFit';
 import { useGuide } from './hooks/useGuide';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { useShortcuts } from './hooks/useShortcuts';
@@ -138,6 +138,7 @@ export default function App() {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [palCollapsed, togglePalette] = useStoredFlag('paletteCollapsed', false, EMBED || undefined);
   const [showZones, toggleZones] = useStoredFlag('zones', true);
+  const [allNumbers, toggleAllNumbers] = useStoredFlag('allNumbers', false);
   const [sfx, setSfxState] = useState(sfxOn);
   useEffect(() => onSfxChange(setSfxState), []);
   const [voice] = useVoice();
@@ -626,6 +627,7 @@ export default function App() {
   );
 
   const unlock = useMemo(() => paletteLocks(scenario, new Set(nodes.map((n) => n.data.kind)), unlockAll), [scenario, nodes, unlockAll]);
+  const hiddenFields = useMemo(() => hiddenSettings(scenario, unlockAll), [scenario, unlockAll]);
 
   /** The path a picked request took: Users first, then each component once, in order. */
   const traced = useMemo(() => {
@@ -759,6 +761,7 @@ export default function App() {
           if (t && COMPONENTS[t]) addNode(t, flow.screenToFlowPosition({ x: e.clientX - 100, y: e.clientY - 36 }));
         }}
       >
+        <h1 className="sr-only">{`AISim: ${displayTitle(scenario)}`}</h1>
         <ReactFlow
           nodes={viewNodes}
           edges={viewEdges}
@@ -789,6 +792,7 @@ export default function App() {
           nodesDraggable={!isPhone}
           fitView
           fitViewOptions={fitOptions()}
+          minZoom={MIN_ZOOM}
           onMoveStart={(e) => {
             // e is null for programmatic moves like fitView; only the player's own pans and zooms count
             if (e) canvas.markMoved();
@@ -803,8 +807,14 @@ export default function App() {
             <Controls showInteractive={false} position="bottom-right" orientation="horizontal" />
           )}
         </ReactFlow>
-        <PressureWindow p={pressure} running={running} hasRun={!!metrics} hud={isIncident && incident ? <IncidentHud s={incident} /> : undefined} />
-        <Telemetry m={metrics} history={sim.history} goals={goals} focus={scenario.difficulty === 1} />
+        <PressureWindow
+          p={pressure}
+          running={running}
+          hasRun={!!metrics}
+          hold={goals.length && !isIncident ? { streak, needed: HOLD_TICKS } : undefined}
+          hud={isIncident && incident ? <IncidentHud s={incident} /> : undefined}
+        />
+        <Telemetry m={metrics} history={sim.history} goals={goals} focus={goals.length > 0} showAll={allNumbers} onToggleAll={toggleAllNumbers} />
         {banner && <IncidentBanner title={banner.title} text={banner.text} />}
         <Complaints samples={metrics?.samples} running={running && !guide.celebrate} />
       </main>
@@ -818,7 +828,7 @@ export default function App() {
         streak={streak}
         needed={HOLD_TICKS}
         warnings={metrics?.warnings ?? []}
-        selected={selected ? { id: selected.id, kind: selected.data.kind, config: selected.data.config } : undefined}
+        selected={selected ? { id: selected.id, kind: selected.data.kind, config: selected.data.config, hidden: hiddenFields } : undefined}
         onChange={updateConfig}
         onDelete={deleteNode}
         tab={tab}

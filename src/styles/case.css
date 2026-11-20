@@ -108,7 +108,7 @@
 
 .transcript-row.is-truth dt {
   padding-top: calc(var(--sp-3) + 2px);
-  color: var(--ok);
+  color: var(--ok-text);
 }
 
 .transcript-row.is-truth dd {

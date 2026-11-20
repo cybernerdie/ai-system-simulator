@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { FitViewOptions, ReactFlowInstance } from '@xyflow/react';
 
-const PHONE_FIT = { padding: 0.12, maxZoom: 1 } as const;
+/** React Flow's own floor is 0.5, too high to fit a four-part pipeline across a phone. */
+export const MIN_ZOOM = 0.2;
+// padding is in pixels: a bare number here would be read as 0.08px
+const PHONE_FIT: FitViewOptions = { padding: '20px', maxZoom: 1, minZoom: MIN_ZOOM };
 const OVERLAYS = '.pressure-window, .telemetry, .canvas, .react-flow';
 
 /** Fit the diagram into the space the floating pressure window and metrics dock leave free. */

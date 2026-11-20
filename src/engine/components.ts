@@ -218,7 +218,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'KW',
     group: 'Retrieval',
     color: '#3b82f6',
-    blurb: 'Classic term matching. Nails exact identifiers (SKU-4471, error E1043) that embeddings blur. Combine with a vector DB for hybrid search.',
+    blurb: 'Classic term matching. Nails exact identifiers (part DT-5510, error E1043) that embeddings blur. Combine with a vector DB for hybrid search.',
     defaults: {},
     fields: [],
   },

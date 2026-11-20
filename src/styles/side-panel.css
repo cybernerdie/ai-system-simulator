@@ -414,3 +414,9 @@
 .mission-case-link {
   margin: 0 0 var(--sp-4);
 }
+
+.field-later {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}

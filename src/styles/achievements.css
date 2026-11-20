@@ -125,8 +125,9 @@
 }
 
 .ach-toast {
+  /* bottom-right, clear of dialog footers, which sit centred */
   position: fixed;
-  left: 50%;
+  right: 24px;
   bottom: 24px;
   z-index: 130;
   display: flex;
@@ -137,7 +138,6 @@
   background: var(--ink);
   color: var(--on-ink);
   box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.45);
-  transform: translateX(-50%);
   animation: ach-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -168,13 +168,16 @@
 
   .ach-toast {
     top: calc(10px + env(safe-area-inset-top));
+    right: auto;
     bottom: auto;
+    left: 50%;
+    transform: translateX(-50%);
   }
 }
 
 @keyframes ach-in {
   from {
     opacity: 0;
-    transform: translate(-50%, 12px);
+    translate: 0 12px;
   }
 }

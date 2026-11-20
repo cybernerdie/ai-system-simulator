@@ -13,7 +13,7 @@ export interface QuizQuestion {
 export const QUIZ: Record<string, QuizQuestion> = {
   'docs-bot': {
     q: "Why did adding retrieval fix the made-up answers, when a bigger model wouldn't have?",
-    options: ['Retrieval makes the model think harder', 'The answers were in private docs the model had never seen', 'Retrieval lowers the temperature'],
+    options: ['Retrieval makes the model think harder', "The answers were in your store's own documents, which the model had never seen", 'Retrieval lowers the temperature'],
     answer: 1,
     why: 'A model can only use what it was trained on or what you give it. Your docs were in neither, so it guessed. Retrieval puts the right passage in the prompt.',
   },

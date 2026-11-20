@@ -32,7 +32,7 @@ export interface Pressure {
 export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   no_knowledge: {
     title: 'Missing knowledge',
-    why: "Users are asking about your private docs, and the model has never seen them. When it doesn't know, it guesses — fluently.",
+    why: "Customers are asking about your own policies and manuals, and the model has never seen them. When it doesn't know, it guesses, and sounds sure of itself.",
     try: 'Ground the model: add an Embedding Model → Vector DB in front of the LLM (retrieval-augmented generation).',
   },
   retrieval_miss: {
@@ -256,9 +256,9 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     try: "Connect a path Users → … → LLM: drag from a node's right dot to the next node. Add an LLM from the left if there isn't one.",
   },
   stable: {
-    title: 'Holding',
-    why: 'Nothing is binding right now. Push more traffic or change the mix to find the next wall.',
-    try: 'Crank the traffic slider and see what breaks next.',
+    title: 'Holding up',
+    why: 'Nothing is struggling right now. Turn up the traffic or change the mix to find what breaks next.',
+    try: 'Drag the traffic slider up and watch which number goes red first.',
   },
 };
 

@@ -518,7 +518,7 @@
 }
 
 .demo-bad {
-  color: var(--hot);
+  color: var(--hot-text);
   background: var(--hot-bg);
   animation: demo-bad 6s infinite;
 }

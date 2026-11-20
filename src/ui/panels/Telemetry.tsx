@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { goalMet } from '../../engine/pressures';
 import type { Goal, GoalMetric, Metrics } from '../../engine/types';
 import { money, monthlyCost } from '../../engine/cost';
@@ -17,12 +16,21 @@ function Spark({ values }: { values: number[] }) {
   );
 }
 
+interface Props {
+  m: Metrics | null;
+  history: Metrics[];
+  goals: Goal[];
+  /** On a level, numbers that aren't goals wait behind a toggle unless the player has asked to see them all. */
+  focus?: boolean;
+  showAll?: boolean;
+  onToggleAll?: () => void;
+}
+
 /**
- * The live numbers. The level's goals come first; with \`focus\` (the intro levels) the rest wait
- * behind a toggle, so a new player only watches what they're being asked to change.
+ * The live numbers. The level's goals come first; with `focus` the rest wait behind a toggle, so the
+ * player watches what they're being asked to change. The toggle is remembered across levels.
  */
-export function Telemetry({ m, history, goals, focus = false }: { m: Metrics | null; history: Metrics[]; goals: Goal[]; focus?: boolean }) {
-  const [showAll, setShowAll] = useState(false);
+export function Telemetry({ m, history, goals, focus = false, showAll = false, onToggleAll }: Props) {
   if (!m) {
     return (
       <div className="telemetry is-empty">
@@ -142,7 +150,7 @@ export function Telemetry({ m, history, goals, focus = false }: { m: Metrics | n
         );
       })}
       {focus && ordered.some((c) => !isGoal(c)) && (
-        <button className="tele tele-more" onClick={() => setShowAll((v) => !v)} aria-expanded={!collapsed}>
+        <button className="tele tele-more" onClick={onToggleAll} aria-expanded={!collapsed}>
           {collapsed ? `${ordered.length - shown.length} more numbers` : 'Show only my goals'}
         </button>
       )}

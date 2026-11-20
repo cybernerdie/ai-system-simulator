@@ -82,7 +82,7 @@
   align-items: center;
   gap: 6px;
   font: 500 11px var(--mono);
-  color: var(--ok);
+  color: var(--ok-text, var(--ok));
 }
 
 .live-pill::before {

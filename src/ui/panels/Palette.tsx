@@ -61,13 +61,13 @@ export function Palette({
                   }}
                   onClick={() => (lockedAt ? onLocked?.(t, lockedAt) : onAdd(t))}
                   title={lockedAt ? `${COMPONENTS[t].name}: unlocks in level ${lockedAt}` : `${COMPONENTS[t].name}: ${COMPONENTS[t].blurb}`}
-                  aria-label={lockedAt ? `${COMPONENTS[t].name}, unlocks in level ${lockedAt}` : COMPONENTS[t].name}
                 >
                   <KindIcon kind={t} size="sm" />
                   <span className="palette-name">{COMPONENTS[t].name}</span>
                   {lockedAt ? (
-                    <em className="palette-lock" aria-label={`Unlocks in level ${lockedAt}`}>
-                      <Lock size={11} aria-hidden /> {lockedAt}
+                    <em className="palette-lock">
+                      <Lock size={11} aria-hidden />
+                      <span className="sr-only">, unlocks in level</span> {lockedAt}
                     </em>
                   ) : (
                     fresh?.has(t) && <em className="palette-new">New</em>

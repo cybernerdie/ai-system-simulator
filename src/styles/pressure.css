@@ -47,7 +47,8 @@
   background: #28c840;
 }
 
-.is-stable .lights i {
+.is-stable .lights i,
+.is-met .lights i {
   background: #28c840;
 }
 
@@ -92,7 +93,8 @@
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--hot) 16%, transparent);
 }
 
-.is-stable .pressure-dot {
+.is-stable .pressure-dot,
+.is-met .pressure-dot {
   background: var(--ok);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 16%, transparent);
 }
@@ -254,4 +256,9 @@
 
 .pressure-ask {
   margin-top: var(--sp-2);
+}
+
+.pressure-hold {
+  max-width: 320px;
+  margin-top: 10px;
 }

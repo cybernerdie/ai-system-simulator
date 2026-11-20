@@ -46,6 +46,8 @@
 }
 
 .palette-item {
+  /* anchors its .sr-only text; unanchored, it escapes the phone's scroll strip and widens the page */
+  position: relative;
   display: flex;
   align-items: center;
   width: 100%;
@@ -94,7 +96,7 @@
   padding: 1px 7px;
   border-radius: 99px;
   background: var(--blue-bg);
-  color: #2563eb;
+  color: var(--blue-text, #2563eb);
   font-size: 11px;
   font-style: normal;
   font-weight: 600;
