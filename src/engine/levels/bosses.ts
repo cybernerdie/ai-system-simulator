@@ -396,6 +396,40 @@ export const BOSSES: Scenario[] = [
     ],
     edges: [...chain('users', 'sc', 'emb', 'vdb', 'rr', 'llm'), { source: 'sc', target: 'kw' }, { source: 'kw', target: 'rr' }],
     hint: 'Fixing one bug can make another look worse. Follow a few failed requests and a few slow ones; they fail for different reasons.',
+    case: {
+      job: 'Find and fix all three settings someone changed, so answers are right, fast and within budget.',
+      chat: {
+        user: 'Can I return a gift without a receipt?',
+        bot: "Gift cards can't be refunded or exchanged.",
+        lie: "Gift cards can't be refunded",
+        truth:
+          'Yes: gifts can be returned within 30 days with the order number, for store credit. Over the last month, three different people each changed one setting to fix something, and nobody wrote down what. Answers are now wrong, slow and expensive.',
+        source: 'from your returns policy',
+        fixed: "Yes, within 30 days with the order number. You'll get store credit.",
+      },
+      predict: {
+        question: 'The typical answer arrives in a tenth of a second. Why is the bill still over budget?',
+        options: [
+          {
+            text: 'The cache is what costs money',
+            why: "The cache costs almost nothing. Every request it doesn't answer goes on to a model set to think hard, and those are the expensive ones.",
+          },
+          {
+            text: 'Fast cache hits are hiding slow, expensive model calls',
+            right: true,
+            why: 'Most answers come straight from the cache, so the typical time looks great. The rest go through a reranker keeping only one chunk, to a model thinking hard about everything. Three bugs, each hiding the others.',
+          },
+          {
+            text: 'Turn off the cache and the problems go away',
+            why: 'Wrong answers drop, but almost every reply then takes about 40 seconds and the bill triples. The cache was hiding the thinking bug.',
+          },
+        ],
+      },
+      named: {
+        term: 'Bugs that hide each other',
+        text: 'In a pipeline, one bug can mask another: a cache answering instantly hides a slow model behind it. Fixing one can make another look worse at first. Follow individual requests, both failed and slow ones, until each problem has its own cause.',
+      },
+    },
     lesson:
       'Debugging a pipeline means isolating one cause at a time. Read individual requests, not just averages: wrong answers, slow answers and expensive answers usually come from different places. Change one thing, watch what moves, then the next.',
     solution: {
