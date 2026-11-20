@@ -9,7 +9,7 @@ import { dailyNumber, dailyShareText, dailyStreak, todayKey } from '../engine/mo
 import { INCIDENTS, INCIDENT_SCENARIO, formatDuration, type IncidentState } from '../engine/modes/incident';
 import { ACHIEVEMENTS, type Progress } from '../engine/modes/achievements';
 import { autoWire, removeAndHeal, tidyLayout } from '../engine/autowire';
-import { scoreStars, type StarResult } from '../engine/stars';
+import { scoreStars, starTips, type StarResult } from '../engine/stars';
 import { hiddenSettings, paletteLocks } from '../engine/unlocks';
 import type { Review } from '../engine/review';
 import type { ComponentType, ConfigValue, Metrics, TrafficProfile } from '../engine/types';
@@ -236,6 +236,12 @@ export default function App() {
   const guide = useGuide({ scenario, nodes, designSig, running, won, streak, streakRef: sim.refs.streak, pressure, stars: result?.stars ?? 1 });
   const { coach, setCoach, stuck, setStuck, missing } = guide;
 
+  // worked out once per win, from the design that won: each tip is a change tried in the simulation
+  const starTipsShown = useMemo(
+    () => (won && result && result.stars < 3 ? starTips(scenario, graph, sim.testTraffic, goals, result) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the design that won, not later edits
+    [won, result],
+  );
   const progress: Progress = useMemo(
     () => ({ cleared, stars, quiz, daily, dailyStreak: dayStreak, incident: incidentBest, lessonsRead: readCount, flags }),
     [cleared, stars, quiz, daily, dayStreak, incidentBest, readCount, flags],
@@ -998,6 +1004,7 @@ export default function App() {
               s={scenario}
               kicker={winKicker}
               result={result}
+              tips={starTipsShown}
               best={stars[scenario.id] ?? 0}
               nextLabel={nextLabel}
               quiz={QUIZ[scenario.id]}

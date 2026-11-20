@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { ArrowRight, Check, ClipboardCheck, Circle, Share2, Star } from 'lucide-react';
 import { CaseChat } from '../case/CaseChat';
 import { type Lesson } from '../../content/learn';
-import type { StarResult } from '../../engine/stars';
+import type { StarResult, StarTips } from '../../engine/stars';
 import type { Scenario } from '../../engine/levels/scenarios';
 import type { QuizQuestion } from '../../content/quiz';
 import { QuizBlock } from './QuizBlock';
@@ -12,6 +12,7 @@ export function WinDialog({
   s,
   kicker,
   result,
+  tips,
   best,
   nextLabel,
   lesson,
@@ -32,6 +33,8 @@ export function WinDialog({
   s: Scenario;
   kicker: string;
   result: StarResult | null;
+  /** For each missed star, one change that would have earned it. */
+  tips?: StarTips | null;
   best: number;
   nextLabel: string;
   lesson?: Lesson;
@@ -91,12 +94,14 @@ export function WinDialog({
               {result.underBudget ? <Check size={14} strokeWidth={3} aria-hidden /> : <Circle size={14} aria-hidden />}
               <span>
                 Within budget: ${result.cost.toFixed(2)} per 1k requests <em>(par ${result.par.cost.toFixed(2)})</em>
+                {!result.underBudget && tips?.budget && <small className="win-tip">{tips.budget}</small>}
               </span>
             </li>
             <li className={result.lean ? 'is-met' : ''}>
               {result.lean ? <Check size={14} strokeWidth={3} aria-hidden /> : <Circle size={14} aria-hidden />}
               <span>
                 Lean build: {result.parts} component{result.parts === 1 ? '' : 's'} <em>(par {result.par.parts})</em>
+                {!result.lean && tips?.lean && <small className="win-tip">{tips.lean}</small>}
               </span>
             </li>
           </ul>
