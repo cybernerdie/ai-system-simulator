@@ -7,13 +7,16 @@ import '@fontsource-variable/geist-mono';
 import './styles/index.css';
 import App from './app/App';
 import { initAnalytics } from './lib/analytics';
+import { ErrorBoundary } from './ui/ErrorBoundary';
 
 initAnalytics();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ReactFlowProvider>
-      <App />
-    </ReactFlowProvider>
+    <ErrorBoundary whole>
+      <ReactFlowProvider>
+        <App />
+      </ReactFlowProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );
