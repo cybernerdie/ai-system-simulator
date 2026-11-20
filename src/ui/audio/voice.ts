@@ -46,6 +46,7 @@ export function onVoiceChange(l: Listener) {
 
 export function stopVoice() {
   current = '';
+  playing = null;
   if (audio) {
     audio.pause();
     audio = null;
@@ -181,10 +182,47 @@ export async function speak(id: string, text: string) {
 
 function fallbackSpeak(id: string, text: string) {
   if (typeof speechSynthesis === 'undefined' || current !== id) return;
-  const u = new SpeechSynthesisUtterance(text);
-  const v = bestVoice();
-  applyVoice(u, v);
+  speakFrom(id, text, 0);
+}
+
+/**
+ * The line being spoken and how far the voice has got through it, so changing the voice or its
+ * speed can carry on from the current sentence instead of starting over or going quiet.
+ */
+let playing: { id: string; text: string; at: number; token: object } | null = null;
+
+function speakFrom(id: string, text: string, from: number) {
+  const u = new SpeechSynthesisUtterance(text.slice(from));
+  applyVoice(u, bestVoice());
   u.rate = rate;
   u.pitch = 1;
+  const token = {};
+  playing = { id, text, at: from, token };
+  u.onboundary = (e) => {
+    if (playing?.token === token) playing.at = from + e.charIndex;
+  };
+  u.onend = () => {
+    if (playing?.token === token) playing = null;
+  };
   say(u);
+}
+
+/** Where the sentence containing `at` begins. */
+function sentenceStart(text: string, at: number): number {
+  const ends = [...text.slice(0, at).matchAll(/[.!?:]\s+/g)];
+  const last = ends[ends.length - 1];
+  return last ? last.index! + last[0].length : 0;
+}
+
+/**
+ * After the voice or speed changes: if a line was mid-way, carry on from the start of the current
+ * sentence in the new voice. Returns false when nothing was being said.
+ */
+export function continueInNewVoice(): boolean {
+  const p = playing;
+  if (!enabled || !p || typeof speechSynthesis === 'undefined') return false;
+  stopVoice();
+  current = p.id;
+  speakFrom(p.id, p.text, sentenceStart(p.text, p.at));
+  return true;
 }

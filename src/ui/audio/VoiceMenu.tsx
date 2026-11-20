@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Volume2 } from 'lucide-react';
-import { chosenVoice, isRecommended, listVoices, onVoicesChanged, previewVoice, setChosenVoice, setVoiceRate, voiceLang, voiceRate } from './voice';
+import { chosenVoice, continueInNewVoice, isRecommended, listVoices, onVoicesChanged, previewVoice, setChosenVoice, setVoiceRate, voiceLang, voiceRate } from './voice';
 import { useVoice } from './useVoice';
 
 /* ---------- voice settings ---------- */
@@ -65,7 +65,8 @@ export function VoiceMenu({ anchor, onClose }: { anchor: DOMRect | null; onClose
               onChange={(e) => {
                 setName(e.target.value);
                 setChosenVoice(e.target.value);
-                previewVoice(e.target.value);
+                // carry on with what the guide was saying, in the new voice; otherwise play a sample
+                if (!continueInNewVoice()) previewVoice(e.target.value);
               }}
             >
               {voices.map((v, i) => (
@@ -90,7 +91,7 @@ export function VoiceMenu({ anchor, onClose }: { anchor: DOMRect | null; onClose
                 setRate(Number(e.target.value));
                 setVoiceRate(Number(e.target.value));
               }}
-              onPointerUp={() => previewVoice(name)}
+              onPointerUp={() => continueInNewVoice() || previewVoice(name)}
             />
           </label>
           <button className="btn btn-ghost voice-sample" onClick={() => previewVoice(name)}>
