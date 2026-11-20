@@ -46,6 +46,10 @@ Built-in levels are data in `engine/levels/`. `engine/catalog.ts` finds any leve
 
 Numbered levels and bosses have their own URL, `/play/<id>`. At build time `scripts/seo.ts` writes a page per level with its own title, description and structured data, plus oEmbed files, so a shared link previews properly. `?embed=1` gives a stripped-down layout for iframes.
 
+## What a change did
+
+After each design change, a note says what changed ("Added Vector DB", "LLM: Model Medium → Large") and how each goal moved (`engine/changes.ts`). It waits until the player stops adjusting, so a slider drag counts as one change, then simulates the design before and after with a fixed seed (`app/hooks/useChangeNote.ts`). The live numbers are smoothed and take seconds to settle, so reading them would give a late, half-moved answer. Quality that isn't measured yet is left out, and nothing is shown while the simulation is paused.
+
 ## Phones
 
 Designs are stored left to right: levels, saved designs and share links all use that one form. Phones show the same design top to bottom (`ui/canvas/portrait.ts`): positions are transposed on the way into the canvas and the cards' connection points move to the top and bottom. Phones don't drag cards, so nothing has to be mapped back. The phone canvas is sized to the diagram at the zoom that fits the screen width, rather than a fixed share of the screen.

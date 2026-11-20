@@ -264,7 +264,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
 
 const QUALITY: GoalMetric[] = ['accuracy', 'hallucination'];
 
-function metricValue(m: Metrics, g: GoalMetric): number {
+export function metricValue(m: Metrics, g: GoalMetric): number {
   return m[g];
 }
 

@@ -68,6 +68,7 @@ import { PressureWindow } from '../ui/panels/PressureWindow';
 import type { Shown } from '../ui/panels/Requests';
 import { SidePanel, type Tab } from '../ui/panels/SidePanel';
 import { Telemetry } from '../ui/panels/Telemetry';
+import { ChangeNote } from '../ui/panels/ChangeNote';
 import { Toast } from '../ui/Toast';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { importOrReload } from '../lib/freshBuild';
@@ -83,6 +84,7 @@ import { useAutoClear } from './hooks/useAutoClear';
 import { MIN_ZOOM, PHONE_PAD, fitOptions, useCanvasFit } from './hooks/useCanvasFit';
 import { useGuide } from './hooks/useGuide';
 import { useMediaQuery } from './hooks/useMediaQuery';
+import { useChangeNote } from './hooks/useChangeNote';
 import { useShortcuts } from './hooks/useShortcuts';
 import { useSimulation } from './hooks/useSimulation';
 import { useStoredFlag } from './hooks/useStoredFlag';
@@ -240,6 +242,8 @@ export default function App() {
   );
   const achievements = useAchievements(progress);
 
+  // bumped when a level loads or resets, so the change note starts from the new design
+  const [designEpoch, setDesignEpoch] = useState(0);
   const loadScenario = useCallback(
     (id: string, { fresh = false, showCase = true } = {}) => {
       const s = lookup(id) ?? SCENARIOS[0];
@@ -248,6 +252,7 @@ export default function App() {
       const saved = fresh ? null : loadDesign(s.id);
       const f = saved ? designToFlow(saved) : buildFlow(s);
       setScenarioId(s.id);
+      setDesignEpoch((e) => e + 1);
       setNodes(f.nodes);
       setEdges(f.edges);
       setRps(s.traffic.rps);
@@ -265,6 +270,7 @@ export default function App() {
     },
     [setNodes, setEdges, setRps, resetSim, setBanner, setTab, canvas],
   );
+  const [changeNote, dismissChangeNote] = useChangeNote({ graph, sig: designSig, epoch: designEpoch, running, traffic: sim.testTraffic, goals });
 
   const showFlow = useCallback(
     (d: SharedDesign) => {
@@ -833,6 +839,7 @@ export default function App() {
         <Telemetry m={metrics} history={sim.history} goals={goals} focus={goals.length > 0} showAll={allNumbers} onToggleAll={toggleAllNumbers} />
         {banner && <IncidentBanner title={banner.title} text={banner.text} />}
         <Complaints samples={metrics?.samples} running={running && !guide.celebrate} />
+        {changeNote && !won && <ChangeNote key={changeNote.id} what={changeNote.what} shifts={changeNote.shifts} onClose={dismissChangeNote} />}
       </main>
 
       {isPhone && sheetOpen && selected && <div className="sheet-backdrop" onClick={() => setSheetOpen(false)} aria-hidden />}
