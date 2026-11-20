@@ -6,9 +6,9 @@ import { BOSSES } from './bosses';
 describe('case files', () => {
   const withCase = [...SCENARIOS, ...BOSSES].filter((s) => s.case);
 
-  it('cover the first four chapters and their bosses', () => {
-    expect(SCENARIOS.slice(0, 20).every((s) => s.case)).toBe(true);
-    expect(BOSSES.filter((b) => ['boss-launch', 'boss-pilot', 'boss-outage', 'boss-scale'].includes(b.id)).every((b) => b.case)).toBe(true);
+  it('cover the first five chapters and their bosses', () => {
+    expect(SCENARIOS.slice(0, 25).every((s) => s.case)).toBe(true);
+    expect(BOSSES.filter((b) => ['boss-launch', 'boss-pilot', 'boss-outage', 'boss-scale', 'boss-agent'].includes(b.id)).every((b) => b.case)).toBe(true);
   });
 
   for (const s of withCase) {

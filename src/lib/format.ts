@@ -10,7 +10,7 @@ export const METRIC_META: Record<GoalMetric, { label: string; term?: string; fmt
   fairnessGap: { label: 'Gap between user groups', fmt: (v) => `${Math.round(v * 100)} pts` },
   piiLeak: { label: 'Personal data leaked', term: 'PII leakage', fmt: pct },
   harmfulActions: { label: 'Hijacked actions', fmt: (v) => (v > 0 && v < 0.001 ? '<0.1%' : `${(v * 100).toFixed(1)}%`) },
-  evalGap: { label: 'Evals off from reality by', fmt: (v) => `${Math.round(v * 100)} pts` },
+  evalGap: { label: 'Gap between eval score and reality', fmt: (v) => `${Math.round(v * 100)} pts` },
   accuracy: { label: 'Right answers', term: 'accuracy', fmt: pct },
   hallucination: { label: 'Made-up answers', term: 'hallucination', fmt: pct },
   injection: { label: 'Attacks that worked', term: 'injection success', fmt: pct },

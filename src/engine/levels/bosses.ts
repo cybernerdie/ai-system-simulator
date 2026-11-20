@@ -325,6 +325,37 @@ export const BOSSES: Scenario[] = [
     ],
     edges: chain('users', 'agent', 'llm'),
     hint: 'Who is sending traffic, what is the agent reading, what is it allowed to do without asking, and how random should an invoice total be?',
+    case: {
+      job: 'Open the inbox agent to the public without a single forwarded invoice, with no failures, right totals and within budget.',
+      chat: {
+        user: "What's the total on the invoice I just forwarded you?",
+        bot: 'Something went wrong. Please try again.',
+        lie: 'Something went wrong.',
+        truthLabel: 'Behind the scenes',
+        truth:
+          'Scripts are signing up for free accounts by the hundred and using up your capacity, so about 1 in 4 requests fail. Some incoming emails hide instructions to forward invoices, and the agent can send without asking. And when a total does come back, it can differ each time, because the temperature is set to 0.7.',
+        fixed: 'The invoice total is \u20ac1,284.00, due 15 December.',
+      },
+      predict: {
+        question: 'Four things are going wrong. What do they have in common?',
+        options: [
+          {
+            text: 'Nothing: rate-limit the scripts and the rest goes away',
+            why: 'Failures drop to almost nothing, but hijacked emails still trigger forwards just as often, and totals are still random.',
+          },
+          {
+            text: 'Each needs a control at a different point',
+            right: true,
+            why: "Who sends (per-user limits), what the agent reads (a sanitizer), what it may do without asking (approval) and how random it is (temperature). One layer can't cover another's problem.",
+          },
+          { text: "Turn off sending until it's safe", why: 'No forwarded invoices, but far fewer requests get done, and scripts still crowd out real users.' },
+        ],
+      },
+      named: {
+        term: 'Defence in depth',
+        text: "A public agent needs a control at every point where things can go wrong: limits on who can send how much, sanitizing what it reads, least permission plus approval for what it does, and low temperature where there's one right answer.",
+      },
+    },
     lesson:
       "Public agents need defence in depth: limits per user so scripts can't swamp you, untrusted content marked as untrusted, approval before anything leaves, and deterministic settings where there is one right answer.",
     solution: {
