@@ -26,7 +26,10 @@ function parFor(s: Scenario): Par {
     edges: s.solution.edges.map((e) => ({ source: e.source, target: e.target })),
   };
   const m = simulate(graph, s.traffic, { seed: 7, samples: 3000 });
-  const par = { cost: Math.max(0.05, m.costPer1k * 1.15), parts: s.solution.nodes.filter((n) => n.type !== 'users').length };
+  // a little slack over the reference, but never looser than the level's own cost goal: a "within budget"
+  // star that's easier than the goal itself would mean nothing
+  const limit = s.goals.find((g) => g.metric === 'costPer1k' && g.op === '<=')?.value ?? Infinity;
+  const par = { cost: Math.max(0.05, Math.min(m.costPer1k * 1.15, limit)), parts: s.solution.nodes.filter((n) => n.type !== 'users').length };
   cache.set(s.id, par);
   return par;
 }

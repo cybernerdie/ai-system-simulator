@@ -33,7 +33,7 @@ export const LESSONS: Lesson[] = [
       },
       {
         kind: 'p',
-        text: "So an attacker doesn't need to talk to your chatbot. They put instructions where your system will read them: hidden white text in an email, a comment in a web page, a line in a shared document. When your agent reads it, the instructions arrive with the same authority as everything else. Your Input Guard never sees them, because it only checks what the user typed.",
+        text: "So an attacker doesn't need to talk to your chatbot. They put instructions where your system will read them: hidden white text in an email, a comment in a web page, a line in a shared document. When your agent reads it, the instructions arrive with the same authority as everything else. An input guard never sees them, because it only checks what the user typed.",
       },
       { kind: 'p', text: 'How bad it gets depends on three things. Security researchers call the combination the lethal trifecta:' },
       {

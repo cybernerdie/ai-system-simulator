@@ -3,6 +3,7 @@
  * so you have to use everything you just learned at once. They unlock when the chapter is cleared.
  */
 import { base, chain, type Scenario } from './kit';
+import { BANK, CLAIMS, REPORT, SPANISH } from './questions';
 
 const boss = (s: Omit<Scenario, 'kind'>): Scenario => ({ ...s, kind: 'boss' });
 
@@ -37,7 +38,7 @@ export const BOSSES: Scenario[] = [
         lie: 'the water tank is empty',
         truth:
           "E1043 means the grinder is jammed, and order #5120 arrived 12 days ago, so it can be refunded. Your bot is still just a prompt and a model: it can't read the manual, look up orders, or spot tricks, and some customers are trying them.",
-        fixed: "E1043 means the grinder is jammed. Order #5120 is within 30 days, so I've started your refund.",
+        fixed: "E1043 means the grinder is jammed. Order #5120 arrived 12 days ago, so it's within the 30-day window: you can request a refund under Orders.",
       },
       predict: {
         question: 'Everything from chapter 1 is going wrong at once. How do you approach it?',
@@ -89,7 +90,7 @@ export const BOSSES: Scenario[] = [
     tagline: 'A bank is trialling you. They read every transcript.',
     brief:
       "A bank is piloting your contract assistant. Analysts hold long conversations about long documents, they expect words on screen within a second and a half, and their compliance team grades answers you can't see unless you measure them. Win the pilot without blowing the budget.",
-    traffic: { ...base, rps: 5, kbShare: 0.75, exactTermShare: 0.25, easyShare: 0.45, repeatShare: 0.05, chatTurns: 14, recallShare: 0.25, qualityHidden: true },
+    traffic: { questions: BANK, ...base, rps: 5, kbShare: 0.75, exactTermShare: 0.25, easyShare: 0.45, repeatShare: 0.05, chatTurns: 14, recallShare: 0.25, qualityHidden: true },
     goals: [
       { metric: 'accuracy', op: '>=', value: 0.78 },
       { metric: 'ttftP50', op: '<=', value: 1500 },
@@ -165,6 +166,7 @@ export const BOSSES: Scenario[] = [
     brief:
       "Every morning your system answers questions about yesterday's numbers and fills a board report with JSON your code parses. Today your main provider is failing most calls, half the figures changed overnight and many live in tables. The report is due at 9.",
     traffic: {
+      questions: REPORT,
       ...base,
       rps: 8,
       kbShare: 0.7,
@@ -243,7 +245,7 @@ export const BOSSES: Scenario[] = [
     tagline: 'The bill is huge, legal is nervous, and the night jobs are eating the day.',
     brief:
       'Your claims platform works, and it costs a fortune. Every call carries a long policy prompt, half the traffic is overnight classification nobody waits for, customers paste medical details, and the house labelling style is something the base model keeps getting wrong. Finance, legal and support all want it fixed this quarter.',
-    traffic: { ...base, rps: 30, easyShare: 0.6, repeatShare: 0, systemPromptTokens: 6000, batchShare: 0.5, piiShare: 0.4, taskShare: 0.5 },
+    traffic: { questions: CLAIMS, ...base, rps: 30, easyShare: 0.6, repeatShare: 0, systemPromptTokens: 6000, batchShare: 0.5, piiShare: 0.4, taskShare: 0.5 },
     goals: [
       { metric: 'costPer1k', op: '<=', value: 1.5 },
       { metric: 'piiLeak', op: '<=', value: 0.02 },
@@ -334,7 +336,7 @@ export const BOSSES: Scenario[] = [
         truthLabel: 'Behind the scenes',
         truth:
           'Scripts are signing up for free accounts by the hundred and using up your capacity, so about 1 in 4 requests fail. Some incoming emails hide instructions to forward invoices, and the agent can send without asking. And when a total does come back, it can differ each time, because the temperature is set to 0.7.',
-        fixed: 'The invoice total is \u20ac1,284.00, due 15 December.',
+        fixed: 'The invoice total is €1,284.00, due 15 December.',
       },
       predict: {
         question: 'Four things are going wrong. What do they have in common?',
@@ -346,7 +348,7 @@ export const BOSSES: Scenario[] = [
           {
             text: 'Each needs a control at a different point',
             right: true,
-            why: "Who sends (per-user limits), what the agent reads (a sanitizer), what it may do without asking (approval) and how random it is (temperature). One layer can't cover another's problem.",
+            why: "Who sends (per-user limits), what the agent reads (a sanitiser), what it may do without asking (approval) and how random it is (temperature). One layer can't cover another's problem.",
           },
           { text: "Turn off sending until it's safe", why: 'No forwarded invoices, but far fewer requests get done, and scripts still crowd out real users.' },
         ],
@@ -454,7 +456,7 @@ export const BOSSES: Scenario[] = [
     tagline: 'Security, compliance and the support lead all have to sign off.',
     brief:
       'Your assistant is going from beta to general availability, and three teams must sign off. Security found the app key is being abused. Compliance wants personal data kept out of third-party systems, including your logs. Support wants every complaint traceable within hours, and the Spanish-speaking customers served as well as everyone else.',
-    traffic: { ...base, rps: 15, kbShare: 0.7, exactTermShare: 0.1, unauthShare: 0.3, piiShare: 0.3, cohortShare: 0.25, cohortHidden: true },
+    traffic: { questions: SPANISH, ...base, rps: 15, kbShare: 0.7, exactTermShare: 0.1, unauthShare: 0.3, piiShare: 0.3, cohortShare: 0.25, cohortHidden: true },
     goals: [
       { metric: 'costPer1k', op: '<=', value: 12 },
       { metric: 'piiLeak', op: '<=', value: 0.02 },
@@ -474,13 +476,13 @@ export const BOSSES: Scenario[] = [
       job: "Get four teams' sign-off for launch: the bill, personal data, traceable complaints, and equal answers in every language.",
       chat: {
         userLabel: 'Customer (Spanish)',
-        user: 'Soy Luc\u00eda P\u00e9rez, pedido 7731. \u00bfPuedo devolver la cafetera?',
+        user: 'Soy Lucía Pérez, pedido 7731. ¿Puedo devolver la cafetera?',
         bot: 'Something went wrong. Please try again.',
         lie: 'Something went wrong.',
         truthLabel: 'Behind the scenes',
         truth:
-          "Strangers are using your leaked app key, so the bill is three times budget and many requests fail. Luc\u00eda's name and order number go to the AI provider. Nothing is recorded when an answer goes wrong. And search was built for English, so Spanish questions find the wrong pages.",
-        fixed: 'S\u00ed, Luc\u00eda: el pedido 7731 est\u00e1 dentro de los 30 d\u00edas. Te enviamos la etiqueta de devoluci\u00f3n.',
+          "Strangers are using your leaked app key, so the bill is three times budget and many requests fail. Lucía's name and order number go to the AI provider. Nothing is recorded when an answer goes wrong. And search was built for English, so Spanish questions find the wrong pages.",
+        fixed: 'Sí, Lucía: el pedido 7731 está dentro de los 30 días. Te enviamos la etiqueta de devolución.',
       },
       predict: {
         question: 'Support wants every failed prompt recorded. Compliance wants no personal data in your logs. Who gets their way?',

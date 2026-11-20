@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SCENARIOS } from './levels/scenarios';
-import { hiddenSettings, settingLevels } from './unlocks';
+import { settingLocks, settingLevels } from './unlocks';
 
 /** Words that would send a player looking for a setting. Provider is left out: it also means "the company you call". */
 const MENTIONS: Record<string, RegExp> = {
@@ -27,7 +27,7 @@ describe('settings that open up later', () => {
   it('are never what a level asks the player to change', () => {
     const problems: string[] = [];
     for (const s of SCENARIOS) {
-      const hidden = hiddenSettings(s, false);
+      const hidden = settingLocks(s, false)?.hidden;
       if (!hidden) continue;
       const text = [s.brief, s.hint].join(' ');
       for (const id of hidden) if (MENTIONS[id]?.test(text)) problems.push(`${s.id} mentions ${id}`);
@@ -36,6 +36,15 @@ describe('settings that open up later', () => {
   });
 
   it('are all open when everything is unlocked', () => {
-    expect(hiddenSettings(SCENARIOS[0], true)).toBeNull();
+    expect(settingLocks(SCENARIOS[0], true)).toBeNull();
+  });
+
+  it('marks the settings a level is the first to show', () => {
+    expect(
+      settingLocks(
+        SCENARIOS.find((s) => s.id === 'broke-parser')!,
+        false,
+      )?.fresh.has('llm.jsonMode'),
+    ).toBe(true);
   });
 });

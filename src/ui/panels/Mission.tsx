@@ -3,7 +3,7 @@ import { Check, ClipboardCheck, Lightbulb, MessagesSquare, TriangleAlert, X } fr
 import { QUALITY_METRICS, goalMet } from '../../engine/pressures';
 import type { Scenario } from '../../engine/levels/scenarios';
 import type { Metrics, TrafficProfile } from '../../engine/types';
-import { METRIC_META, goalText } from '../../lib/format';
+import { METRIC_META, goalValue, goalText } from '../../lib/format';
 import { CaseChat } from '../case/CaseChat';
 import { Group } from './Group';
 import { displayTitle } from '../../engine/levels/kit';
@@ -104,7 +104,7 @@ export function Mission({
                     {goalText(g, !!s.traffic.voice)}
                     {meta.term && <span className="goal-term">{meta.term}</span>}
                   </span>
-                  {m && <span className="goal-now">{unknown ? 'unknown' : meta.fmt(m[g.metric])}</span>}
+                  {m && <span className="goal-now">{unknown ? 'unknown' : goalValue(g, m[g.metric], !!ok)}</span>}
                 </li>
               );
             })}

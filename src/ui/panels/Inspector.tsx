@@ -12,6 +12,7 @@ export function Inspector({
   kind,
   config,
   hidden,
+  fresh,
   onChange,
   onDelete,
   onLearn,
@@ -21,6 +22,8 @@ export function Inspector({
   config: NodeConfig;
   /** Settings a later level teaches, as `type.key`. Still shown if this node already uses them. */
   hidden?: Set<string> | null;
+  /** Settings this level is the first to show, badged "New" like new components. */
+  fresh?: Set<string> | null;
   onChange: (id: string, key: string, v: ConfigValue) => void;
   onDelete: (id: string) => void;
   onLearn: (termId: string) => void;
@@ -47,11 +50,14 @@ export function Inspector({
           {fields.map((f) => (
             <label key={f.key} className="field">
               <span className="field-label">
-                {f.label}
-                {f.kind === 'range' && <output>{String(config[f.key])}</output>}
+                <span>
+                  {f.label}
+                  {fresh?.has(`${kind}.${f.key}`) && <span className="palette-new field-new">New</span>}
+                </span>
+                {f.kind === 'range' && <output>{rangeText(f, Number(config[f.key]))}</output>}
               </span>
               {f.kind === 'select' && (
-                <select value={String(config[f.key])} onChange={(e) => onChange(id, f.key, e.target.value)}>
+                <select aria-label={f.label} value={String(config[f.key])} onChange={(e) => onChange(id, f.key, e.target.value)}>
                   {f.options!.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
@@ -60,11 +66,20 @@ export function Inspector({
                 </select>
               )}
               {f.kind === 'range' && (
-                <input type="range" min={f.min} max={f.max} step={f.step} value={Number(config[f.key])} onChange={(e) => onChange(id, f.key, Number(e.target.value))} />
+                <input
+                  type="range"
+                  aria-label={f.label}
+                  aria-valuetext={rangeText(f, Number(config[f.key]))}
+                  min={f.min}
+                  max={f.max}
+                  step={f.step}
+                  value={Number(config[f.key])}
+                  onChange={(e) => onChange(id, f.key, Number(e.target.value))}
+                />
               )}
               {f.kind === 'toggle' && (
                 <span className="switch">
-                  <input type="checkbox" role="switch" checked={config[f.key] === true} onChange={(e) => onChange(id, f.key, e.target.checked)} />
+                  <input type="checkbox" role="switch" aria-label={f.label} checked={config[f.key] === true} onChange={(e) => onChange(id, f.key, e.target.checked)} />
                   <span className="switch-track" aria-hidden />
                 </span>
               )}
@@ -126,4 +141,9 @@ export function Inspector({
       )}
     </div>
   );
+}
+
+/** A share reads as a percentage ("5%"), anything else as its number. */
+function rangeText(f: { key: string; label: string; max?: number }, v: number): string {
+  return /share|rate$/i.test(f.key) && (f.max ?? 2) <= 1 ? `${Math.round(v * 100)}%` : String(v);
 }

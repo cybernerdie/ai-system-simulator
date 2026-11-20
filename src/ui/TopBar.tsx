@@ -146,7 +146,7 @@ export function TopBar({ scenario, tag, title, embedLink, traffic, running, pinn
       <button className={`btn btn-primary btn-run${running ? ' is-running' : ''}`} onClick={actions.toggleRun}>
         {running ? <Pause size={14} fill="currentColor" aria-hidden /> : <Play size={14} fill="currentColor" aria-hidden />}
         {running ? 'Pause' : 'Run'}
-        <kbd>Space</kbd>
+        <kbd className="only-keys">Space</kbd>
       </button>
     </header>
   );

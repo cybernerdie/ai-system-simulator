@@ -3,6 +3,7 @@
  * Who may call you at all, seeing why an answer went wrong, and checking every group of users is served well.
  */
 import { base, chain, type Scenario } from './kit';
+import { SPANISH, STRANGERS } from './questions';
 
 export const PROD_LEVELS: Scenario[] = [
   {
@@ -13,7 +14,7 @@ export const PROD_LEVELS: Scenario[] = [
     tagline: 'Per-user limits are on. The bill doubled anyway.',
     brief:
       "Your mobile app calls the AI endpoint directly, with the key built into the app. Someone pulled it out, and now scripts all over the world use your endpoint as a free AI. They rotate thousands of accounts and addresses, so your per-user limits barely notice. Nearly half your traffic isn't your users.",
-    traffic: { ...base, rps: 30, easyShare: 0.6, repeatShare: 0, unauthShare: 0.45 },
+    traffic: { questions: STRANGERS, ...base, rps: 30, easyShare: 0.6, repeatShare: 0, unauthShare: 0.45 },
     goals: [
       { metric: 'costPer1k', op: '<=', value: 7 },
       { metric: 'errorRate', op: '<=', value: 0.01 },
@@ -150,7 +151,7 @@ export const PROD_LEVELS: Scenario[] = [
     tagline: 'Fine on average. Not for everyone.',
     brief:
       'Your help assistant scores well, and the dashboard is green. But a third of your customers write in Spanish or Portuguese, and they keep escalating to human support. Nobody has checked whether quality is the same for them. Find out, and close the gap.',
-    traffic: { ...base, rps: 6, kbShare: 0.75, exactTermShare: 0.1, cohortShare: 0.3, cohortHidden: true },
+    traffic: { questions: SPANISH, ...base, rps: 6, kbShare: 0.75, exactTermShare: 0.1, cohortShare: 0.3, cohortHidden: true },
     goals: [
       { metric: 'fairnessGap', op: '<=', value: 0.06 },
       { metric: 'accuracy', op: '>=', value: 0.72 },
@@ -167,12 +168,12 @@ export const PROD_LEVELS: Scenario[] = [
     case: {
       job: 'Measure quality for each language, then close the gap for Spanish and Portuguese speakers, within budget.',
       chat: {
-        user: '\u00bfC\u00f3mo cambio la direcci\u00f3n de entrega de mi pedido?',
+        user: '¿Cómo cambio la dirección de entrega de mi pedido?',
         bot: 'Para cancelar tu pedido, ve a Pedidos y elige Cancelar.',
         lie: 'Para cancelar tu pedido',
         truth:
           'They asked how to change their delivery address, and the bot explained how to cancel. A third of your customers write in Spanish or Portuguese, and they keep escalating to human support. The dashboard only shows the overall average, so nobody has checked whether their answers are as good.',
-        fixed: 'Ve a Pedidos, elige el pedido y pulsa Cambiar direcci\u00f3n.',
+        fixed: 'Ve a Pedidos, elige el pedido y pulsa Cambiar dirección.',
       },
       predict: {
         question: 'Why do Spanish-speaking customers get worse answers?',

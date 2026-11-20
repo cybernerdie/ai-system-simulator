@@ -92,13 +92,18 @@ export function settingLevels(): Map<string, number> {
 }
 
 /**
- * Settings a level keeps out of the inspector because a later level teaches them, as `type.key`.
- * Returns null when everything is open (sandbox, modes, "unlock everything").
+ * Settings a level keeps out of the inspector because a later level teaches them (`hidden`), and the
+ * ones this level is the first to show (`fresh`, badged "New"), as `type.key`. Null when everything
+ * is open (sandbox, modes, "unlock everything").
  */
-export function hiddenSettings(s: Scenario, unlockAll: boolean): Set<string> | null {
+export function settingLocks(s: Scenario, unlockAll: boolean): { hidden: Set<string>; fresh: Set<string> } | null {
   const cap = unlockCap(s);
   if (unlockAll || cap === null) return null;
-  const out = new Set<string>();
-  settingLevels().forEach((lvl, id) => lvl > cap && out.add(id));
-  return out;
+  const hidden = new Set<string>();
+  const fresh = new Set<string>();
+  settingLevels().forEach((lvl, id) => {
+    if (lvl > cap) hidden.add(id);
+    else if (lvl === levelNumber(s)) fresh.add(id);
+  });
+  return { hidden, fresh };
 }

@@ -566,6 +566,7 @@
 }
 
 .stop-title {
+  cursor: pointer;
   max-width: 120px;
   font-size: 12px;
   line-height: 1.3;

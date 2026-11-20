@@ -49,6 +49,11 @@ export interface SimGraph {
 /** Shape of the traffic hitting the system. All shares are 0..1. */
 export interface TrafficProfile {
   rps: number;
+  /**
+   * What this level's requests say, by kind, when it isn't the store most levels are set in (a legal
+   * team, a bank, a homework helper). Only the wording: the mix of kinds comes from the shares below.
+   */
+  questions?: Partial<Record<RequestSample['kind'], string[]>>;
   /** Questions whose answer lives in your private knowledge base. */
   kbShare: number;
   /** Of the KB questions, how many hinge on exact terms (SKUs, error codes, names). */

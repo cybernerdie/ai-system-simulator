@@ -27,6 +27,9 @@ export function ReviewDialog({ review, onFocusNode, onClose }: { review: Review 
                 <h2 id="review-title">{review.summary}</h2>
               </div>
             </header>
+            {review.scores.length > 0 && review.goalsTotal > 0 && (
+              <p className="review-scale">Scored against this level's goals: 100 means the goal is met, not that it's perfect.</p>
+            )}
             {review.scores.length > 0 && (
               <ul className="review-scores">
                 {review.scores.map((s) => (

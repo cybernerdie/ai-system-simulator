@@ -38,3 +38,22 @@ describe('goalShifts', () => {
     expect(goalShifts(run(start), run(start), level1.goals)).toEqual([]);
   });
 });
+
+describe('goalShifts on noise and measurement', () => {
+  const base = simulate(start, level1.traffic, { seed: 7, samples: 1500 });
+  const goal = [{ metric: 'piiLeak' as const, op: '<=' as const, value: 0.02 }];
+
+  it('ignores a small rate wobbling within sampling noise', () => {
+    expect(goalShifts({ ...base, piiLeak: 0.025 }, { ...base, piiLeak: 0.028 }, goal)).toEqual([]);
+  });
+
+  it('reports a small rate that really moved', () => {
+    expect(goalShifts({ ...base, piiLeak: 0.006 }, { ...base, piiLeak: 0.014 }, goal)).toHaveLength(1);
+  });
+
+  it('reports a number the change made visible as newly measured', () => {
+    const fair = [{ metric: 'fairnessGap' as const, op: '<=' as const, value: 0.05 }];
+    const [s] = goalShifts({ ...base, fairnessVisible: false }, { ...base, fairnessVisible: true, fairnessGap: 0.27 }, fair);
+    expect(s).toMatchObject({ metric: 'fairnessGap', to: 0.27, revealed: true });
+  });
+});

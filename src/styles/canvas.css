@@ -421,3 +421,7 @@
     width: auto;
   }
 }
+
+.change-shifts .is-revealed .change-values strong {
+  color: var(--ink);
+}

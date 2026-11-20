@@ -3,6 +3,7 @@ import { COMPONENTS } from '../components';
 import { base, chain, type Scenario, type ScenarioNode } from './kit';
 import { BUG_LEVELS } from './bugs';
 import { PROD_LEVELS } from './production';
+import { CONTRACTS, HOMEWORK, INSURANCE, INVOICES, TICKETS } from './questions';
 
 export type { Scenario, ScenarioNode } from './kit';
 export { chain } from './kit';
@@ -122,8 +123,8 @@ const CORE: Scenario[] = [
         ],
       },
       named: {
-        term: 'Hybrid search and reranking',
-        text: "You added keyword search next to meaning search, so exact codes match exactly while paraphrased questions still work. That's hybrid search. Then a reranker reads the widened results and keeps only the best few, so the model gets a short, clean set of pages.",
+        term: 'Hybrid search',
+        text: "You added keyword search next to meaning search, so exact codes match exactly while paraphrased questions still work. That's hybrid search. Teams often add a reranker after it: it reads the widened results and keeps only the best few, so the model gets a short, clean set of pages.",
       },
     },
     lesson:
@@ -354,7 +355,7 @@ const CORE: Scenario[] = [
     tagline: 'Every answer is buried in a 90-page PDF.',
     brief:
       'Legal wants a bot that answers questions about long contracts. To "not miss anything", someone set retrieval to grab 12 huge chunks per question and pinned the cheap small model to save money. Now every request fails.',
-    traffic: { ...base, rps: 4, kbShare: 0.9, exactTermShare: 0.25, easyShare: 0.4, repeatShare: 0.1 },
+    traffic: { questions: CONTRACTS, ...base, rps: 4, kbShare: 0.9, exactTermShare: 0.25, easyShare: 0.4, repeatShare: 0.1 },
     goals: [
       { metric: 'errorRate', op: '<=', value: 0.01 },
       { metric: 'accuracy', op: '>=', value: 0.72 },
@@ -511,11 +512,11 @@ const CORE: Scenario[] = [
       job: 'Keep long chats accurate and affordable, without the bot forgetting what the customer said.',
       chat: {
         user: "So with everything I've told you, which oven should I get?",
-        bot: "I'd go for the Elara electric oven at \u20ac1,400. It's our most popular model.",
-        lie: 'the Elara electric oven at \u20ac1,400',
+        bot: "I'd go for the Elara electric oven at €1,400. It's our most popular model.",
+        lie: 'the Elara electric oven at €1,400',
         truth:
-          'Forty messages ago the customer said the budget is \u20ac800 and it has to be gas. Every message, the bot resends the whole chat, about 7,000 tokens (roughly 5,000 words), and that line is buried in it.',
-        fixed: 'Within your \u20ac800 budget and gas only, the Brava 60 at \u20ac749 fits best.',
+          'Forty messages ago the customer said the budget is €800 and it has to be gas. Every message, the bot resends the whole chat, about 7,000 tokens (roughly 5,000 words), and that line is buried in it.',
+        fixed: 'Within your €800 budget and gas only, the Brava 60 at €749 fits best.',
       },
       predict: {
         question: 'The customer told the bot their budget. Why did it ignore it?',
@@ -726,7 +727,7 @@ const CORE: Scenario[] = [
         truthLabel: 'Behind the scenes',
         truth:
           'Your AI provider is having an outage: 7 in 10 calls come back with a 503 error ("service unavailable"). Your bot only knows one provider, so when it fails, your customers see the failure.',
-        fixed: "Yes, I've moved your delivery to Saturday.",
+        fixed: 'Yes, Saturday delivery is available. You can change the day under Orders until 6pm the day before.',
       },
       predict: {
         question: 'Your provider is failing 7 in 10 calls. What keeps your bot answering?',
@@ -839,7 +840,7 @@ const CORE: Scenario[] = [
     tagline: 'The hard questions keep coming back wrong.',
     brief:
       'Your tutoring assistant handles a lot of genuinely hard questions: multi-step maths, tricky logic, "explain why this proof is wrong". The medium model gets too many of them wrong. One engineer wants the large model for everything, another wants the new reasoning mode turned all the way up.',
-    traffic: { ...base, rps: 3, easyShare: 0.3, repeatShare: 0 },
+    traffic: { questions: HOMEWORK, ...base, rps: 3, easyShare: 0.3, repeatShare: 0 },
     goals: [
       { metric: 'accuracy', op: '>=', value: 0.91 },
       { metric: 'costPer1k', op: '<=', value: 15 },
@@ -855,12 +856,12 @@ const CORE: Scenario[] = [
       job: 'Get the hard, multi-step questions right without blowing the budget or the wait.',
       chat: {
         userLabel: 'Student',
-        user: 'A shirt costs \u20ac40 after a 20% discount. What was the original price?',
-        bot: 'The original price was \u20ac48.',
-        lie: '\u20ac48',
+        user: 'A shirt costs €40 after a 20% discount. What was the original price?',
+        bot: 'The original price was €48.',
+        lie: '€48',
         truth:
-          '\u20ac50. \u20ac40 is 80% of the original price, so the original is 40 \u00f7 0.8 = 50. Adding 20% to \u20ac40 is a classic mistake, and the model makes it because it answers in one go, without working through the steps.',
-        fixed: '\u20ac50. \u20ac40 is 80% of the original, and 40 \u00f7 0.8 = 50.',
+          '€50. €40 is 80% of the original price, so the original is 40 ÷ 0.8 = 50. Adding 20% to €40 is a classic mistake, and the model makes it because it answers in one go, without working through the steps.',
+        fixed: '€50. €40 is 80% of the original, and 40 ÷ 0.8 = 50.',
       },
       predict: {
         question: 'How do you get the hard ones right without blowing the budget?',
@@ -905,7 +906,7 @@ const CORE: Scenario[] = [
     tagline: 'One in nine responses crashes your code.',
     brief:
       'Your invoice-extraction API asks the model to return JSON (vendor, date, line items), and your code parses it. It works in the demo. In production, every so often the model adds a friendly sentence, forgets a bracket or invents a field, and your parser throws. The customer sees a 500 error.',
-    traffic: { ...base, rps: 10, easyShare: 0.7, repeatShare: 0, structuredShare: 0.8 },
+    traffic: { questions: INVOICES, ...base, rps: 10, easyShare: 0.7, repeatShare: 0, structuredShare: 0.8 },
     goals: [
       { metric: 'errorRate', op: '<=', value: 0.01 },
       { metric: 'accuracy', op: '>=', value: 0.8 },
@@ -987,12 +988,12 @@ const CORE: Scenario[] = [
       job: "Make answers match today's documents, including what's in tables, within budget.",
       chat: {
         user: 'How much is the CM-5 coffee machine?',
-        bot: 'The CM-5 is \u20ac299.',
-        lie: '\u20ac299',
+        bot: 'The CM-5 is €299.',
+        lie: '€299',
         truth:
-          "\u20ac349 since Monday. The search index was built once, by hand, so it still holds last month's price list. And prices inside tables were scraped out as jumbled text, so many can't be found at all.",
+          "€349 since Monday. The search index was built once, by hand, so it still holds last month's price list. And prices inside tables were scraped out as jumbled text, so many can't be found at all.",
         source: "from this week's price list",
-        fixed: 'The CM-5 is \u20ac349.',
+        fixed: 'The CM-5 is €349.',
       },
       predict: {
         question: 'Search and reranking are working. Why is the price wrong?',
@@ -1052,11 +1053,11 @@ const CORE: Scenario[] = [
       job: 'Keep the answers just as good while cutting what you pay to process the same prompt over and over.',
       chat: {
         user: 'Can I pay for my order in instalments?',
-        bot: 'Yes! Orders over \u20ac200 can be split into three monthly payments at checkout.',
+        bot: 'Yes! Orders over €200 can be split into three monthly payments at checkout.',
         truthLabel: 'Behind the scenes',
         truth:
           "The answer is right. But to write it, the model re-read a 12,000-token system prompt: the full policy manual, the tone guide and twenty examples. That's the same text it read for the last question and will read for the next. About 4 cents per answer, almost all of it for reading the manual again.",
-        fixed: 'Yes! Orders over \u20ac200 can be split into three monthly payments at checkout.',
+        fixed: 'Yes! Orders over €200 can be split into three monthly payments at checkout.',
       },
       predict: {
         question: 'The answers are good, but the bill is almost three times the budget. Where does the money go?',
@@ -1165,7 +1166,7 @@ const CORE: Scenario[] = [
     tagline: 'Your labels, your format, your 40 categories.',
     brief:
       'Your support triage system sorts tickets into your company\'s 40 internal categories, in your exact format, and also answers questions from the help centre. Off-the-shelf models keep inventing categories. The large model does a bit better and costs five times as much. Someone says "just fine-tune it". Someone else says "fine-tuning will teach it our docs too".',
-    traffic: { ...base, rps: 8, taskShare: 0.7, kbShare: 0.25, exactTermShare: 0.1, repeatShare: 0 },
+    traffic: { questions: TICKETS, ...base, rps: 8, taskShare: 0.7, kbShare: 0.25, exactTermShare: 0.1, repeatShare: 0 },
     goals: [
       { metric: 'accuracy', op: '>=', value: 0.82 },
       { metric: 'costPer1k', op: '<=', value: 4 },
@@ -1300,8 +1301,9 @@ const CORE: Scenario[] = [
     tagline: "Half your prompts contain someone's medical history.",
     brief:
       'Your insurance assistant works well, and every claim question that customers paste in (names, policy numbers, diagnoses) goes straight to a third-party model provider. The compliance team has found out. They want personal data to stop leaving your systems without killing the product.',
-    traffic: { ...base, kbShare: 0.6, exactTermShare: 0.1, piiShare: 0.5 },
+    traffic: { questions: INSURANCE, ...base, kbShare: 0.6, exactTermShare: 0.1, piiShare: 0.5 },
     goals: [
+      { metric: 'errorRate', op: '<=', value: 0.02 },
       { metric: 'piiLeak', op: '<=', value: 0.02 },
       { metric: 'accuracy', op: '>=', value: 0.74 },
       { metric: 'costPer1k', op: '<=', value: 12 },
@@ -1317,12 +1319,12 @@ const CORE: Scenario[] = [
     case: {
       job: 'Stop personal data leaving your systems, without breaking the answers or the budget.',
       chat: {
-        user: "Hi, I'm Maria Borg, policy 44-1902. My knee MRI cost \u20ac640. Am I covered?",
-        bot: 'Yes, Maria, MRI scans are covered up to \u20ac800 under your policy.',
+        user: "Hi, I'm Maria Borg, policy 44-1902. My knee MRI cost €640. Am I covered?",
+        bot: 'Yes, Maria, MRI scans are covered up to €800 under your policy.',
         truthLabel: 'Behind the scenes',
         truth:
-          "The answer is right. But Maria's name, policy number and medical details just went to a third-party AI provider, like half of all claim questions do. Compliance has found out.",
-        fixed: 'Yes, MRI scans are covered up to \u20ac800 under your policy.',
+          "The answer is right. But Maria's name, policy number and medical details just went to a third-party AI provider. Half of all claim questions carry details like these, and every one of them is sent as it is. Compliance has found out.",
+        fixed: 'Yes, Maria, MRI scans are covered up to €800 under your policy.',
       },
       predict: {
         question: 'How do you stop personal data leaving, without breaking the bot?',
@@ -1644,7 +1646,7 @@ const CORE: Scenario[] = [
       { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
     ],
     edges: chain('users', 'agent', 'llm'),
-    hint: "The Input Guard only reads what the user typed, and the attack isn't there. Think in layers: how the agent treats what it reads, what it's allowed to do, and what has to be checked before it does it.",
+    hint: "An Input Guardrail only reads what the user typed, and the attack isn't there. Think in layers: how the agent treats what it reads, what it's allowed to do, and what has to be checked before it does it.",
     case: {
       job: 'Stop hidden instructions in emails from making the agent act, while it keeps sending replies for customers.',
       chat: {
@@ -1661,14 +1663,14 @@ const CORE: Scenario[] = [
         question: 'How do you stop this without stopping the agent sending replies?',
         options: [
           {
-            text: 'Add an Input Guard',
+            text: 'Add an Input Guardrail',
             why: 'It only reads what users type in the chat, and this attack arrived inside an email. Almost every hijack still gets through, and the guard blocks some honest requests.',
           },
           { text: 'Take away its permission to send', why: 'No more forwarded invoices, but customers lose the replies they rely on: far fewer requests get done.' },
           {
             text: 'Clean what it reads, and check risky actions before they happen',
             right: true,
-            why: 'A sanitizer strips or flags instructions hidden in content, and an approval step checks actions like sending to a new address. Each one alone still lets some attacks through; together they stop them.',
+            why: 'A sanitiser strips or flags instructions hidden in content, and an approval step checks actions like sending to a new address. Each one alone still lets some attacks through; together they stop them.',
           },
         ],
       },

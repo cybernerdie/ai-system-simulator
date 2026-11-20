@@ -459,7 +459,8 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
                     ? 'knowledge'
                     : 'general';
     // inbox-style wording when the scenario is about email the agent reads and sends
-    const qs = (traffic.poisonShare ?? 0) > 0 && req.tool ? (req.poisoned ? POISONED_TASKS : req.send ? SEND_TASKS : QUESTIONS[qkind]) : QUESTIONS[qkind];
+    const pool = traffic.questions?.[qkind] ?? QUESTIONS[qkind];
+    const qs = (traffic.poisonShare ?? 0) > 0 && req.tool ? (req.poisoned ? POISONED_TASKS : req.send ? SEND_TASKS : pool) : pool;
     const t: Trace = {
       req,
       outcome: 'correct',
@@ -1316,7 +1317,7 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
     if (n.type === 'llm' && active.has(n.id) && prof.has(n.id)) {
       const limit = P(n).tpm;
       const util = tpmUse[n.id] / limit;
-      label = `${Math.round(util * 100)}% TPM`;
+      label = `${Math.round(util * 100)}% of rate limit`;
       status = util > 1 ? 'hot' : util > 0.75 ? 'warn' : nrps > 0 ? 'ok' : 'idle';
       if (outcomes.overflow > 0 && traces.some((t) => t.outcome === 'overflow' && t.touched.includes(n.id))) {
         status = 'hot';

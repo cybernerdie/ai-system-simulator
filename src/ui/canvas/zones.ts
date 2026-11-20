@@ -37,7 +37,7 @@ const ZONE_LABEL: Record<ZoneKey, string> = {
   guard: 'Safety, before the model',
   context: 'Retrieval and memory',
   model: 'Model',
-  check: 'Safety, after the model',
+  check: 'Checks after the model',
   output: 'Output',
   observe: 'Measure and observe',
 };

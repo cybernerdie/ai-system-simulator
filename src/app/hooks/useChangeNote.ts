@@ -14,7 +14,7 @@ export interface ChangeNote {
 const SETTLE_MS = 650;
 const SHOW_MS = 7000;
 /** Seeded and fixed, so a note compares designs rather than sampling noise. */
-const RUN = { seed: 7, samples: 1500 };
+const RUN = { seed: 7, samples: 3000 };
 
 /**
  * After each design change, say what changed and how the goals moved. Both designs are simulated

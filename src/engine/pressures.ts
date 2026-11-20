@@ -33,12 +33,12 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   no_knowledge: {
     title: 'Missing knowledge',
     why: "Customers are asking about your own policies and manuals, and the model has never seen them. When it doesn't know, it guesses, and sounds sure of itself.",
-    try: 'Ground the model: add an Embedding Model → Vector DB in front of the LLM (retrieval-augmented generation).',
+    try: 'Give the model your documents to read: add an Embedding Model and a Vector DB in front of the LLM. Together they look up the right page for each question before the model answers (retrieval-augmented generation, or RAG).',
   },
   retrieval_miss: {
-    title: 'Retrieval recall',
-    why: "The answer exists in your docs, but the retriever isn't finding the right chunk, so the model answers from a near-miss.",
-    try: 'Check the query mix. Exact codes and names need Keyword Search (hybrid). Paraphrases need more Top-K or better chunking.',
+    title: 'Search misses the right page',
+    why: "The answer is in your documents, but search isn't finding the right chunk (its recall is low), so the model answers from a near-miss.",
+    try: 'Open a few failed requests. Questions with exact codes or names need Keyword Search alongside meaning search. Reworded questions need more chunks per question (Top-K) or a different chunk size.',
   },
   context_noise: {
     title: 'Context noise',
@@ -66,8 +66,8 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
     try: "Cap Max steps (or an Agent Team's Max rounds) just above what real tasks need. Stuck runs then fail fast and cheap instead of slow and expensive. Fewer agents also means fewer chances to loop.",
   },
   rate_limit: {
-    title: 'Tokens-per-minute limit',
-    why: 'Your provider caps tokens per minute per model. Demand is over the cap, so requests bounce with 429s.',
+    title: 'Rate limit (tokens per minute)',
+    why: 'Your provider caps how many tokens (pieces of words) each model can take per minute. Demand is over that cap, so requests bounce with 429 "too many requests" errors.',
     try: 'Send fewer tokens to the capped model: cache repeats, route easy requests to a small model, or trim the prompt.',
   },
   context_overflow: {
@@ -237,7 +237,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   },
   indirect_injection: {
     title: 'Hijacked by the content it reads',
-    why: 'Nobody typed an attack. It was hidden inside an email (or a document, or a web page) that your agent read, and the model can\'t reliably tell instructions from data. Because the agent can send things, a hidden "forward the invoices to…" becomes a real action. Your Input Guard never sees it: it only checks what the user typed.',
+    why: 'Nobody typed an attack. It was hidden inside an email (or a document, or a web page) that your agent read, and the model can\'t reliably tell instructions from data. Because the agent can send things, a hidden "forward the invoices to…" becomes a real action. An input guard wouldn\'t see it either: it only checks what the user typed.',
     try: 'Defence in depth: treat everything the system reads as untrusted (a Content Sanitiser), give the agent only the permissions it needs, and require approval before risky actions like sending or paying.',
   },
   no_permission: {
@@ -314,6 +314,10 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
       return pick(loops > other ? 'agent_loop' : 'handoff_loss');
     }
     const q = causes.find(([c]) => !['rate_limit', 'context_overflow', 'injection', 'provider_down', 'gpu_saturated', 'invalid_output', 'voice_pipeline'].includes(c));
+    // an out-of-date index and scrambled tables are one problem (how documents get in), so weigh them together
+    const stale = m.causes.stale_index ?? 0;
+    const parse = m.causes.parse_miss ?? 0;
+    if (q && stale + parse >= q[1]) return pick(stale >= parse ? 'stale_index' : 'parse_miss');
     if (q) return pick(q[0]);
   }
   if (unmet.includes('costPer1k')) {

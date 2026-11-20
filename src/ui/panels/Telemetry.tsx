@@ -1,7 +1,7 @@
-import { goalMet } from '../../engine/pressures';
+import { goalMet, metricValue } from '../../engine/pressures';
 import type { Goal, GoalMetric, Metrics } from '../../engine/types';
 import { money, monthlyCost } from '../../engine/cost';
-import { METRIC_META, ms, pct, usd } from '../../lib/format';
+import { METRIC_META, goalValue, ms, pct, usd } from '../../lib/format';
 
 function Spark({ values }: { values: number[] }) {
   if (values.length < 2) return <svg className="spark" viewBox="0 0 64 18" aria-hidden />;
@@ -132,7 +132,7 @@ export function Telemetry({ m, history, goals, focus = false, showAll = false, o
           <div key={c.key} className={`tele ${state}`} title={c.title}>
             <div className="tele-label">{c.label}</div>
             <div className="tele-row">
-              <span className="tele-value">{c.value}</span>
+              <span className="tele-value">{goal && state === 'unmet' ? goalValue(goal, metricValue(seen, goal.metric), false) : c.value}</span>
               {goal && (
                 <span className="tele-goal">
                   {goal.op === '>=' ? '≥' : '≤'}

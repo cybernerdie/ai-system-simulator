@@ -10,7 +10,7 @@ import { INCIDENTS, INCIDENT_SCENARIO, formatDuration, type IncidentState } from
 import { ACHIEVEMENTS, type Progress } from '../engine/modes/achievements';
 import { autoWire, removeAndHeal, tidyLayout } from '../engine/autowire';
 import { scoreStars, starTips, type StarResult } from '../engine/stars';
-import { hiddenSettings, paletteLocks } from '../engine/unlocks';
+import { paletteLocks, settingLocks } from '../engine/unlocks';
 import type { Review } from '../engine/review';
 import type { ComponentType, ConfigValue, Metrics, TrafficProfile } from '../engine/types';
 import { COACH } from '../content/guide';
@@ -135,6 +135,7 @@ export default function App() {
   const [incidentOver, setIncidentOver] = useState<IncidentState | null>(null);
   /** Stars already celebrated this session per level, so improving a level celebrates again. */
   const awarded = useRef(new Map<string, number>());
+  const heldNotice = useRef<string | null>(null);
 
   // preferences
   const [theme, toggleTheme] = useTheme();
@@ -189,7 +190,16 @@ export default function App() {
     const parts = partsOf(nodesRef.current);
     const r = scoreStars(scenario, m, parts);
     const before = awarded.current.get(scenario.id) ?? 0;
-    if (cleared.has(scenario.id) && r.stars <= before) return false;
+    if (cleared.has(scenario.id) && r.stars <= before) {
+      // the bar has filled, so say something rather than nothing; once per design, not every tick
+      if (heldNotice.current !== designSig) {
+        heldNotice.current = designSig;
+        showToast(
+          `Every goal still holds: ${r.stars} star${r.stars === 1 ? '' : 's'}, ${r.stars === before ? 'the same as before' : 'fewer than before'}. Beat it to see the results again.`,
+        );
+      }
+      return false;
+    }
     awarded.current.set(scenario.id, r.stars);
     if (m.costPer1k <= r.par.cost * 0.5) setFlags(addFlag('half-budget'));
     if (parts < r.par.parts) setFlags(addFlag('under-par'));
@@ -246,7 +256,7 @@ export default function App() {
     () => ({ cleared, stars, quiz, daily, dailyStreak: dayStreak, incident: incidentBest, lessonsRead: readCount, flags }),
     [cleared, stars, quiz, daily, dayStreak, incidentBest, readCount, flags],
   );
-  const achievements = useAchievements(progress);
+  const achievements = useAchievements(progress, won && isPhone);
 
   // bumped when a level loads or resets, so the change note starts from the new design
   const [designEpoch, setDesignEpoch] = useState(0);
@@ -259,6 +269,9 @@ export default function App() {
       const f = saved ? designToFlow(saved) : buildFlow(s);
       setScenarioId(s.id);
       setDesignEpoch((e) => e + 1);
+      // a fresh start (load or reset) is a fresh attempt: clearing it again shows the results again
+      awarded.current.delete(s.id);
+      heldNotice.current = null;
       setNodes(f.nodes);
       setEdges(f.edges);
       setRps(s.traffic.rps);
@@ -532,7 +545,14 @@ export default function App() {
       );
       // phones: don't cover the canvas with the settings sheet; just add it and say so
       const phone = window.matchMedia(PHONE_QUERY).matches;
-      const added: SimFlowNode = { id, type: 'sim', position: position ?? { x: 0, y: 0 }, selected: !phone, data: { kind: type, config: { ...COMPONENTS[type].defaults } } };
+      const config = { ...COMPONENTS[type].defaults };
+      // a second model added behind a fallback is there to fail over to, so put it on the other provider:
+      // on the same one, failover would quietly do nothing
+      if (type === 'llm' && nodesRef.current.some((n) => n.data.kind === 'fallback')) {
+        const used = new Set(nodesRef.current.filter((n) => n.data.kind === 'llm').map((n) => n.data.config.provider));
+        if (used.size && !used.has('B')) config.provider = 'B';
+      }
+      const added: SimFlowNode = { id, type: 'sim', position: position ?? { x: 0, y: 0 }, selected: !phone, data: { kind: type, config } };
       let next = [...nodesRef.current.map((n) => ({ ...n, selected: false })), added];
       if (!position) {
         // tapped from the palette rather than dropped: tidy the diagram into columns along the flow
@@ -640,7 +660,7 @@ export default function App() {
   );
 
   const unlock = useMemo(() => paletteLocks(scenario, new Set(nodes.map((n) => n.data.kind)), unlockAll), [scenario, nodes, unlockAll]);
-  const hiddenFields = useMemo(() => hiddenSettings(scenario, unlockAll), [scenario, unlockAll]);
+  const fieldLocks = useMemo(() => settingLocks(scenario, unlockAll), [scenario, unlockAll]);
 
   /** The path a picked request took: Users first, then each component once, in order. */
   const traced = useMemo(() => {
@@ -857,7 +877,7 @@ export default function App() {
         streak={streak}
         needed={HOLD_TICKS}
         warnings={metrics?.warnings ?? []}
-        selected={selected ? { id: selected.id, kind: selected.data.kind, config: selected.data.config, hidden: hiddenFields } : undefined}
+        selected={selected ? { id: selected.id, kind: selected.data.kind, config: selected.data.config, hidden: fieldLocks?.hidden, fresh: fieldLocks?.fresh } : undefined}
         onChange={updateConfig}
         onDelete={deleteNode}
         tab={tab}
@@ -1020,7 +1040,7 @@ export default function App() {
               onShare={shareResult}
               onReview={openReview}
               onNext={goNext}
-              path={requestPath(graph).map((k) => (k === 'users' ? 'Customer' : COMPONENTS[k].name))}
+              path={requestPath(graph).map((k) => (k === 'users' ? (scenario.case?.chat.userLabel ?? 'Customer') : COMPONENTS[k].name))}
             />
           )}
           {incidentOver && (

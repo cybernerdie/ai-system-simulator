@@ -420,3 +420,8 @@
   font-size: 12px;
   color: var(--ink-3);
 }
+
+.field-new {
+  margin-left: 6px;
+  vertical-align: 1px;
+}

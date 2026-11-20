@@ -3,6 +3,7 @@
  * Nothing needs adding. The skill is reading the symptoms and finding the culprit.
  */
 import { base, chain, type Scenario } from './kit';
+import { COACHING } from './questions';
 
 export const BUG_LEVELS: Scenario[] = [
   {
@@ -49,7 +50,7 @@ export const BUG_LEVELS: Scenario[] = [
           {
             text: "The cache treats questions as the same when they're only similar",
             right: true,
-            why: 'A semantic cache compares meanings, and its threshold sets how close two questions must be. At 0.8, "cancel Pro" and "upgrade to Pro" are close enough, so one gets the other\'s stored answer.',
+            why: 'A semantic cache compares meanings, and its threshold sets how close two questions must be. Set too loose, "cancel Pro" and "upgrade to Pro" count as the same question, so one gets the other\'s stored answer.',
           },
           {
             text: 'The cancellation docs are wrong',
@@ -59,7 +60,7 @@ export const BUG_LEVELS: Scenario[] = [
       },
       named: {
         term: 'Cache similarity threshold',
-        text: 'A semantic cache reuses an answer when a new question is similar enough to an old one. Set the threshold too low and different questions share answers; too high and it rarely hits. Small words like "cancel" and "upgrade" can flip the meaning, so the threshold usually has to be high, around 0.95.',
+        text: 'A semantic cache reuses an answer when a new question is similar enough to an old one. Set the threshold too low and different questions share answers; too high and it rarely hits. Small words like "cancel" and "upgrade" can flip the meaning, so the threshold usually has to be high: 0.9 or above.',
       },
     },
     lesson:
@@ -83,7 +84,7 @@ export const BUG_LEVELS: Scenario[] = [
     tagline: '"As I said two minutes ago..."',
     brief:
       "Your coaching chatbot has long conversations with its users, and the bill is under control. The complaint is that it keeps forgetting things: the user's goal, the injury they mentioned, the plan you agreed on ten messages back. They have to repeat themselves constantly.",
-    traffic: { ...base, rps: 6, easyShare: 0.6, repeatShare: 0.05, chatTurns: 22, recallShare: 0.35 },
+    traffic: { questions: COACHING, ...base, rps: 6, easyShare: 0.6, repeatShare: 0.05, chatTurns: 22, recallShare: 0.35 },
     goals: [
       { metric: 'accuracy', op: '>=', value: 0.85 },
       { metric: 'costPer1k', op: '<=', value: 12 },
@@ -172,7 +173,7 @@ export const BUG_LEVELS: Scenario[] = [
         bot: "Sorry, your message can't be processed.",
         lie: "can't be processed",
         truth:
-          "An ordinary question, blocked. After last month's jailbreak scare, security turned the Input Guard up to maximum strictness. No attack has got through since, and neither have many customers.",
+          "An ordinary question, blocked. After last month's jailbreak scare, security turned the Input Guardrail up to maximum strictness. No attack has got through since, and neither have many customers.",
         source: 'from the help centre',
         fixed: "Go to Sign in, choose Forgot password, and we'll email you a reset link.",
       },

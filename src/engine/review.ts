@@ -377,7 +377,7 @@ export function reviewDesign(s: Scenario, graph: SimGraph, traffic: TrafficProfi
       key: 'quality',
       label: 'Quality',
       score: clamp(q),
-      note: `${pct(m.accuracy)} right, ${pct(m.hallucination)} made up${m.qualityVisible ? '' : ", and you can't see it without evals"}`,
+      note: `${pct(m.accuracy)} right${goals.some((g) => g.metric === 'accuracy') ? ` (goal ${pct(accGoal)})` : ''}, ${pct(m.hallucination)} made up${m.qualityVisible ? '' : ", and you can't see it without evals"}`,
     });
   }
   const costTarget = ref ? ref.costPer1k * 1.15 : costGoal?.value;

@@ -6,8 +6,11 @@ import { play } from '../../ui/audio/sfx';
 
 const TOAST_MS = 3400;
 
-/** Awards achievements as progress changes and queues a toast for each one, shown one at a time. */
-export function useAchievements(progress: Progress) {
+/**
+ * Awards achievements as progress changes and queues a toast for each one, shown one at a time.
+ * While `hold` is set (a phone's win screen, which the toast would cover) they wait their turn.
+ */
+export function useAchievements(progress: Progress, hold = false) {
   const [unlocked, setUnlocked] = useState(() => loadUnlocked());
   const [queue, setQueue] = useState<string[]>([]);
   const firstCheck = useRef(true);
@@ -30,11 +33,11 @@ export function useAchievements(progress: Progress) {
   }, [progress]);
 
   useEffect(() => {
-    if (!queue.length) return;
+    if (!queue.length || hold) return;
     play('star', 0.2);
     const t = window.setTimeout(() => setQueue((q) => q.slice(1)), TOAST_MS);
     return () => window.clearTimeout(t);
-  }, [queue]);
+  }, [queue, hold]);
 
-  return { unlocked, showing: queue[0] ?? null };
+  return { unlocked, showing: hold ? null : (queue[0] ?? null) };
 }

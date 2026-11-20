@@ -71,7 +71,7 @@ export function WinDialog({
         <h2 id="win-title">{displayTitle(s)}</h2>
         {s.case && (
           <section className="win-replay">
-            <p className="win-replay-label">Same customer, same question:</p>
+            <p className="win-replay-label">{s.case.chat.userLabel ? 'Same request, this time:' : 'Same customer, same question:'}</p>
             <CaseChat chat={s.case.chat} fixed compact />
             {path && path.length > 2 && (
               <p className="win-path" aria-label={`How it got there: ${path.join(', then ')}`}>

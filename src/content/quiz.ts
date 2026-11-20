@@ -164,7 +164,7 @@ export const QUIZ: Record<string, QuizQuestion> = {
     why: 'Evals are only as honest as their test set and their judge. Sample real traffic, and check the judge against human ratings.',
   },
   'indirect-injection': {
-    q: "Why didn't the input guard stop the hijacked email?",
+    q: "Why wouldn't an input guard stop the hijacked email?",
     options: ['It was switched off', 'The attack was in content the agent read, not in what the user typed', 'Emails are encrypted'],
     answer: 1,
     why: 'Indirect injection hides in documents, emails and web pages. Defend in layers: treat external content as untrusted, limit permissions and require approval for risky actions.',
@@ -218,10 +218,10 @@ export const QUIZ: Record<string, QuizQuestion> = {
     why: 'Measure quality per group, not just overall. Here retrieval failed for questions in other languages, and a multilingual embedding model closed the gap.',
   },
   'boss-launch': {
-    q: "With six problems at once, what's the best way to work?",
-    options: ['Add every component, then tune', "Fix the binding pressure, rerun, and see what's binding next", 'Start with the cheapest fix'],
+    q: "With several problems at once, what's the best way to work?",
+    options: ['Add every component, then tune', 'Fix the biggest problem, rerun, and see what the biggest problem is now', 'Start with the cheapest fix'],
     answer: 1,
-    why: "Fixes interact. Working on whatever is binding right now, then rechecking, avoids paying for components that don't help.",
+    why: "Fixes interact. Working on whatever is the biggest problem right now, then rechecking, avoids paying for components that don't help.",
   },
   'boss-pilot': {
     q: "Why add evals first in a pilot whose quality you can't see?",

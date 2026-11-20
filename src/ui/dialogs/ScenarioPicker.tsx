@@ -209,7 +209,10 @@ export function ScenarioPicker({
                             {open ? i + 1 : <Lock size={15} aria-hidden />}
                           </button>
                           <StarRow n={isDone ? (stars[id] ?? 1) : 0} />
-                          <span className="stop-title">{plain(sc.title)}</span>
+                          {/* the name selects too; the dot is the keyboard target, so this stays a mouse convenience */}
+                          <span className="stop-title" onClick={() => setSel(id)}>
+                            {plain(sc.title)}
+                          </span>
                         </li>
                       );
                     })}
@@ -227,7 +230,9 @@ export function ScenarioPicker({
                           {isOpen(boss.id) ? <Crown size={17} aria-hidden /> : <Lock size={15} aria-hidden />}
                         </button>
                         <StarRow n={cleared.has(boss.id) ? (stars[boss.id] ?? 1) : 0} />
-                        <span className="stop-title">Boss: {plain(boss.title)}</span>
+                        <span className="stop-title" onClick={() => setSel(boss.id)}>
+                          Boss: {plain(boss.title)}
+                        </span>
                       </li>
                     )}
                   </ol>

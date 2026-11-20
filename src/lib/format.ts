@@ -25,3 +25,17 @@ export function goalText(g: Goal, voice = false): string {
   const label = g.metric === 'ttftP50' && voice ? 'Time to first audio' : METRIC_META[g.metric].label;
   return `${label}: ${g.op === '>=' ? 'at least' : 'at most'} ${METRIC_META[g.metric].fmt(g.value)}`;
 }
+
+/**
+ * A goal's current value, precise enough that a missed goal never reads as exactly its target:
+ * "$16.04" against "at most $16", not "$16" with a red cross beside it.
+ */
+export function goalValue(g: Goal, v: number, met: boolean): string {
+  const fmt = METRIC_META[g.metric].fmt;
+  const shown = fmt(v);
+  if (met || shown !== fmt(g.value)) return shown;
+  if (g.metric === 'costPer1k') return `$${v.toFixed(2)}`;
+  if (g.metric === 'p50' || g.metric === 'ttftP50') return v >= 1000 ? `${(v / 1000).toFixed(2)}s` : `${v.toFixed(1)}ms`;
+  if (g.metric === 'diagnoseHours') return `${v.toFixed(2)}h`;
+  return g.metric === 'fairnessGap' || g.metric === 'evalGap' ? `${(v * 100).toFixed(1)} pts` : `${(v * 100).toFixed(2)}%`;
+}

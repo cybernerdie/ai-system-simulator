@@ -57,6 +57,22 @@ export interface Shift {
   to: number;
   /** Moved in the direction its goal (or common sense, in the sandbox) wants. */
   better: boolean;
+  /** Nothing measured it before this change: `from` means nothing, and measuring it is the news. */
+  revealed?: boolean;
+}
+
+/** Shares of requests, as opposed to money, time or hours. */
+const RATES = new Set<GoalMetric>(['accuracy', 'hallucination', 'injection', 'errorRate', 'piiLeak', 'harmfulActions', 'fairnessGap', 'evalGap']);
+
+/**
+ * Whether a move is bigger than sampling noise. A rate has to move a full point, or half a point if
+ * it's also a big relative change (0.6% → 1.4% errors matters; 2.5% → 2.8% is noise). Money and time
+ * have to move 5%.
+ */
+function moved(metric: GoalMetric, from: number, to: number): boolean {
+  const d = Math.abs(to - from);
+  if (RATES.has(metric)) return d >= 0.01 || (d >= 0.005 && d / Math.max(from, to) >= 0.4);
+  return d / Math.max(Math.abs(from), Math.abs(to), 1e-9) >= 0.05;
 }
 
 /** In the sandbox there are no goals, so these stand in: what anyone building one would watch. */
@@ -68,19 +84,19 @@ const SANDBOX_GOALS: Goal[] = [
 ];
 
 /**
- * How each goal's number moved between two runs. Quality that isn't measured in the new design is left
- * out rather than reported as a number the player can't see; so are numbers that barely moved.
+ * How each goal's number moved between two runs. A number the change made visible (adding evals or a
+ * per-group check) is reported as newly measured. One still unmeasured is left out rather than shown
+ * as a number the player can't see; so are moves within sampling noise.
  */
 export function goalShifts(before: Metrics, after: Metrics, goals: Goal[]): Shift[] {
   const out: Shift[] = [];
   for (const g of goals.length ? goals : SANDBOX_GOALS) {
-    if (QUALITY_METRICS.includes(g.metric) && !(before.qualityVisible && after.qualityVisible)) continue;
-    if (g.metric === 'fairnessGap' && !(before.fairnessVisible && after.fairnessVisible)) continue;
+    const seen = (m: Metrics) => (QUALITY_METRICS.includes(g.metric) ? m.qualityVisible : g.metric === 'fairnessGap' ? m.fairnessVisible : true);
+    if (!seen(after)) continue;
     const from = metricValue(before, g.metric);
     const to = metricValue(after, g.metric);
-    const scale = Math.max(Math.abs(from), Math.abs(to), 1e-9);
-    if (Math.abs(to - from) / scale < 0.03) continue;
-    out.push({ metric: g.metric, from, to, better: g.op === '>=' ? to > from : to < from });
+    if (!seen(before)) out.push({ metric: g.metric, from, to, better: true, revealed: true });
+    else if (moved(g.metric, from, to)) out.push({ metric: g.metric, from, to, better: g.op === '>=' ? to > from : to < from });
   }
   return out;
 }

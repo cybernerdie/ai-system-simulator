@@ -83,17 +83,20 @@ export function designSignature(graph: SimGraph): string {
   return JSON.stringify([graph.nodes.map((n) => [n.type, n.config]), graph.edges.map((e) => [e.source, e.target])]);
 }
 
-/** The components a request passes through, in order, starting from Users. */
+/**
+ * The components a request passes through, in order, starting from Users, when that's a single
+ * chain. A design that branches (keyword search beside vector search, a backup model) has no one
+ * order to show, so it gets an empty path rather than a misleading one.
+ */
 export function requestPath(graph: SimGraph): SimGraph['nodes'][number]['type'][] {
   const start = graph.nodes.find((n) => n.type === 'users');
   if (!start) return [];
   const order: string[] = [];
-  const queue = [start.id];
-  while (queue.length) {
-    const id = queue.shift()!;
-    if (order.includes(id)) continue;
+  for (let id: string | undefined = start.id; id && !order.includes(id);) {
     order.push(id);
-    for (const e of graph.edges) if (e.source === id) queue.push(e.target);
+    const next = graph.edges.filter((e) => e.source === id);
+    if (next.length > 1) return [];
+    id = next[0]?.target;
   }
   return order.map((id) => graph.nodes.find((n) => n.id === id)!.type);
 }

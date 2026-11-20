@@ -34,6 +34,15 @@ export function ChangeNote({ what, shifts, onClose }: { what: string; shifts: Sh
           {shifts.map((s) => {
             const meta = METRIC_META[s.metric];
             const Arrow = s.to > s.from ? ArrowUpRight : ArrowDownRight;
+            if (s.revealed)
+              return (
+                <li key={s.metric} className="is-revealed">
+                  <span className="change-label">{meta.label}</span>
+                  <span className="change-values">
+                    now measured: <strong>{meta.fmt(s.to)}</strong>
+                  </span>
+                </li>
+              );
             return (
               <li key={s.metric} className={s.better ? 'is-better' : 'is-worse'}>
                 <span className="change-label">{meta.label}</span>
