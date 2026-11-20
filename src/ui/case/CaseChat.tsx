@@ -21,24 +21,24 @@ export function CaseChat({ chat, fixed = false, compact = false }: { chat: CaseF
   return (
     <div className={`transcript${compact ? ' is-compact' : ''}${fixed ? ' is-fixed' : ''}`}>
       <dl>
-        <div>
-          <dt>Customer</dt>
+        <div className="transcript-row">
+          <dt>{chat.userLabel ?? 'Customer'}</dt>
           <dd>{chat.user}</dd>
         </div>
-        <div>
+        <div className="transcript-row">
           <dt>Your bot</dt>
           <dd>{fixed ? chat.fixed : <WithLie text={chat.bot} lie={chat.lie} />}</dd>
         </div>
+        {!fixed && (
+          <div className="transcript-row is-truth">
+            <dt>{chat.truthLabel ?? 'Actually'}</dt>
+            <dd>
+              {chat.truth}
+              {chat.source && <span className="transcript-source"> ({chat.source})</span>}
+            </dd>
+          </div>
+        )}
       </dl>
-      {!fixed && (
-        <div className="transcript-truth">
-          <span className="transcript-truth-label">Actually</span>
-          <p>
-            {chat.truth}
-            {chat.source && <span className="transcript-source"> ({chat.source})</span>}
-          </p>
-        </div>
-      )}
     </div>
   );
 }

@@ -160,7 +160,7 @@ export const caseLine = (s: Scenario): Line | null =>
   s.case
     ? {
         id: lineId('case', s.id),
-        text: `A customer asked: ${s.case.chat.user} Your bot said: ${s.case.chat.bot} That's wrong. ${s.case.chat.truth} Your job: ${s.case.job}`,
+        text: `${s.case.chat.userLabel ?? 'A customer'} asked: ${s.case.chat.user} Your bot said: ${s.case.chat.bot} ${s.case.chat.truthLabel ? `${s.case.chat.truthLabel}: ` : "That's wrong. "}${s.case.chat.truth} Your job: ${s.case.job}`,
       }
     : null;
 

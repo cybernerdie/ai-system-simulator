@@ -26,8 +26,13 @@ export interface CaseFile {
     lie?: string;
     /** The part of \`truth\` (and \`fixed\`) that contradicts it. */
     fact?: string;
-    /** Where the truth comes from, e.g. "X-200 manual, page 14". */
+    /** Where the truth comes from, e.g. "from your returns policy". */
     source?: string;
+    /** Who's asking, when it isn't a customer (default "Customer"). */
+    userLabel?: string;
+    /** The label on the truth line: "Actually" for a false answer, "Behind the scenes" when the
+     *  problem is errors, cost or waiting rather than something the bot said. */
+    truthLabel?: string;
   };
   /** Asked before playing. Exactly one option is right; each explains itself once picked. */
   predict: { question: string; options: { text: string; right?: true; why: string }[] };

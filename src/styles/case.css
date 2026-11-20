@@ -57,7 +57,7 @@
   margin-bottom: var(--sp-5);
 }
 
-/* the exchange: who said what, with the one false claim marked */
+/* the exchange: who said what, with the one bad part marked; labels share one column */
 .transcript {
   padding: var(--sp-4) var(--sp-5);
   border-radius: 12px;
@@ -66,14 +66,13 @@
 
 .transcript dl {
   display: grid;
-  gap: var(--sp-3);
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--sp-4);
   margin: 0;
 }
 
-.transcript dl > div {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: var(--sp-3);
+.transcript-row {
+  display: contents;
 }
 
 .transcript dt {
@@ -83,10 +82,14 @@
 }
 
 .transcript dd {
-  margin: 0;
+  margin: 0 0 var(--sp-3);
   font-size: 15.5px;
   line-height: 1.5;
   color: var(--ink);
+}
+
+.transcript-row:last-child dd {
+  margin-bottom: 0;
 }
 
 .transcript-lie {
@@ -97,23 +100,18 @@
   text-underline-offset: 4px;
 }
 
-.transcript-truth {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: var(--sp-3);
-  margin-top: var(--sp-4);
+.transcript-row.is-truth dt,
+.transcript-row.is-truth dd {
   padding-top: var(--sp-3);
   border-top: 1px solid var(--line);
 }
 
-.transcript-truth-label {
-  padding-top: 2px;
-  font-size: 13px;
+.transcript-row.is-truth dt {
+  padding-top: calc(var(--sp-3) + 2px);
   color: var(--ok);
 }
 
-.transcript .transcript-truth p {
-  margin: 0;
+.transcript-row.is-truth dd {
   font-size: 14.5px;
   line-height: 1.55;
   color: var(--ink-2);
@@ -123,35 +121,28 @@
   color: var(--ink-3);
 }
 
+/* narrow spaces: each label sits above its line */
 .transcript.is-compact {
   padding: var(--sp-3) var(--sp-4);
 }
 
-.transcript.is-compact dl > div {
+.transcript.is-compact dl {
   grid-template-columns: minmax(0, 1fr);
-  gap: 1px;
 }
 
 .transcript.is-compact dt {
-  padding: 0;
+  padding-top: 0;
   font-size: 12px;
 }
 
 .transcript.is-compact dd {
+  margin-bottom: var(--sp-2);
   font-size: 13.5px;
 }
 
-.transcript.is-compact .transcript-truth {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 1px;
-}
-
-.transcript.is-compact .transcript-truth-label {
-  padding: 0;
-  font-size: 12px;
-}
-
-.transcript.is-compact .transcript-truth p {
+.transcript.is-compact .transcript-row.is-truth dd {
+  padding-top: 0;
+  border-top: 0;
   font-size: 13px;
 }
 
@@ -304,12 +295,17 @@
   .transcript {
     padding: var(--sp-3) var(--sp-4);
   }
-  .transcript dl > div {
+  .transcript dl {
     grid-template-columns: minmax(0, 1fr);
-    gap: 1px;
   }
-  .transcript-truth {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 1px;
+  .transcript dt {
+    padding-top: 0;
+  }
+  .transcript dd {
+    margin-bottom: var(--sp-3);
+  }
+  .transcript-row.is-truth dd {
+    padding-top: 0;
+    border-top: 0;
   }
 }

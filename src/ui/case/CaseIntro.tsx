@@ -77,7 +77,8 @@ export function CaseIntro({ s, kicker, onStart }: { s: Scenario; kicker: string;
               <strong>{c.job}</strong>{' '}
               {parts.map((p, i) => (
                 <Fragment key={p.what}>
-                  {i === 0 ? p.verb[0].toUpperCase() + p.verb.slice(1) : p.verb} {p.what} from {p.from} to <strong>{p.to}</strong>
+                  {i === 0 ? p.verb[0].toUpperCase() + p.verb.slice(1) : p.verb} {p.what} {p.from ? `from ${p.from} to ` : 'at '}
+                  <strong>{p.to}</strong>
                   {i < parts.length - 2 ? ', ' : i === parts.length - 2 ? ', and ' : '.'}
                 </Fragment>
               ))}
