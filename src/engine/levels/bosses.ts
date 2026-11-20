@@ -29,6 +29,39 @@ export const BOSSES: Scenario[] = [
     ],
     edges: chain('users', 'llm'),
     hint: 'Take it one pressure at a time. Knowledge first, then exact codes, then tools, then attackers, then the bill.',
+    case: {
+      job: 'Get through launch week: right answers, no successful attacks, no failures, within budget.',
+      chat: {
+        user: "My coffee machine shows E1043 and won't work. Can I get a refund? Order #5120.",
+        bot: "E1043 means the water tank is empty, so just refill it. Refunds aren't possible once a machine has been used.",
+        lie: 'the water tank is empty',
+        truth:
+          "E1043 means the grinder is jammed, and order #5120 arrived 12 days ago, so it can be refunded. Your bot is still just a prompt and a model: it can't read the manual, look up orders, or spot tricks, and some customers are trying them.",
+        fixed: "E1043 means the grinder is jammed. Order #5120 is within 30 days, so I've started your refund.",
+      },
+      predict: {
+        question: 'Everything from chapter 1 is going wrong at once. How do you approach it?',
+        options: [
+          {
+            text: 'Add every component from chapter 1 at once',
+            why: "You'd pay for all of it and couldn't tell which part helped. Each part also costs something: guards block some honest customers, an agent adds model calls. Add each one because a number needs it.",
+          },
+          {
+            text: 'Fix the biggest problem first, then check what moved',
+            right: true,
+            why: 'Each fix solves one problem and can shift another. The "Biggest problem right now" panel shows which goal is furthest off. Fix that, read the numbers again, then take the next one.',
+          },
+          {
+            text: 'Switch to the biggest model',
+            why: "It still can't read your manual or look up an order, so right answers barely move. Attackers still get through about a third of the time, and the bill is five times higher, over budget.",
+          },
+        ],
+      },
+      named: {
+        term: "Fixing what's binding",
+        text: 'Real systems hit every problem at once. The binding constraint is the one holding you back most right now. Fix it, re-measure, and repeat, because every component solves one problem and costs something elsewhere: money, speed or blocked customers.',
+      },
+    },
     lesson:
       "Real systems hit every problem at once. The order you fix them in matters less than fixing the one that's binding right now, then checking what moved. Each component you added solved one problem and cost something somewhere else.",
     solution: {
@@ -71,6 +104,41 @@ export const BOSSES: Scenario[] = [
     ],
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: "You can't improve what you can't see, so measure first. Then: what overflows, what's slow to start, and what grows with every message?",
+    case: {
+      job: "Win a bank's trial: answers their compliance team approves, words on screen within 1.5 seconds, within budget.",
+      chat: {
+        userLabel: 'Bank analyst',
+        user: 'Going back to clause 14 from earlier: does the termination fee apply if the supplier breaches first?',
+        bot: '(after 9 seconds) Something went wrong. Please try again.',
+        lie: 'Something went wrong.',
+        truthLabel: 'Behind the scenes',
+        truth:
+          "Every message sends the whole conversation plus 12 large chunks of contract to your biggest model. Half the questions fail, the rest take 9 seconds to show a first word and cost about 27 cents each. And nothing measures whether answers are right, but the bank's compliance team grades every one.",
+        fixed: 'No. Under clause 14.3, the fee is waived if the supplier breaches first.',
+      },
+      predict: {
+        question: "The bank grades answers you can't see. What do you do first?",
+        options: [
+          {
+            text: 'Switch to a smaller, cheaper model',
+            why: "Failures and cost drop a lot, but you can't see whether answers got better or worse, and that's what the bank is grading. You'd be trading blind.",
+          },
+          {
+            text: 'Measure answer quality before changing anything else',
+            right: true,
+            why: "Speed, cost and failures are on your dashboard; quality isn't. Once answers are scored, you can cut the cost and the wait and see whether each change kept the bank's answers right.",
+          },
+          {
+            text: 'Turn on streaming',
+            why: "The first words show up in about 2 seconds, but half the questions still fail, every answer still costs 27 cents, and you still can't see quality.",
+          },
+        ],
+      },
+      named: {
+        term: 'Measure, then tune',
+        text: 'Enterprise buyers judge quality they can audit, speed they can feel and cost they can forecast. Evals make quality visible, smaller chunks and reranking keep the context tight, retrieved memory keeps long chats small, and streaming makes it feel fast.',
+      },
+    },
     lesson:
       'Enterprise buyers judge on quality they can audit, speed they can feel and cost they can forecast. Evals make quality visible, smaller chunks and reranking keep context tight, streaming makes it feel fast, and memory keeps long conversations affordable.',
     solution: {

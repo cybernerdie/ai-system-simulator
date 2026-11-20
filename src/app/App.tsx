@@ -850,7 +850,7 @@ export default function App() {
               onClose={closeIntro}
             />
           )}
-          {caseOpen && scenario.case && <CaseIntro s={scenario} kicker={num ? `Level ${num}` : 'Level'} onStart={closeCase} />}
+          {caseOpen && scenario.case && <CaseIntro s={scenario} kicker={num ? `Level ${num}` : scenario.kind === 'boss' ? 'Boss level' : 'Level'} onStart={closeCase} />}
           {coach !== null && !caseOpen && (
             <GuideCard
               key={COACH[coach].id}

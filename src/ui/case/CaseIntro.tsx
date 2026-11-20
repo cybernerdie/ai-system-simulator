@@ -77,7 +77,7 @@ export function CaseIntro({ s, kicker, onStart }: { s: Scenario; kicker: string;
               <strong>{c.job}</strong>{' '}
               {parts.map((p, i) => (
                 <Fragment key={p.what}>
-                  {i === 0 ? p.verb[0].toUpperCase() + p.verb.slice(1) : p.verb} {p.what} {p.from ? `from ${p.from} to ` : 'at '}
+                  {i === 0 ? p.verb[0].toUpperCase() + p.verb.slice(1) : p.verb} {p.what} {p.from ? `from ${p.from} to ` : p.unmeasured ? '(not measured yet) to ' : 'at '}
                   <strong>{p.to}</strong>
                   {i < parts.length - 2 ? ', ' : i === parts.length - 2 ? ', and ' : '.'}
                 </Fragment>
@@ -88,7 +88,7 @@ export function CaseIntro({ s, kicker, onStart }: { s: Scenario; kicker: string;
                 Skip
               </button>
               <button className="btn btn-primary" onClick={() => setGuessing(true)}>
-                Why is this happening? <ArrowRight size={14} aria-hidden />
+                What's going on? <ArrowRight size={14} aria-hidden />
               </button>
             </div>
           </>

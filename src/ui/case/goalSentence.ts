@@ -1,5 +1,5 @@
 import type { Goal, Metrics } from '../../engine/types';
-import { goalMet } from '../../engine/pressures';
+import { QUALITY_METRICS, goalMet } from '../../engine/pressures';
 import { METRIC_META } from '../../lib/format';
 
 export interface GoalPart {
@@ -8,13 +8,15 @@ export interface GoalPart {
   what: string;
   /** Where it is now; absent when the goal is already met and only has to be kept. */
   from?: string;
+  /** Nothing measures it yet (quality on a level with no evals), so there's no "from". */
+  unmeasured?: boolean;
   to: string;
 }
 
 /**
  * Each goal as part of one plain sentence about what has to change: "raise right answers from 23%
  * to at least 70%". Goals the starting design already meets (or rounds to) are ones to keep:
- * "keep cost per 1,000 requests at $35 or less".
+ * "keep cost per 1,000 requests at $35 or less". Quality nobody measures yet has no starting point.
  */
 export function goalParts(goals: Goal[], now: Metrics, voice = false): GoalPart[] {
   return goals.map((g) => {
@@ -25,6 +27,9 @@ export function goalParts(goals: Goal[], now: Metrics, voice = false): GoalPart[
     const from = tidy(now[g.metric]);
     const target = tidy(g.value);
     const atLeast = g.op === '>=';
+    if (!now.qualityVisible && QUALITY_METRICS.includes(g.metric)) {
+      return { verb: atLeast ? 'raise' : 'cut', what, unmeasured: true, to: atLeast ? `at least ${target}` : `${target} or less` };
+    }
     if (goalMet(now, g) || from === target) return { verb: 'keep', what, to: `${target} or ${atLeast ? 'more' : 'less'}` };
     return atLeast ? { verb: 'raise', what, from, to: `at least ${target}` } : { verb: 'cut', what, from, to: `${target} or less` };
   });

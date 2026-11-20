@@ -113,7 +113,7 @@ const CORE: Scenario[] = [
           {
             text: 'Search treats E1043 and E1034 as the same thing',
             right: true,
-            why: 'Search by meaning sees two codes that look almost identical and treats them as the same thing. Codes, part numbers and names need a search that matches the exact characters.',
+            why: 'Search by meaning (embeddings) sees two codes that look almost identical and treats them as the same thing. Codes, part numbers and names need a search that matches the exact characters.',
           },
           {
             text: "The answer isn't in the manual",
@@ -394,7 +394,7 @@ const CORE: Scenario[] = [
           {
             text: "It's sent more text than the model can read at once",
             right: true,
-            why: 'Every model has a limit on how much text it can take in one go, and 12 long pages blow straight past it. A bigger model takes in more, but costs many times as much per question and still gets lost in all that text.',
+            why: 'Every model has a limit on how much text it can take in one go, called its context window, and 12 long pages blow straight past it. A bigger model takes in more, but costs many times as much per question and still gets lost in all that text.',
           },
         ],
       },
@@ -470,7 +470,7 @@ const CORE: Scenario[] = [
       },
       named: {
         term: 'Streaming',
-        text: "Streaming sends the answer word by word as it's written, so the first words appear in well under a second. Anything that has to read the full answer first, like an output judge, quietly cancels it, so quality is protected earlier, with better search.",
+        text: "Streaming sends the answer token by token as it's written, so the first words appear in well under a second. That delay is called time to first token, and it's what users feel as speed. Anything that has to read the full answer first, like an output judge, quietly cancels it, so quality is protected earlier, with better search.",
       },
     },
     lesson:
@@ -494,7 +494,7 @@ const CORE: Scenario[] = [
     title: '8 · The chat that never ends',
     tagline: 'Memory optimization: it either forgets what you said, or costs a fortune.',
     brief:
-      'Your AI coaching app is a hit: conversations run 20, 40, 80 messages. Users constantly refer back ("like I said earlier, my budget is…"). The prototype resends the entire conversation with every message. The bill grows every week, answers get worse as chats get longer, and the longest chats have started failing.',
+      'Customers love planning whole kitchens with your shopping assistant, in chats that run 20, 40, 80 messages. They refer back all the time ("like I said earlier, my budget is…"). The prototype resends the entire conversation with every message. The bill grows every week, answers get worse as chats get longer, and the longest chats have started failing.',
     traffic: { ...base, rps: 6, easyShare: 0.6, repeatShare: 0.05, chatTurns: 22, recallShare: 0.35 },
     goals: [
       { metric: 'costPer1k', op: '<=', value: 12 },
@@ -507,6 +507,39 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'llm'),
     hint: 'Open a few requests and look at what each one sends. Does the model need every word from 40 turns ago, or only the few facts this message depends on? Try each memory strategy and watch which goal breaks.',
+    case: {
+      job: 'Keep long chats accurate and affordable, without the bot forgetting what the customer said.',
+      chat: {
+        user: "So with everything I've told you, which oven should I get?",
+        bot: "I'd go for the Elara electric oven at \u20ac1,400. It's our most popular model.",
+        lie: 'the Elara electric oven at \u20ac1,400',
+        truth:
+          'Forty messages ago the customer said the budget is \u20ac800 and it has to be gas. Every message, the bot resends the whole chat, about 7,000 tokens (roughly 5,000 words), and that line is buried in it.',
+        fixed: 'Within your \u20ac800 budget and gas only, the Brava 60 at \u20ac749 fits best.',
+      },
+      predict: {
+        question: 'The customer told the bot their budget. Why did it ignore it?',
+        options: [
+          {
+            text: 'The model forgot the start of the chat',
+            why: "A model can't forget: it remembers nothing between messages, so the app resends the whole chat every time. The budget was in there, buried under 40 messages of other text, and long prompts make models miss things.",
+          },
+          {
+            text: 'Every message resends the whole chat, so the important facts get buried',
+            right: true,
+            why: 'Resending everything works for short chats. At 40 messages each reply carries thousands of tokens you pay for, the facts that matter are lost in the noise, and the longest chats grow past what the model can take in at once, so they fail.',
+          },
+          {
+            text: 'The model is too small to keep track',
+            why: 'A large model is a little more accurate, but it still reads the whole chat every time, so each reply costs about five times as much and more of them time out.',
+          },
+        ],
+      },
+      named: {
+        term: 'Conversation memory',
+        text: 'Models are stateless: memory is whatever you choose to send with each message. Keeping only the last few messages (a sliding window) is cheap but forgets the budget. A running summary keeps the gist but loses exact numbers. Storing the chat and retrieving only the messages each new question depends on keeps prompts small and the key facts in view.',
+      },
+    },
     lesson:
       'Models are stateless: they remember nothing between calls, so "memory" is whatever you choose to resend. Resending everything is accurate at first, then gets expensive, slow and noisy, and eventually overflows. A sliding window is cheap but forgets. A summary keeps the gist but loses specifics. Storing the conversation as long-term memory and retrieving only what each message needs keeps prompts small and the important facts in view.',
     solution: {
@@ -525,7 +558,7 @@ const CORE: Scenario[] = [
     title: '9 · Flying blind',
     tagline: 'Costs are down 95%. Is anything else down?',
     brief:
-      'A contractor "optimised" your docs assistant: the small model, one huge chunk per question. The dashboard looks fantastic (fast, cheap, zero errors) and they\'ve already invoiced. Support says answers have got worse, but nobody can prove it, because nothing measures whether answers are right.',
+      'A contractor "optimised" your help bot: the small model, one huge chunk per question. The dashboard looks fantastic (fast, cheap, zero errors) and they\'ve already invoiced. Support says answers have got worse, but nobody can prove it, because nothing measures whether answers are right.',
     traffic: { ...base, rps: 5, kbShare: 0.8, exactTermShare: 0.3, easyShare: 0.5, repeatShare: 0.1, qualityHidden: true },
     goals: [
       { metric: 'accuracy', op: '>=', value: 0.82 },
@@ -541,6 +574,39 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: 'Before you change anything, make quality visible: add an Eval Harness after the LLM. Then let the numbers, and the failed requests, tell you what to fix.',
+    case: {
+      job: 'Find out how good the answers really are, then fix quality without losing the speed and savings.',
+      chat: {
+        user: 'Can I put the CM-5 milk jug in the dishwasher?',
+        bot: 'Yes, the milk jug is dishwasher safe on any setting.',
+        lie: 'dishwasher safe on any setting',
+        truth: "Hand wash only: the dishwasher warps the jug's seal. Support has seen more wrong answers like this since the contractor's changes, but nothing measures how many.",
+        source: 'from the CM-5 manual',
+        fixed: 'No, hand wash it only. The dishwasher warps the seal.',
+      },
+      predict: {
+        question: "The dashboard says fast, cheap and zero errors. Support says answers got worse. Who's right?",
+        options: [
+          {
+            text: 'The dashboard: it measures everything',
+            why: 'It measures speed, cost and failed requests, because those are easy to count. A fast, cheap, wrong answer scores perfectly on all three. Nothing on it checks whether an answer is right.',
+          },
+          {
+            text: 'Nobody can tell yet, because nothing checks whether answers are right',
+            right: true,
+            why: "Support has a feeling and the dashboard has the wrong numbers. Until answers are checked against ones you know are right, every fix is a guess and you can't show it helped.",
+          },
+          {
+            text: 'Support: undo the changes and switch back to a bigger model',
+            why: "You'd be guessing which change did the damage. Here a bigger model on its own barely helps, because the model is handed one huge block of text per question. You'd only see that once quality is measured.",
+          },
+        ],
+      },
+      named: {
+        term: 'Evaluation (evals)',
+        text: 'An eval harness checks answers against a test set with known right answers, and has an LLM judge score a sample of real traffic. It turns "I think it\'s worse" into a number, so every change shows what it does to quality, not just speed and cost.',
+      },
+    },
     lesson:
       "You can't improve what you can't see. Speed, cost and errors are easy to measure, so teams optimise them and quietly wreck quality. An eval harness (a test set with known answers, plus an LLM judge scoring a sample of real traffic) turns \"I think it's worse\" into a number, and tells you whether each change actually helped.",
     solution: {
@@ -581,6 +647,40 @@ const CORE: Scenario[] = [
     ],
     edges: [...chain('users', 'emb', 'vdb', 'rr', 'gpu'), ...chain('users', 'kw', 'rr')],
     hint: 'One request per GPU wastes almost all of it. Raise the batch size and watch throughput jump while each answer slows down. Then decide how many GPUs you really need, and whether you can afford full precision.',
+    case: {
+      job: 'Answer every question on your own GPUs, fast enough and for less than the API cost.',
+      chat: {
+        user: 'Is the CM-5 back in stock?',
+        bot: '(after 30 seconds) Something went wrong. Please try again.',
+        lie: 'Something went wrong.',
+        truthLabel: 'Behind the scenes',
+        truth:
+          'To cut a bill of about $10 per 1,000 questions, the team moved the bot to an open 70B model on 4 rented GPUs. Each GPU answers one question at a time, at full precision. 30 questions arrive every second, so almost all of them wait 30 seconds in a queue and time out.',
+        fixed: 'Yes, the CM-5 is back in stock and ships within 2 days.',
+      },
+      predict: {
+        question: 'Why does almost every question time out?',
+        options: [
+          {
+            text: "The open model isn't as good as the API",
+            why: "Quality isn't the problem: the few questions that get through are answered about as well as before. The rest never reach the model in time.",
+          },
+          {
+            text: 'Each GPU handles one question at a time, so the queue never clears',
+            right: true,
+            why: "A GPU can work on many questions at once for only a little extra time each. One at a time wastes most of it, so questions arrive faster than they're answered and time out waiting.",
+          },
+          {
+            text: "There aren't enough GPUs",
+            why: "More GPUs that each handle one question still can't keep up: 32 of them, eight times as many, still fail most questions and cost nearly three times as much. Make each GPU do more first.",
+          },
+        ],
+      },
+      named: {
+        term: 'Batching, quantization and capacity',
+        text: 'Batching lets one GPU serve many requests at once: throughput jumps while each answer gets a little slower. Quantization stores the model in smaller numbers (int8 instead of fp16), so it runs faster for a small quality cost. Then you size the GPU count. You pay for GPUs by the hour, busy or idle, so you want them busy but not overloaded.',
+      },
+    },
     lesson:
       'Self-hosting turns a per-token bill into a capacity-planning problem. Batching is the biggest lever (one GPU serves many requests at once), quantization makes each GPU faster for a small quality cost, and the GPU count sets your bill whether the GPUs are busy or not. The sweet spot is busy but not saturated: too few GPUs and requests queue and time out, too many and you pay for idle silicon.',
     solution: {
