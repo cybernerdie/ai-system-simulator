@@ -21,6 +21,7 @@ import { track } from '../lib/analytics';
 import { copyWithFallback, downloadBlob, shareOrCopy } from '../lib/clipboard';
 import {
   addFlag,
+  caseSeen,
   clearDesign,
   introSeen,
   loadCleared,
@@ -32,6 +33,7 @@ import {
   loadRead,
   loadStars,
   loadUnlockAll,
+  markCaseSeen,
   markIntroSeen,
   rememberLevel,
   saveCleared,
@@ -66,11 +68,12 @@ import type { Shown } from '../ui/panels/Requests';
 import { SidePanel, type Tab } from '../ui/panels/SidePanel';
 import { Telemetry } from '../ui/panels/Telemetry';
 import { Toast } from '../ui/Toast';
+import { CaseIntro } from '../ui/case/CaseIntro';
 import { TopBar } from '../ui/TopBar';
 import { AchievementsDialog, CommandPalette, CompareDialog, IncidentOverDialog, LearnHub, LevelMakerDialog, ReviewDialog, Tour, VoiceMenu, WelcomeScreen } from '../ui/lazy';
 import { buildCommands } from './commands';
 import { EMBED, HOLD_TICKS, PHONE_QUERY, PLAY_ID, SITE } from './config';
-import { buildFlow, designGraph, designSignature, designToFlow, edgeOf, flowGraph, packDesign, reuseEdges } from './flow';
+import { buildFlow, requestPath, designGraph, designSignature, designToFlow, edgeOf, flowGraph, packDesign, reuseEdges } from './flow';
 import { analyticsLevel, lookup, pathFor, registerCustomLevel, startingPoint } from './levels';
 import { useAchievements } from './hooks/useAchievements';
 import { useAutoClear } from './hooks/useAutoClear';
@@ -109,6 +112,8 @@ export default function App() {
 
   // saved progress
   const [cleared, setCleared] = useState(loadCleared);
+  const clearedRef = useRef(cleared);
+  clearedRef.current = cleared;
   const [stars, setStars] = useState(loadStars);
   const [unlockAll, setUnlockAll] = useState(loadUnlockAll);
   const [daily, setDaily] = useState(loadDaily);
@@ -148,6 +153,13 @@ export default function App() {
   const [makerOpen, setMakerOpen] = useState(false);
   const [cmdk, setCmdk] = useState(false);
   const [review, setReview] = useState<Review | null | 'loading'>(null);
+  /** The level's case file: opens with a level the player hasn't cleared, and from the Mission tab. */
+  const [caseOpen, setCaseOpen] = useState(() => {
+    const s = lookup(start.id);
+    return !!s?.case && !EMBED && introSeen() && !caseSeen(s.id) && !loadCleared().has(s.id);
+  });
+  /** The coached first level starts once its case has been read. */
+  const coachAfterCase = useRef(false);
   const [pin, setPin] = useState<SharedDesign | null>(null);
   const pinHere = pin?.scenarioId === scenario.id ? pin : null;
 
@@ -225,8 +237,9 @@ export default function App() {
   const achievements = useAchievements(progress);
 
   const loadScenario = useCallback(
-    (id: string, { fresh = false } = {}) => {
+    (id: string, { fresh = false, showCase = true } = {}) => {
       const s = lookup(id) ?? SCENARIOS[0];
+      setCaseOpen(showCase && !!s.case && !EMBED && !clearedRef.current.has(s.id));
       if (fresh) clearDesign(s.id);
       const saved = fresh ? null : loadDesign(s.id);
       const f = saved ? designToFlow(saved) : buildFlow(s);
@@ -333,7 +346,7 @@ export default function App() {
 
   const resetScenario = useCallback(() => {
     const before = { nodes: nodesRef.current, edges: edgesRef.current };
-    loadScenario(scenario.id, { fresh: true });
+    loadScenario(scenario.id, { fresh: true, showCase: false });
     showToast('Scenario reset.', {
       label: 'Undo',
       run: () => {
@@ -350,8 +363,18 @@ export default function App() {
   const startPlaying = useCallback(() => {
     closeIntro();
     loadScenario(SCENARIOS[0].id, { fresh: true });
-    setCoach(0);
+    if (SCENARIOS[0].case) coachAfterCase.current = true;
+    else setCoach(0);
   }, [closeIntro, loadScenario, setCoach]);
+
+  const closeCase = useCallback(() => {
+    setCaseOpen(false);
+    markCaseSeen(scenario.id);
+    if (coachAfterCase.current) {
+      coachAfterCase.current = false;
+      setCoach(0);
+    }
+  }, [scenario.id, setCoach]);
 
   const restartIncident = useCallback(() => {
     setIncidentOver(null);
@@ -639,7 +662,7 @@ export default function App() {
     [edges, running, active, metrics, traced, arrow],
   );
 
-  const anyDialog = intro !== null || touring || won || picker || !!hub || cmdk || compareOpen || makerOpen || achOpen || !!incidentOver || !!review;
+  const anyDialog = caseOpen || intro !== null || touring || won || picker || !!hub || cmdk || compareOpen || makerOpen || achOpen || !!incidentOver || !!review;
   useShortcuts({ blocked: anyDialog, onToggleRun: toggleRun, onCommands: EMBED ? undefined : () => setCmdk(true) });
 
   const tour = useMemo(() => tourSteps({ setTab, run: () => setRunning(true) }), [setTab, setRunning]);
@@ -774,7 +797,7 @@ export default function App() {
           )}
         </ReactFlow>
         <PressureWindow p={pressure} running={running} hasRun={!!metrics} hud={isIncident && incident ? <IncidentHud s={incident} /> : undefined} />
-        <Telemetry m={metrics} history={sim.history} goals={goals} />
+        <Telemetry m={metrics} history={sim.history} goals={goals} focus={scenario.difficulty === 1} />
         {banner && <IncidentBanner title={banner.title} text={banner.text} />}
         <Complaints samples={metrics?.samples} running={running && !guide.celebrate} />
       </main>
@@ -801,6 +824,7 @@ export default function App() {
         onMix={(patch) => setMixOverride((o) => ({ ...o, ...patch }))}
         onResetMix={() => setMixOverride(null)}
         onReview={EMBED ? undefined : openReview}
+        onShowCase={() => setCaseOpen(true)}
       />
 
       <Suspense fallback={null}>
@@ -818,7 +842,8 @@ export default function App() {
             onClose={closeIntro}
           />
         )}
-        {coach !== null && (
+        {caseOpen && scenario.case && <CaseIntro s={{ ...scenario, case: scenario.case }} kicker={num ? `Level ${num}` : 'Level'} onStart={closeCase} />}
+        {coach !== null && !caseOpen && (
           <GuideCard
             key={COACH[coach].id}
             target={COACH[coach].target}
@@ -947,6 +972,7 @@ export default function App() {
             onShare={shareResult}
             onReview={openReview}
             onNext={goNext}
+            path={requestPath(graph).map((k) => (k === 'users' ? 'Customer' : COMPONENTS[k].name))}
           />
         )}
         {incidentOver && (

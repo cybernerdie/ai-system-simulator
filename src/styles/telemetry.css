@@ -165,3 +165,49 @@
     border-top: 1px solid var(--line);
   }
 }
+
+/* intro levels: only the goals, plus a way to see everything else */
+@media (min-width: 901px) {
+  .telemetry.is-collapsed {
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    right: auto;
+    width: min(560px, calc(100% - 2 * var(--sp-4)));
+  }
+  /* expanded on laptops: the toggle takes its own row under the two rows of four */
+  .telemetry.is-focused:not(.is-collapsed) .tele-more {
+    grid-column: 1 / -1;
+    padding: var(--sp-2);
+    border-top: 1px solid var(--line);
+  }
+}
+
+@media (min-width: 1421px) {
+  .telemetry.is-focused:not(.is-collapsed) {
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  }
+  .telemetry.is-focused:not(.is-collapsed) .tele-more {
+    grid-column: auto;
+    border-top: 0;
+  }
+}
+
+/* phones: the toggle spans the two columns */
+@media (max-width: 900px) {
+  .tele-more {
+    grid-column: 1 / -1;
+    padding: var(--sp-2);
+  }
+}
+
+.tele-more {
+  border: 0;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.tele-more:hover {
+  color: var(--ink);
+}

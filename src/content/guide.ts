@@ -29,7 +29,12 @@ const WELCOME: Line = {
 
 /* ---------------- level 1 coaching ---------------- */
 
-export type CoachWait = { kind: 'running' } | { kind: 'has'; type: ComponentType } | { kind: 'won' } | { kind: 'next' }; // the player taps "Got it"
+export type CoachWait =
+  | { kind: 'running' }
+  | { kind: 'has'; type: ComponentType }
+  | { kind: 'added' } // any new component on the canvas
+  | { kind: 'won' }
+  | { kind: 'next' }; // the player taps "Got it"
 
 export interface CoachStep extends Line {
   /** what to highlight while this step is active */
@@ -39,39 +44,37 @@ export interface CoachStep extends Line {
   title: string;
 }
 
+/**
+ * The coached first level teaches the controls, not the answer: run it, read the problem, add a
+ * part, watch the numbers. Which part to add is the player's call; the case file asked them to
+ * think about it, and the hints are there if they're stuck.
+ */
 export const COACH: CoachStep[] = [
   {
-    id: 'coach-1-run',
-    title: 'Send in some customers',
-    text: 'This is a support chatbot. Customers ask it about your product. Press Run to send some customers its way.',
+    id: 'coach-1-send',
+    title: 'Send in the customers',
+    text: 'Press Run. Customers start asking your bot questions, and you can watch how many answers come back right.',
     target: '.btn-run',
     wait: { kind: 'running' },
   },
   {
-    id: 'coach-2-problem',
-    title: 'Something is wrong',
-    text: 'See the complaints? The bot sounds confident, but it is making things up. The panel at the top always names the one biggest problem.',
+    id: 'coach-2-read',
+    title: 'Read the problem',
+    text: 'This panel names the biggest problem right now. The numbers at the bottom are your goals: they turn green once the problem is fixed.',
     target: '.pressure-window',
     wait: { kind: 'next' },
   },
   {
-    id: 'coach-3-library',
-    title: 'Give it your docs',
-    text: 'It has never read your documentation, so it guesses. Tap Vector DB to give it a searchable library of your docs.',
-    target: '[data-palette="vector_db"]',
-    wait: { kind: 'has', type: 'vector_db' },
+    id: 'coach-3-add',
+    title: 'Add a part',
+    text: "These are the parts you can add. Tap one to add it to your system, then tap it on the canvas to see what it does. You can delete anything you add, so it's fine to experiment.",
+    target: '.palette',
+    wait: { kind: 'added' },
   },
   {
-    id: 'coach-4-embedding',
-    title: 'Make it searchable',
-    text: 'Nice. Search works by meaning, so it needs an Embedding Model to turn each question into something it can look up. Tap Embedding Model.',
-    target: '[data-palette="embedding"]',
-    wait: { kind: 'has', type: 'embedding' },
-  },
-  {
-    id: 'coach-5-watch',
-    title: 'Watch it improve',
-    text: 'Now every question finds the right page before the model answers. Watch accuracy climb. Keep every goal green for a few seconds to clear the level.',
+    id: 'coach-4-watch',
+    title: 'Watch the numbers',
+    text: 'Keep both goals green for a few seconds to clear the level. If they stay red, try something else. Stuck? The hints in the Mission tab get more specific each time.',
     target: '.telemetry',
     wait: { kind: 'won' },
   },
@@ -134,7 +137,7 @@ const firstSentence = (s: string) => (s.match(/^.*?[.!?](\s|$)/)?.[0] ?? s).trim
 export function pressureLine(key: PressureKey): Line | null {
   if (key === 'stable') return null;
   const p = PRESSURES[key];
-  return { id: lineId('pressure', key), text: `${p.title}. ${firstSentence(p.try)}` };
+  return { id: lineId('pressure', key), text: `${p.title}. ${firstSentence(p.why)}` };
 }
 
 export function nudgeLine(key: PressureKey): Line | null {

@@ -45,7 +45,10 @@ export function GuideCard({ target, kicker, title, text, actions, onClose, close
       if (key !== last) {
         last = key;
         setPos(r && desktop ? place(r, h) : null);
-        setDockTop(!!r && r.top + r.height / 2 > window.innerHeight * 0.55);
+        // phones: dock at the top only while the target is on screen in the lower part, so once the
+        // player scrolls elsewhere (say, up to the components) the card gets out of their way
+        const visible = !!r && r.top < window.innerHeight && r.top + r.height > 0;
+        setDockTop(visible && r!.top + r!.height / 2 > window.innerHeight * 0.55);
       }
       raf = requestAnimationFrame(tick);
     };

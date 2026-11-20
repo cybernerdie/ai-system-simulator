@@ -36,6 +36,10 @@ The rest of the behaviour lives in focused hooks next to it:
 - `useCanvasFit`: keeps the diagram framed as the overlays around it resize, until the player pans or zooms
 - `useShortcuts`, `useTheme`, `useToast`, `useStoredFlag`, `useMediaQuery`, `useAutoClear`
 
+## How a level teaches
+
+A level with a `case` opens on one real exchange: a customer's question, the bot's confident wrong answer and what's actually true, then the job in one sentence and the goals in plain words. Before touching anything the player guesses the cause from three options, and each option explains itself. While they play, the problem panel names the problem and why, and keeps the fix behind a question; the hints in the Mission tab get more specific the longer they're stuck. After the win the same question is answered right, the path it took through their design is shown, and only then is the idea named. This follows the research on letting people attempt a problem before instruction, with guidance on hand, and on starting concrete and naming the abstraction last.
+
 ## Levels and URLs
 
 Built-in levels are data in `engine/levels/`. `engine/catalog.ts` finds any level by id, including the daily (built from the date) and incident mode. `app/levels.ts` adds player-made levels, which arrive in a link (`/#l=<code>`), are verified (the author's design must win and the starting design must fail) and are remembered in the browser.

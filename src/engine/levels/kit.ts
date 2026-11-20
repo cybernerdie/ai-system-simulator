@@ -8,6 +8,22 @@ export interface ScenarioNode {
   config?: NodeConfig;
 }
 
+/**
+ * A level told as a case: one real exchange that shows the problem, the job in plain words, a
+ * question that makes the player guess the cause before touching anything, and the name of the
+ * idea, given only after they've made it work.
+ */
+export interface CaseFile {
+  /** What the player has to achieve, in one plain sentence. */
+  job: string;
+  /** One customer exchange: the question, the bot's bad answer, the truth, and the answer once fixed. */
+  chat: { user: string; bot: string; truth: string; fixed: string };
+  /** Asked before playing. Exactly one option is right; each explains itself once picked. */
+  predict: { question: string; options: { text: string; right?: true; why: string }[] };
+  /** Revealed after the win: what they built is called this. */
+  named: { term: string; text: string };
+}
+
 export interface Scenario {
   id: string;
   title: string;
@@ -27,6 +43,8 @@ export interface Scenario {
   edges: SimEdge[];
   hint: string;
   lesson: string;
+  /** The level as a case file. Levels without one fall back to the brief. */
+  case?: CaseFile;
   /** A known-good design, used by tests to prove the scenario is winnable. */
   solution: { nodes: ScenarioNode[]; edges: SimEdge[] };
 }

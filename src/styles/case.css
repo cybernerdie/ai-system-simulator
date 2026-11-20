@@ -1,0 +1,297 @@
+/* Case files: the customer exchange, the job, the guess before playing, and the replay after winning. */
+
+.case-intro {
+  width: min(520px, 100%);
+}
+
+.case-chat {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-4) 0;
+}
+
+.case-msg {
+  max-width: 88%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.case-msg p {
+  margin: 2px 0 0;
+}
+
+.case-who {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.case-msg.is-user {
+  justify-self: end;
+  background: var(--surface-2);
+  border-bottom-right-radius: 4px;
+}
+
+.case-msg.is-bot {
+  justify-self: start;
+  background: var(--surface);
+  box-shadow: var(--ring);
+  border-bottom-left-radius: 4px;
+}
+
+.case-msg.is-wrong {
+  background: var(--hot-bg);
+  box-shadow: none;
+}
+
+.case-msg.is-right {
+  background: var(--ok-bg);
+  box-shadow: none;
+}
+
+.case-verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  background: var(--surface);
+}
+
+.is-wrong .case-verdict {
+  color: var(--hot);
+}
+
+.is-right .case-verdict {
+  color: var(--ok);
+}
+
+.case-truth {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--blue-bg);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.case-truth svg {
+  flex: none;
+  margin-top: 3px;
+}
+
+.case-truth p {
+  margin: 0;
+}
+
+.case-chat.is-compact .case-msg,
+.case-chat.is-compact .case-truth {
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.case-job {
+  padding: var(--sp-4);
+  border-radius: 12px;
+  box-shadow: var(--ring);
+}
+
+.case-job .case-job-label,
+.mission-job .case-job-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.case-job .case-job-text,
+.mission-job .case-job-text {
+  margin: 4px 0 var(--sp-3);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.case-job .case-goals-label {
+  margin: 0 0 4px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.case-goals {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.case-intro .case-question {
+  margin: var(--sp-3) 0;
+  font-size: 15.5px;
+  font-weight: 500;
+}
+
+.case-options {
+  display: grid;
+  gap: 6px;
+}
+
+.case-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--ring);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.case-option:hover:not(:disabled) {
+  box-shadow: var(--ring-strong);
+}
+
+.case-option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.case-option:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
+
+.case-option-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.case-option.is-right {
+  background: var(--ok-bg);
+  box-shadow: none;
+}
+
+.case-option.is-right .case-option-mark {
+  background: var(--ok);
+  color: var(--on-ink);
+}
+
+.case-option.is-wrong {
+  background: var(--hot-bg);
+  box-shadow: none;
+}
+
+.case-option.is-wrong .case-option-mark {
+  background: var(--hot);
+  color: var(--on-ink);
+}
+
+.case-intro .case-why {
+  margin: var(--sp-3) 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  background: var(--surface-2);
+}
+
+.case-intro .case-why.is-right {
+  background: var(--ok-bg);
+}
+
+/* the job, pinned at the top of the Mission tab while playing */
+.mission-job {
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.mission-job .case-job-text {
+  margin-bottom: 0;
+  font-size: 15px;
+}
+
+/* after the win: the same question, answered right, and how it got there */
+.win-replay {
+  margin: var(--sp-3) 0 var(--sp-4);
+  text-align: left;
+}
+
+.win-replay .win-replay-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.win-replay .win-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.win-path-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.win-named {
+  margin: 0 0 var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 12px;
+  background: var(--violet-bg);
+  text-align: left;
+}
+
+.win-named strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--violet-fg);
+}
+
+.win-named p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .case-intro {
+    padding: var(--sp-5);
+  }
+  .case-msg {
+    max-width: 94%;
+  }
+}

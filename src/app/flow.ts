@@ -82,3 +82,18 @@ export function designGraph(d: SharedDesign): SimGraph {
 export function designSignature(graph: SimGraph): string {
   return JSON.stringify([graph.nodes.map((n) => [n.type, n.config]), graph.edges.map((e) => [e.source, e.target])]);
 }
+
+/** The components a request passes through, in order, starting from Users. */
+export function requestPath(graph: SimGraph): SimGraph['nodes'][number]['type'][] {
+  const start = graph.nodes.find((n) => n.type === 'users');
+  if (!start) return [];
+  const order: string[] = [];
+  const queue = [start.id];
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (order.includes(id)) continue;
+    order.push(id);
+    for (const e of graph.edges) if (e.source === id) queue.push(e.target);
+  }
+  return order.map((id) => graph.nodes.find((n) => n.id === id)!.type);
+}

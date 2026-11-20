@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { goalMet } from '../../engine/pressures';
 import type { Goal, GoalMetric, Metrics } from '../../engine/types';
 import { money, monthlyCost } from '../../engine/cost';
@@ -16,7 +17,12 @@ function Spark({ values }: { values: number[] }) {
   );
 }
 
-export function Telemetry({ m, history, goals }: { m: Metrics | null; history: Metrics[]; goals: Goal[] }) {
+/**
+ * The live numbers. The level's goals come first; with \`focus\` (the intro levels) the rest wait
+ * behind a toggle, so a new player only watches what they're being asked to change.
+ */
+export function Telemetry({ m, history, goals, focus = false }: { m: Metrics | null; history: Metrics[]; goals: Goal[]; focus?: boolean }) {
+  const [showAll, setShowAll] = useState(false);
   if (!m) {
     return (
       <div className="telemetry is-empty">
@@ -34,7 +40,7 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
     // With an Eval Harness, the dashboard shows what your evals report, which is only as honest as they are
     {
       key: 'acc',
-      label: m.evalSetup ? 'Accuracy (evals)' : 'Accuracy',
+      label: m.evalSetup ? 'Right answers (evals)' : 'Right answers',
       value: noAnswers ? '—' : pct(m.evalSetup ? m.measuredAccuracy : m.accuracy),
       series: history.map((h) => (h.evalSetup ? h.measuredAccuracy : h.accuracy)),
       metric: 'accuracy',
@@ -42,7 +48,7 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
     },
     {
       key: 'hal',
-      label: m.evalSetup ? 'Halluc. (evals)' : 'Hallucination',
+      label: m.evalSetup ? 'Made up (evals)' : 'Made-up answers',
       value: noAnswers ? '—' : pct(m.evalSetup ? m.measuredHallucination : m.hallucination),
       series: history.map((h) => (h.evalSetup ? h.measuredHallucination : h.hallucination)),
       metric: 'hallucination',
@@ -55,7 +61,7 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
           value: m.avgHistoryTokens >= 1000 ? `${(m.avgHistoryTokens / 1000).toFixed(1)}k` : String(Math.round(m.avgHistoryTokens)),
           series: history.map((h) => h.avgHistoryTokens),
         }
-      : { key: 'rec', label: 'Recall', value: m.recall == null ? '—' : pct(m.recall), series: history.map((h) => h.recall ?? 0) },
+      : { key: 'rec', label: 'Right page found', value: m.recall == null ? '—' : pct(m.recall), series: history.map((h) => h.recall ?? 0) },
     goals.some((g) => g.metric === 'fairnessGap')
       ? {
           key: 'fair',
@@ -76,17 +82,29 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
               metric: 'harmfulActions' as const,
             }
           : goals.some((g) => g.metric === 'piiLeak')
-            ? { key: 'pii', label: 'PII leaked', value: pct(m.piiLeak), series: history.map((h) => h.piiLeak), metric: 'piiLeak' as const }
-            : { key: 'inj', label: 'Injection', value: pct(m.injection), series: history.map((h) => h.injection), metric: 'injection' as const },
-    { key: 'err', label: 'Errors', value: pct(m.errorRate), series: history.map((h) => h.errorRate), metric: 'errorRate' },
-    { key: 'p50', label: 'p50 latency', value: ms(m.p50), series: history.map((h) => h.p50), metric: 'p50' },
-    { key: 'ttft', label: m.voice ? 'First audio' : 'First token', value: ms(m.ttftP50), series: history.map((h) => h.ttftP50), metric: 'ttftP50' },
-    { key: 'cost', label: 'Cost / 1k', value: usd(m.costPer1k), series: history.map((h) => h.costPer1k), metric: 'costPer1k' },
+            ? { key: 'pii', label: 'Personal data leaked', value: pct(m.piiLeak), series: history.map((h) => h.piiLeak), metric: 'piiLeak' as const }
+            : { key: 'inj', label: 'Attacks that worked', value: pct(m.injection), series: history.map((h) => h.injection), metric: 'injection' as const },
+    { key: 'err', label: 'Failed requests', value: pct(m.errorRate), series: history.map((h) => h.errorRate), metric: 'errorRate' },
+    { key: 'p50', label: 'Typical response', value: ms(m.p50), series: history.map((h) => h.p50), metric: 'p50' },
+    { key: 'ttft', label: m.voice ? 'First audio' : 'First word', value: ms(m.ttftP50), series: history.map((h) => h.ttftP50), metric: 'ttftP50' },
+    { key: 'cost', label: 'Cost per 1k', value: usd(m.costPer1k), series: history.map((h) => h.costPer1k), metric: 'costPer1k' },
   ];
   const hidden = new Set(m.qualityVisible ? [] : ['acc', 'hal', 'inj', 'rec']);
+  const rank = (c: (typeof cells)[number]) => {
+    const i = goals.findIndex((g) => g.metric === c.metric);
+    return i < 0 ? goals.length : i;
+  };
+  const ordered = [...cells].sort((a, b) => rank(a) - rank(b));
+  const isGoal = (c: (typeof cells)[number]) => goals.some((g) => g.metric === c.metric);
+  const collapsed = focus && !showAll && ordered.some((c) => !isGoal(c));
+  const shown = collapsed ? ordered.filter(isGoal) : ordered;
   return (
-    <div className="telemetry" aria-live="polite">
-      {cells.map((c) => {
+    <div
+      className={`telemetry${focus ? ' is-focused' : ''}${collapsed ? ' is-collapsed' : ''}`}
+      style={focus ? ({ '--cols': shown.length + 1 } as React.CSSProperties) : undefined}
+      aria-live="polite"
+    >
+      {shown.map((c) => {
         if (hidden.has(c.key))
           return (
             <div key={c.key} className="tele is-hidden" title="Invisible without evals">
@@ -123,6 +141,11 @@ export function Telemetry({ m, history, goals }: { m: Metrics | null; history: M
           </div>
         );
       })}
+      {focus && ordered.some((c) => !isGoal(c)) && (
+        <button className="tele tele-more" onClick={() => setShowAll((v) => !v)} aria-expanded={!collapsed}>
+          {collapsed ? `${ordered.length - shown.length} more numbers` : 'Show only my goals'}
+        </button>
+      )}
     </div>
   );
 }

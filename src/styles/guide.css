@@ -261,8 +261,13 @@
 }
 
 /* glow on whatever the guide wants you to touch */
-.coach-glow {
+/* lift the highlighted element above its neighbours; :where() keeps this from overriding
+   elements that position themselves, like the floating problem panel and metrics dock */
+:where(.coach-glow) {
   position: relative;
+}
+
+.coach-glow {
   z-index: 3;
   animation: coach-glow 1.4s ease-in-out infinite;
   border-radius: 12px;

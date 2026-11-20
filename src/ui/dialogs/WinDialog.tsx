@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Check, ClipboardCheck, Circle, Share2, Star } from 'lucide-react';
+import { ArrowRight, Check, ClipboardCheck, Circle, Share2, Star } from 'lucide-react';
+import { CaseChat } from '../case/CaseChat';
 import { type Lesson } from '../../content/learn';
 import type { StarResult } from '../../engine/stars';
 import type { Scenario } from '../../engine/levels/scenarios';
@@ -23,7 +24,10 @@ export function WinDialog({
   onShare,
   onReview,
   shareLabel = 'Share result',
+  path,
 }: {
+  /** The route a request took through the winning design, by component name. */
+  path?: string[];
   onReview?: () => void;
   s: Scenario;
   kicker: string;
@@ -62,6 +66,21 @@ export function WinDialog({
           {best > n && ` · your best is ${best} stars`}
         </p>
         <h2 id="win-title">{displayTitle(s)}</h2>
+        {s.case && (
+          <section className="win-replay">
+            <p className="win-replay-label">Same customer, same question:</p>
+            <CaseChat chat={s.case.chat} fixed compact />
+            {path && path.length > 2 && (
+              <p className="win-path" aria-label={`How it got there: ${path.join(', then ')}`}>
+                {path.map((step, i) => (
+                  <span key={`${step}-${i}`} className="win-path-step">
+                    {i > 0 && <ArrowRight size={11} aria-hidden />} {step}
+                  </span>
+                ))}
+              </p>
+            )}
+          </section>
+        )}
         {result && (
           <ul className="win-criteria">
             <li className="is-met">
@@ -88,7 +107,18 @@ export function WinDialog({
           </button>
         )}
         {quiz && <QuizBlock q={quiz} picked={quizPick} onPick={onQuiz} />}
-        {(!quiz || quizPick !== null) && s.lesson && (
+        {(!quiz || quizPick !== null) && s.case && (
+          <div className="win-named">
+            <strong>What you just built: {s.case.named.term}</strong>
+            <p>{s.case.named.text}</p>
+            {lesson && (
+              <button className="link-btn" onClick={() => onLesson(lesson.id)}>
+                Read the lesson: {lesson.title}
+              </button>
+            )}
+          </div>
+        )}
+        {(!quiz || quizPick !== null) && s.lesson && !s.case && (
           <div className="win-learned">
             <span className="win-learned-label">What you just learned</span>
             <p>{takeaway?.kind === 'takeaway' ? takeaway.text : s.lesson.split(/(?<=[.!?])\s/)[0]}</p>

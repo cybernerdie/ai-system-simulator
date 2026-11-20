@@ -28,8 +28,10 @@ export function SidePanel({
   onMix,
   onResetMix,
   onReview,
+  onShowCase,
 }: {
   onReview?: () => void;
+  onShowCase?: () => void;
   traffic: TrafficProfile;
   onMix: (patch: Partial<TrafficProfile>) => void;
   onResetMix: () => void;
@@ -73,7 +75,18 @@ export function SidePanel({
         </button>
       </div>
       {tab === 'mission' ? (
-        <Mission scenario={scenario} m={m} streak={streak} needed={needed} warnings={warnings} traffic={traffic} onMix={onMix} onResetMix={onResetMix} onReview={onReview} />
+        <Mission
+          scenario={scenario}
+          m={m}
+          streak={streak}
+          needed={needed}
+          warnings={warnings}
+          traffic={traffic}
+          onMix={onMix}
+          onResetMix={onResetMix}
+          onReview={onReview}
+          onShowCase={onShowCase}
+        />
       ) : tab === 'requests' ? (
         <RequestsPanel samples={m?.samples ?? []} running={running} picked={picked} onPick={onPick} qualityVisible={m?.qualityVisible ?? true} />
       ) : selected ? (

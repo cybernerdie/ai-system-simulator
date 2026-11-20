@@ -39,6 +39,10 @@ export const saveStars = (s: Record<string, number>) => writeJson('stars', s);
 export const loadRead = () => readJson('lessonsRead', stringSet, new Set<string>());
 export const saveRead = (s: Set<string>) => writeJson('lessonsRead', [...s]);
 
+/** Levels whose case file the player has already been shown. */
+export const caseSeen = (id: string) => readJson('casesSeen', stringSet, new Set<string>()).has(id);
+export const markCaseSeen = (id: string) => writeJson('casesSeen', [...readJson('casesSeen', stringSet, new Set<string>()).add(id)]);
+
 /* ---------- work in progress, per level ---------- */
 
 export const loadLastScenario = () => readString('lastScenario');

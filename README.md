@@ -161,6 +161,7 @@ Add an entry to `src/engine/levels/` (core levels in `scenarios.ts`, debugging l
 - a broken starting design
 - a hint and a lesson
 - a `solution` design
+- a `case`: one customer exchange that shows the problem (their question, the bot's wrong answer, what's actually true, and the right answer once fixed), the player's job in one plain sentence, a three-option question about the cause, and the name of the idea, revealed only after the win
 
 Then place it in a chapter in `src/engine/levels/chapters.ts` and give it a quiz question in `src/content/quiz.ts`. The tests check that the start fails, the solution clears every goal and every level has a question, so a level can't silently become unwinnable when the engine changes.
 

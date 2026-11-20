@@ -14,6 +14,7 @@ const KEYS = {
   stars: 'aisim.stars.v1',
   unlockAll: 'aisim.unlockAll.v1',
   lessonsRead: 'aisim.lessonsRead.v1',
+  casesSeen: 'aisim.casesSeen.v1',
   daily: 'aisim.daily.v1',
   incidentBest: 'aisim.incident.v1',
   quiz: 'aisim.quiz.v1',

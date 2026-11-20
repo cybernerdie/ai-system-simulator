@@ -27,6 +27,37 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'llm'),
     hint: 'The model has never seen your docs. What component lets it look things up at question time?',
+    case: {
+      job: 'Make the bot answer from your docs instead of guessing.',
+      chat: {
+        user: 'How do I reset my X-200 to factory settings?',
+        bot: 'Go to Settings → System → Factory Reset and confirm. It takes about two minutes.',
+        truth: 'The X-200 has no Settings menu. You hold the power button for 10 seconds until the light blinks red.',
+        fixed: 'Hold the power button for 10 seconds until the light blinks red. (From: X-200 manual, page 14.)',
+      },
+      predict: {
+        question: "The bot sounds sure of itself, but it's wrong. Why?",
+        options: [
+          {
+            text: 'The model is too small to be smart enough',
+            why: 'A bigger model is better with language, but it has never read your docs either. It would make things up more fluently, and cost more. Try it if you like: click the LLM and switch it to Large.',
+          },
+          {
+            text: 'It has never seen your product docs, so it guesses',
+            right: true,
+            why: "Right. Models learn from public text. Your manual isn't in there, so it fills the gap with something that sounds plausible.",
+          },
+          {
+            text: 'Too many customers are asking at once',
+            why: "Busy traffic causes slow or failed answers, not confident wrong ones. This bot answers quickly; it's just wrong.",
+          },
+        ],
+      },
+      named: {
+        term: 'Retrieval-augmented generation (RAG)',
+        text: "You gave the model a way to look up your docs before it answers. That's called RAG: it's how most company chatbots stay accurate. The Embedding Model turns a question into something searchable by meaning, and the Vector DB finds the matching pages.",
+      },
+    },
     lesson:
       "You built retrieval-augmented generation (RAG). A model can only be as right as the information it's given — when the answer lives in private data, the fix is retrieval, not a bigger model. Notice recall: it's not 100%, and every miss is still a potential hallucination. That's the next wall.",
     solution: {

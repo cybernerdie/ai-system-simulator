@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Check, ClipboardCheck, Lightbulb, TriangleAlert, X } from 'lucide-react';
+import { Check, ClipboardCheck, Lightbulb, MessagesSquare, Target, TriangleAlert, X } from 'lucide-react';
 import { QUALITY_METRICS, goalMet } from '../../engine/pressures';
 import type { Scenario } from '../../engine/levels/scenarios';
 import type { Metrics, TrafficProfile } from '../../engine/types';
-import { METRIC_META } from '../../lib/format';
+import { METRIC_META, goalText } from '../../lib/format';
+import { CaseChat } from '../case/CaseChat';
 import { Group } from './Group';
 import { displayTitle } from '../../engine/levels/kit';
 
@@ -52,7 +53,9 @@ export function Mission({
   onMix,
   onResetMix,
   onReview,
+  onShowCase,
 }: {
+  onShowCase?: () => void;
   scenario: Scenario;
   m: Metrics | null;
   streak: number;
@@ -68,8 +71,27 @@ export function Mission({
   return (
     <div className="mission">
       <h2 className="mission-title">{displayTitle(s)}</h2>
-      <p className="mission-tagline">{s.tagline}</p>
-      <p className="mission-brief">{s.brief}</p>
+      {s.case ? (
+        <>
+          <div className="mission-job">
+            <p className="case-job-label">
+              <Target size={14} aria-hidden /> Your job
+            </p>
+            <p className="case-job-text">{s.case.job}</p>
+          </div>
+          <CaseChat chat={s.case.chat} compact />
+          {onShowCase && (
+            <button className="link-btn mission-case-link" onClick={onShowCase}>
+              <MessagesSquare size={13} aria-hidden /> See the problem again
+            </button>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="mission-tagline">{s.tagline}</p>
+          <p className="mission-brief">{s.brief}</p>
+        </>
+      )}
 
       {s.goals.length > 0 && (
         <Group title="Goals" count={m ? `${met}/${s.goals.length}` : String(s.goals.length)}>
@@ -84,7 +106,8 @@ export function Mission({
                     {unknown ? '?' : ok === null ? <span className="goal-ring" /> : ok ? <Check size={11} strokeWidth={3} /> : <X size={11} strokeWidth={3} />}
                   </span>
                   <span className="goal-text">
-                    {g.metric === 'ttftP50' && s.traffic.voice ? 'First audio' : meta.label} {g.op === '>=' ? 'at least' : 'at most'} {meta.fmt(g.value)}
+                    {goalText(g, !!s.traffic.voice)}
+                    {meta.term && <span className="goal-term">{meta.term}</span>}
                   </span>
                   {m && <span className="goal-now">{unknown ? 'unknown' : meta.fmt(m[g.metric])}</span>}
                 </li>
