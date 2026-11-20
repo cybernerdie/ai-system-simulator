@@ -1,314 +1,135 @@
-/* Case files: the escalated ticket, the job and how far away it is, the guess before playing, and the replay after winning. */
+/* Case files: the exchange that went wrong, the job, the guess before playing, and the replay after winning. */
 
 .case-intro {
-  width: min(600px, 100%);
+  width: min(560px, 100%);
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
 }
 
-/* where you are in the level: problem → guess → fix */
-.case-steps {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  margin: 0 0 var(--sp-6);
-  padding: 0;
-  list-style: none;
-  font-size: 12.5px;
-  color: var(--ink-3);
-}
-
-.case-steps li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.case-steps li + li::before {
-  content: '';
-  width: 20px;
-  height: 1px;
-  margin-right: 2px;
-  background: var(--line);
-}
-
-.case-step-dot {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  box-shadow: var(--ring);
-  font-size: 10.5px;
-  font-weight: 600;
-}
-
-.case-steps .is-current {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.case-steps .is-current .case-step-dot {
-  background: var(--ink);
-  color: var(--on-ink);
-  box-shadow: none;
-}
-
-.case-steps .is-done .case-step-dot {
-  background: var(--ok);
-  color: var(--on-ink);
-  box-shadow: none;
-}
-
 .case-intro .case-level {
-  margin: 0 0 2px;
+  margin: 0 0 4px;
   font-size: 13px;
   color: var(--ink-3);
 }
 
-.case-intro .case-lede {
-  margin: 0 0 var(--sp-4);
+.case-intro h2 {
+  margin-bottom: var(--sp-5);
 }
 
-/* the ticket: one exchange, with the false claim checked against the source */
-.ticket {
-  overflow: hidden;
-  border-radius: 14px;
-  box-shadow: var(--ring);
-  background: var(--surface);
+/* the exchange: who said what, with the one false claim marked */
+.transcript {
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: 12px;
+  background: var(--surface-2);
 }
 
-.ticket-row,
-.ticket-check {
+.transcript dl {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
   gap: var(--sp-3);
-  padding: 14px 16px;
+  margin: 0;
 }
 
-.ticket-row + .ticket-row,
-.ticket-check {
+.transcript dl > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: var(--sp-3);
+}
+
+.transcript dt {
+  padding-top: 2px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.transcript dd {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.transcript-lie {
+  background: none;
+  color: inherit;
+  text-decoration: underline wavy var(--hot);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+
+.transcript-truth {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
   border-top: 1px solid var(--line);
 }
 
-.ticket-avatar {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--surface-2);
+.transcript-truth-label {
+  padding-top: 2px;
+  font-size: 13px;
+  color: var(--ok);
+}
+
+.transcript .transcript-truth p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
   color: var(--ink-2);
 }
 
-.ticket-row.is-wrong {
-  box-shadow: inset 3px 0 0 var(--hot);
-}
-
-.ticket-row.is-right {
-  box-shadow: inset 3px 0 0 var(--ok);
-}
-
-.ticket-row.is-wrong .ticket-avatar {
-  background: var(--hot-bg);
-  color: var(--hot);
-}
-
-.ticket-row.is-right .ticket-avatar {
-  background: var(--ok-bg);
-  color: var(--ok);
-}
-
-.ticket .ticket-who {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  margin: 0 0 3px;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.4;
+.transcript-source {
   color: var(--ink-3);
 }
 
-.ticket .ticket-text {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--ink);
+.transcript.is-compact {
+  padding: var(--sp-3) var(--sp-4);
 }
 
-.ticket-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  font-size: 11px;
+.transcript.is-compact dl > div {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
 }
 
-.is-wrong .ticket-badge {
-  background: var(--hot-bg);
-  color: var(--hot);
+.transcript.is-compact dt {
+  padding: 0;
+  font-size: 12px;
 }
 
-.is-right .ticket-badge {
-  background: var(--ok-bg);
-  color: var(--ok);
-}
-
-/* the source check sits under the reply, indented to line up with the text it corrects */
-.ticket-check {
-  row-gap: 3px;
-  background: var(--surface-2);
-}
-
-.ticket-check .ticket-who {
-  grid-column: 2;
-}
-
-.ticket-check .ticket-text {
-  grid-column: 2;
-}
-
-.ticket-check .ticket-who svg {
-  color: var(--ok);
-}
-
-.case-mark {
-  padding: 1px 2px;
-  border-radius: 3px;
-  color: inherit;
-}
-
-.case-mark.is-lie {
-  background: var(--hot-bg);
-  box-shadow: inset 0 -2px 0 var(--hot);
-}
-
-.case-mark.is-fact {
-  background: var(--ok-bg);
-  box-shadow: inset 0 -2px 0 var(--ok);
-}
-
-.ticket.is-compact .ticket-row,
-.ticket.is-compact .ticket-check {
-  grid-template-columns: 22px minmax(0, 1fr);
-  column-gap: 10px;
-  padding: 10px 12px;
-}
-
-.ticket.is-compact .ticket-avatar {
-  width: 22px;
-  height: 22px;
-}
-
-.ticket.is-compact .ticket-text {
+.transcript.is-compact dd {
   font-size: 13.5px;
 }
 
-/* the job, and how far the system is from it */
-.case-job {
-  margin-top: var(--sp-6);
+.transcript.is-compact .transcript-truth {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
 }
 
-.case-job h3 {
-  margin: 0 0 4px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ink-3);
-}
-
-.case-job .case-job-text {
-  margin: 0 0 var(--sp-4);
-  font-size: 18px;
-  font-weight: 500;
-  line-height: 1.35;
-  letter-spacing: -0.01em;
-  color: var(--ink);
-}
-
-.goal-meters {
-  display: grid;
-  gap: var(--sp-4);
-  margin: 0;
+.transcript.is-compact .transcript-truth-label {
   padding: 0;
-  list-style: none;
+  font-size: 12px;
 }
 
-.goal-meters li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
-  row-gap: 6px;
-  font-size: 14px;
-}
-
-.goal-meter-label {
-  color: var(--ink);
-  font-weight: 500;
-}
-
-.goal-meter-values {
-  display: flex;
-  gap: var(--sp-2);
+.transcript.is-compact .transcript-truth p {
   font-size: 13px;
 }
 
-.goal-meter-now {
+/* the job and the distance to cover, as one sentence */
+.case-intro .case-job {
+  margin: var(--sp-5) 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.case-job strong {
   font-weight: 600;
-}
-
-.is-unmet .goal-meter-now {
-  color: var(--hot);
-}
-
-.is-met .goal-meter-now {
-  color: var(--ok);
-}
-
-.goal-meter-need {
-  color: var(--ink-3);
-}
-
-.goal-meter-track {
-  position: relative;
-  grid-column: 1 / -1;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--track);
-}
-
-.goal-meter-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: inherit;
-  background: var(--hot);
-}
-
-.is-met .goal-meter-fill {
-  background: var(--ok);
-}
-
-/* the target: a notch the fill has to reach (or stay under) */
-.goal-meter-target {
-  position: absolute;
-  top: -4px;
-  bottom: -4px;
-  width: 2px;
-  margin-left: -1px;
-  border-radius: 1px;
-  background: var(--ink);
-}
-
-.case-job .case-job-note {
-  margin: var(--sp-4) 0 0;
-  font-size: 12.5px;
-  color: var(--ink-3);
+  color: var(--ink);
 }
 
 .case-actions {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
   margin-top: var(--sp-6);
@@ -316,7 +137,7 @@
 
 /* the guess */
 .case-intro .case-question {
-  margin: var(--sp-4) 0;
+  margin: 0 0 var(--sp-3);
   font-size: 17px;
   font-weight: 500;
   color: var(--ink);
@@ -325,21 +146,21 @@
 .case-options {
   display: grid;
   gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .case-option {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
   width: 100%;
   padding: 12px 14px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--surface);
   box-shadow: var(--ring);
   color: var(--ink);
   font: inherit;
-  font-size: 14.5px;
+  font-size: 15px;
   text-align: left;
   cursor: pointer;
 }
@@ -349,7 +170,7 @@
 }
 
 .case-option:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: default;
 }
 
@@ -358,72 +179,33 @@
   outline-offset: 1px;
 }
 
-.case-option-mark {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
-  background: var(--surface-2);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-2);
-}
-
 .case-option.is-right {
-  background: var(--ok-bg);
-  box-shadow: inset 0 0 0 1px var(--ok);
-}
-
-.case-option.is-right .case-option-mark {
-  background: var(--ok);
-  color: var(--on-ink);
+  box-shadow: inset 0 0 0 1.5px var(--ok);
+  font-weight: 500;
 }
 
 .case-option.is-wrong {
-  background: var(--hot-bg);
-  box-shadow: inset 0 0 0 1px var(--hot);
-}
-
-.case-option.is-wrong .case-option-mark {
-  background: var(--hot);
-  color: var(--on-ink);
+  color: var(--ink-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--hot);
 }
 
 .case-intro .case-why {
   margin: var(--sp-4) 0 0;
-  padding: 12px 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--ink);
-  background: var(--surface-2);
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
 }
 
-.case-intro .case-why.is-right {
-  background: var(--ok-bg);
+.case-why strong {
+  color: var(--ink);
 }
 
 /* the job, pinned at the top of the Mission tab while playing */
-.mission-job {
-  margin-bottom: var(--sp-3);
-}
-
-.mission-job .case-job-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-3);
-}
-
-.mission-job .case-job-text {
-  margin: 2px 0 0;
+.mission .mission-job {
+  margin: 0 0 var(--sp-3);
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.4;
   color: var(--ink);
 }
@@ -436,8 +218,7 @@
 
 .win-replay .win-replay-label {
   margin: 0 0 var(--sp-2);
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 13px;
   color: var(--ink-3);
 }
 
@@ -448,7 +229,7 @@
   gap: 4px 6px;
   margin: var(--sp-2) 0 0;
   font-size: 12.5px;
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 
 .win-path-step {
@@ -459,44 +240,35 @@
 
 .win-named {
   margin: 0 0 var(--sp-4);
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: 12px;
-  background: var(--violet-bg);
   text-align: left;
 }
 
 .win-named strong {
   display: block;
   margin-bottom: 4px;
-  color: var(--violet-fg);
+  font-size: 15px;
+  color: var(--ink);
 }
 
 .win-named p {
   margin: 0;
-  font-size: 13.5px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 @media (max-width: 900px) {
   .case-intro {
     padding: var(--sp-5);
   }
-  .case-steps {
-    margin-bottom: var(--sp-4);
-    font-size: 11.5px;
+  .transcript {
+    padding: var(--sp-3) var(--sp-4);
   }
-  .case-steps li + li::before {
-    width: 10px;
+  .transcript dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1px;
   }
-  .ticket-row,
-  .ticket-check {
-    padding: 12px;
-    column-gap: 10px;
-  }
-  .ticket .ticket-text {
-    font-size: 14.5px;
-  }
-  .case-job .case-job-text {
-    font-size: 16.5px;
+  .transcript-truth {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1px;
   }
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, ClipboardCheck, Lightbulb, MessagesSquare, Target, TriangleAlert, X } from 'lucide-react';
+import { Check, ClipboardCheck, Lightbulb, MessagesSquare, TriangleAlert, X } from 'lucide-react';
 import { QUALITY_METRICS, goalMet } from '../../engine/pressures';
 import type { Scenario } from '../../engine/levels/scenarios';
 import type { Metrics, TrafficProfile } from '../../engine/types';
@@ -73,12 +73,7 @@ export function Mission({
       <h2 className="mission-title">{displayTitle(s)}</h2>
       {s.case ? (
         <>
-          <div className="mission-job">
-            <p className="case-job-label">
-              <Target size={14} aria-hidden /> Your job
-            </p>
-            <p className="case-job-text">{s.case.job}</p>
-          </div>
+          <p className="mission-job">{s.case.job}</p>
           <CaseChat chat={s.case.chat} compact />
           {onShowCase && (
             <button className="link-btn mission-case-link" onClick={onShowCase}>
