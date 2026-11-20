@@ -1,10 +1,12 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { Fragment, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowRight, SlidersHorizontal, Volume2, VolumeX } from 'lucide-react';
 import type { Scenario } from '../../engine/levels/kit';
 import { displayTitle } from '../../engine/levels/kit';
 import { startingMetrics } from '../../engine/baseline';
 import { caseLine, guessLine } from '../../content/guide';
 import { speak } from '../audio/voice';
+import { useVoice } from '../audio/useVoice';
+import { VoiceMenu } from '../lazy';
 import { useEscape } from '../hooks/useEscape';
 import { CaseChat } from './CaseChat';
 import { goalParts } from './goalSentence';
@@ -16,16 +18,27 @@ import { goalParts } from './goalSentence';
 export function CaseIntro({ s, kicker, onStart }: { s: Scenario; kicker: string; onStart: () => void }) {
   const [guessing, setGuessing] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
-  useEscape(onStart);
+  const [voice, setVoice] = useVoice();
+  const [voiceMenu, setVoiceMenu] = useState<DOMRect | null>(null);
+  // Escape closes the voice menu first, not the whole case
+  useEscape(useCallback(() => (voiceMenu ? undefined : onStart()), [voiceMenu, onStart]));
   const parts = useMemo(() => goalParts(s.goals, startingMetrics(s), !!s.traffic.voice), [s]);
   const c = s.case;
   const gotIt = !!c && picked.some((i) => c.predict.options[i].right);
   const last = picked[picked.length - 1];
 
-  useEffect(() => {
+  const readCase = useCallback(() => {
     const line = caseLine(s);
     if (line) void speak(line.id, line.text);
   }, [s]);
+  useEffect(readCase, [readCase]);
+
+  const toggleVoice = () => {
+    const on = !voice;
+    setVoice(on);
+    // switching it back on reads the case again, so nothing is missed
+    if (on && !guessing) readCase();
+  };
 
   const pick = (i: number) => {
     setPicked((p) => (p.includes(i) ? p : [...p, i]));
@@ -37,7 +50,24 @@ export function CaseIntro({ s, kicker, onStart }: { s: Scenario; kicker: string;
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="case-title">
       <div className="dialog case-intro">
-        <p className="case-level">{kicker}</p>
+        <div className="case-head">
+          <p className="case-level">{kicker}</p>
+          <div className="case-voice">
+            <button className="case-voice-btn" onClick={toggleVoice} aria-pressed={voice} title={voice ? 'Mute the voice guide' : 'Turn the voice guide on'}>
+              {voice ? <Volume2 size={15} aria-hidden /> : <VolumeX size={15} aria-hidden />}
+              {voice ? 'Voice on' : 'Voice off'}
+            </button>
+            <button
+              className="case-voice-btn"
+              onClick={(e) => setVoiceMenu(voiceMenu ? null : e.currentTarget.getBoundingClientRect())}
+              aria-expanded={!!voiceMenu}
+              aria-label="Change the voice"
+              title="Change the voice or its speed"
+            >
+              <SlidersHorizontal size={15} aria-hidden />
+            </button>
+          </div>
+        </div>
         <h2 id="case-title">{displayTitle(s)}</h2>
 
         {!guessing ? (
@@ -98,6 +128,11 @@ export function CaseIntro({ s, kicker, onStart }: { s: Scenario; kicker: string;
           </>
         )}
       </div>
+      {voiceMenu && (
+        <Suspense fallback={null}>
+          <VoiceMenu anchor={voiceMenu} onClose={() => setVoiceMenu(null)} />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -6,10 +6,51 @@
   overflow-y: auto;
 }
 
+.case-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: 4px;
+}
+
 .case-intro .case-level {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 13px;
   color: var(--ink-3);
+}
+
+/* the voice reads the case aloud; muting or changing it is one tap away */
+.case-voice {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.case-voice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-3);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.case-voice-btn:hover,
+.case-voice-btn[aria-expanded='true'] {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.case-voice-btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
 }
 
 .case-intro h2 {
