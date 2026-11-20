@@ -717,6 +717,40 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: 'Try Retry & Fallback with only retries first, and push them up. Does it get better or worse? Then give it somewhere else to go: a second model on provider B, or your own GPUs.',
+    case: {
+      job: 'Keep the bot answering while your AI provider is failing, without slowing it down or making it worse.',
+      chat: {
+        user: 'Can I change my delivery to Saturday?',
+        bot: 'Something went wrong. Please try again in a moment.',
+        lie: 'Something went wrong.',
+        truthLabel: 'Behind the scenes',
+        truth:
+          'Your AI provider is having an outage: 7 in 10 calls come back with a 503 error ("service unavailable"). Your bot only knows one provider, so when it fails, your customers see the failure.',
+        fixed: "Yes, I've moved your delivery to Saturday.",
+      },
+      predict: {
+        question: 'Your provider is failing 7 in 10 calls. What keeps your bot answering?',
+        options: [
+          {
+            text: 'Retry failed calls more times',
+            why: "A retry or two helps with brief blips. In a real outage, extra retries pile more load onto a struggling provider: at five retries almost 9 in 10 calls fail, and replies get slower. That's called a retry storm.",
+          },
+          {
+            text: 'Send failed calls to a second provider',
+            right: true,
+            why: "If one provider fails, the call goes somewhere else that's up. The backup doesn't need to be identical, just good enough to keep you answering.",
+          },
+          {
+            text: 'Wait for the provider to fix it',
+            why: 'Outages can last hours, and every minute your customers see errors. If you depend on one provider, you can never be more reliable than it is.',
+          },
+        ],
+      },
+      named: {
+        term: 'Retries and failover',
+        text: "Retry once or twice for brief blips, with a cap so you don't make an outage worse. Then fail over: route the call to a second provider or your own model. Failover keeps you up; it costs more while it's in use, and a backup model may answer a little differently.",
+      },
+    },
     lesson:
       "Retries help with brief blips, but during a real outage they pile more load onto a struggling provider and make things worse (a retry storm). Resilience means having somewhere else to go: a second provider or a self-hosted model, with automatic failover, timeouts and a cap on retries. The backup doesn't need to be identical, just good enough to keep you up.",
     solution: {
@@ -752,6 +786,40 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'ag', 'llm'),
     hint: 'Swap the single agent for an Agent Team. Then tune it: how many workers before hand-offs and loops cost more than they save? What do you do about the answers that come back wrong, and about teams that bounce work around forever?',
+    case: {
+      job: 'Answer multi-part research questions faster and more completely, without the bill running away.',
+      chat: {
+        userLabel: 'Analyst',
+        user: 'Compare our three coffee bean suppliers on price, delivery time and reviews.',
+        bot: '(after 25 seconds) Andes Roast is the cheapest and fastest. Kivu Beans has the best reviews.',
+        lie: 'Andes Roast is the cheapest and fastest',
+        truth:
+          'Andes Roast is the cheapest but the slowest to deliver, and the third supplier, Sumatra Co., is missing. One agent researched each supplier in turn, adding every search result to one ever-growing prompt, until the early details got lost.',
+        fixed: 'Andes Roast is cheapest, Sumatra Co. delivers fastest, and Kivu Beans has the best reviews.',
+      },
+      predict: {
+        question: 'Why is it slow and still missing things?',
+        options: [
+          {
+            text: 'The agent needs more steps',
+            why: "With 40 steps it's just as slow, a few requests fail, and the bill goes over budget. More steps only means a longer prompt to get lost in.",
+          },
+          {
+            text: 'One agent does every part in turn, with a prompt that keeps growing',
+            right: true,
+            why: "Three suppliers means three separate searches done one after another, and each result piles onto the same prompt. It's slow because nothing runs in parallel, and it misses things because the prompt gets too long to keep track of.",
+          },
+          {
+            text: 'The model is too small for research',
+            why: "A large model gets more right, but each answer takes nearly 40 seconds and costs about five times as much. It's still one agent doing everything in turn.",
+          },
+        ],
+      },
+      named: {
+        term: 'Multi-agent (an agent team)',
+        text: "A lead agent splits the question into parts and hands each to a worker with its own small, focused prompt, so they run in parallel. Every worker is more model calls, and each hand-off can drop detail, so keep the team small (about one worker per part), add a reviewer to catch mistakes, and cap the rounds so agents can't loop forever.",
+      },
+    },
     lesson:
       'Multi-agent systems trade money for speed and focus. Parallel workers with small, focused contexts beat one agent drowning in its own history, but every agent is more calls, every hand-off loses detail, and agents can loop. Good teams are small (about one worker per sub-task), have a reviewer to catch what the hand-offs dropped, and have a hard cap on rounds.',
     solution: {
@@ -783,6 +851,40 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'llm'),
     hint: 'Try the large model, then try the thinking budget at low and high. Which one is accurate enough without blowing the cost or the wait? Do the easy questions need any of it?',
+    case: {
+      job: 'Get the hard, multi-step questions right without blowing the budget or the wait.',
+      chat: {
+        userLabel: 'Student',
+        user: 'A shirt costs \u20ac40 after a 20% discount. What was the original price?',
+        bot: 'The original price was \u20ac48.',
+        lie: '\u20ac48',
+        truth:
+          '\u20ac50. \u20ac40 is 80% of the original price, so the original is 40 \u00f7 0.8 = 50. Adding 20% to \u20ac40 is a classic mistake, and the model makes it because it answers in one go, without working through the steps.',
+        fixed: '\u20ac50. \u20ac40 is 80% of the original, and 40 \u00f7 0.8 = 50.',
+      },
+      predict: {
+        question: 'How do you get the hard ones right without blowing the budget?',
+        options: [
+          {
+            text: 'Use the large model for everything',
+            why: 'It gets more right, but costs five times as much, over budget. Most of that goes on questions the medium model already handled.',
+          },
+          {
+            text: 'Let the model think a little before answering',
+            right: true,
+            why: 'Working through the steps before answering fixes most multi-step mistakes. A low thinking budget gets most of the gain for a fraction of the cost and wait.',
+          },
+          {
+            text: 'Turn thinking all the way up',
+            why: "It's the most accurate, but answers take about 40 seconds and cost seven times as much. Thinking is written before the first visible word, and you pay for every token of it.",
+          },
+        ],
+      },
+      named: {
+        term: 'Reasoning (thinking) models',
+        text: "A thinking budget lets the model reason through a problem in hidden tokens before it answers. Those tokens are billed and written before the first visible word, so more thinking is slower and costlier. A modest budget captures most of the gain, and a router can send easy questions to a small model that doesn't think at all.",
+      },
+    },
     lesson:
       'Reasoning ("thinking") lets a model work through a problem before answering, which buys real accuracy on hard questions. But the hidden thinking tokens are paid for, and they\'re written before the first visible word, so more thinking is slower too. A modest budget usually captures most of the gain. Spend it only where questions are hard, for example by routing easy ones to a small model.',
     solution: {
@@ -815,6 +917,38 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'llm'),
     hint: "Look at what failed in the request inspector. Is the model wrong, or just badly formatted? There's a model setting built for exactly this. A validator helps too, but is it enough on its own?",
+    case: {
+      job: 'Stop malformed answers crashing your app, while keeping the answers right and cheap.',
+      chat: {
+        userLabel: 'Your app',
+        user: 'Read this invoice. Return only JSON with vendor, date and total.',
+        bot: 'Sure! Here\'s the JSON: {"vendor": "Brava Ltd", "date": "2026-11-03", "total": 412.50',
+        lie: "Sure! Here's the JSON:",
+        truthLabel: 'Behind the scenes',
+        truth:
+          'The values are right, but your code expects pure JSON. A friendly sentence in front, or a missing closing bracket, and the parser throws. That happens on about 1 in 9 requests, and each one is a 500 error for your customer.',
+        fixed: '{"vendor": "Brava Ltd", "date": "2026-11-03", "total": 412.50}',
+      },
+      predict: {
+        question: 'Why does your code keep crashing?',
+        options: [
+          { text: 'The model reads invoices wrong', why: 'The vendor, date and total are right. The format around them is what breaks your code.' },
+          {
+            text: "Asking for JSON in the prompt doesn't guarantee JSON",
+            right: true,
+            why: 'A prompt is a request, not a contract. The model follows it almost every time, and at 10 requests a second "almost" means constant crashes.',
+          },
+          {
+            text: 'The model is too small to follow the format',
+            why: 'Bigger models break format less often, but not never: even the large one crashes about 1 in 40 requests, at over 100 times the cost.',
+          },
+        ],
+      },
+      named: {
+        term: 'Structured output',
+        text: "JSON mode (or a schema the model must follow) constrains the model as it writes, so it can only produce valid JSON. A validator that checks the result and retries is a useful safety net, but it's not the fix: retries cost time and money every time the format breaks.",
+      },
+    },
     lesson:
       'Asking nicely for JSON isn\'t a contract. Models occasionally break format, and at scale "occasionally" means constant crashes. Structured output (JSON mode or schema-constrained decoding) makes the model produce valid output by construction. A validator that checks and retries is the safety net, not the fix.',
     solution: {
@@ -849,6 +983,37 @@ const CORE: Scenario[] = [
     ],
     edges: [...chain('users', 'emb', 'vdb', 'rr', 'llm'), ...chain('users', 'kw', 'rr')],
     hint: "Open the Vector DB settings. Retrieval is only as good as what went into the index: how often is it rebuilt, and how are documents turned into text? (An Output Judge won't save you here. Why not?)",
+    case: {
+      job: "Make answers match today's documents, including what's in tables, within budget.",
+      chat: {
+        user: 'How much is the CM-5 coffee machine?',
+        bot: 'The CM-5 is \u20ac299.',
+        lie: '\u20ac299',
+        truth:
+          "\u20ac349 since Monday. The search index was built once, by hand, so it still holds last month's price list. And prices inside tables were scraped out as jumbled text, so many can't be found at all.",
+        source: "from this week's price list",
+        fixed: 'The CM-5 is \u20ac349.',
+      },
+      predict: {
+        question: 'Search and reranking are working. Why is the price wrong?',
+        options: [
+          { text: 'The model misread the page', why: "It read the page it was given correctly. The page is last month's price list." },
+          {
+            text: "The index still holds last month's documents",
+            right: true,
+            why: "Search can only find what's in the index. Nobody rebuilt it after prices changed, and tables turned into word soup when the PDFs were turned into text.",
+          },
+          {
+            text: 'A bigger model would know the new price',
+            why: 'No model knows your price list. A large one reads the same out-of-date page, gets barely more right, and costs about five times as much.',
+          },
+        ],
+      },
+      named: {
+        term: 'Ingestion: freshness and parsing',
+        text: 'Most RAG problems start before search, when documents go into the index. Content that changes needs re-indexing on a schedule or whenever a document changes, and a layout-aware parser keeps tables and columns readable. Fix freshness and parsing together: each one alone fixes only part of the wrong answers.',
+      },
+    },
     lesson:
       "Most RAG problems start before retrieval: in ingestion. Content that changes needs a pipeline that re-indexes on a schedule or on every change, or the model will confidently quote old facts that your judge can't catch, because the sources agree. And how you parse documents matters: plain text extraction turns tables and multi-column PDFs into word soup.",
     solution: {

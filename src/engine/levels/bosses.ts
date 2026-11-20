@@ -189,6 +189,35 @@ export const BOSSES: Scenario[] = [
     ],
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: "Three separate problems: calls that fail, answers your code can't parse, and facts that are out of date or trapped in tables.",
+    case: {
+      job: 'Get the 9am board report out: no failures, the right figures, within budget.',
+      chat: {
+        userLabel: 'Report script',
+        user: "What was yesterday's revenue by region? Reply as JSON.",
+        bot: 'Something went wrong. Please try again.',
+        lie: 'Something went wrong.',
+        truthLabel: 'Behind the scenes',
+        truth:
+          "Your main provider is failing 6 in 10 calls. Many figures changed overnight, but the index was built by hand and still has the old ones, and figures in tables come through as jumbled text. When an answer does arrive, it's sometimes JSON your code can't parse.",
+        fixed: '{"EU": 412300, "US": 538900, "APAC": 201450}',
+      },
+      predict: {
+        question: 'Calls fail, figures are out of date, and the format breaks. Which fix covers all three?',
+        options: [
+          { text: 'A second provider', why: 'It keeps you answering, but the answers are as out of date as before, and still not always valid JSON.' },
+          {
+            text: 'None: each problem needs its own fix',
+            right: true,
+            why: "Failover handles the outage, structured output handles the format, and a fresh, table-aware index handles the figures. None of them helps with the others' problem.",
+          },
+          { text: 'A bigger model', why: 'It fails just as often, because the provider is down, reads the same old figures, and costs five times as much.' },
+        ],
+      },
+      named: {
+        term: 'Layered reliability',
+        text: "Reliability comes in layers, and each one guards against a different failure: a second provider for outages, structured output for format, a fresh, layout-aware index for facts. Check which failure you're looking at before choosing a fix.",
+      },
+    },
     lesson:
       "Reliability is layered. A second provider keeps you up when one fails, structured output keeps your code from crashing, and a fresh, layout-aware index keeps answers true. None of them helps with the others' problem.",
     solution: {
