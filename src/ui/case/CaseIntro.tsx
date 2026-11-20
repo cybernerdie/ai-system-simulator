@@ -1,8 +1,10 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import type { Scenario } from '../../engine/levels/kit';
 import { displayTitle } from '../../engine/levels/kit';
 import { startingMetrics } from '../../engine/baseline';
+import { caseLine, guessLine } from '../../content/guide';
+import { speak } from '../audio/voice';
 import { useEscape } from '../hooks/useEscape';
 import { CaseChat } from './CaseChat';
 import { goalParts } from './goalSentence';
@@ -11,15 +13,27 @@ import { goalParts } from './goalSentence';
  * How a level opens: what went wrong for one customer and what the player has to change, then a
  * quick guess at the cause, so they think before they build.
  */
-export function CaseIntro({ s, kicker, onStart }: { s: Scenario & { case: NonNullable<Scenario['case']> }; kicker: string; onStart: () => void }) {
+export function CaseIntro({ s, kicker, onStart }: { s: Scenario; kicker: string; onStart: () => void }) {
   const [guessing, setGuessing] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
   useEscape(onStart);
-  const c = s.case;
   const parts = useMemo(() => goalParts(s.goals, startingMetrics(s), !!s.traffic.voice), [s]);
-  const gotIt = picked.some((i) => c.predict.options[i].right);
+  const c = s.case;
+  const gotIt = !!c && picked.some((i) => c.predict.options[i].right);
   const last = picked[picked.length - 1];
 
+  useEffect(() => {
+    const line = caseLine(s);
+    if (line) void speak(line.id, line.text);
+  }, [s]);
+
+  const pick = (i: number) => {
+    setPicked((p) => (p.includes(i) ? p : [...p, i]));
+    const line = guessLine(s, i);
+    if (line) void speak(line.id, line.text);
+  };
+
+  if (!c) return null;
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="case-title">
       <div className="dialog case-intro">
@@ -59,7 +73,7 @@ export function CaseIntro({ s, kicker, onStart }: { s: Scenario & { case: NonNul
                       className={`case-option${chosen ? (o.right ? ' is-right' : ' is-wrong') : ''}`}
                       disabled={gotIt && !chosen}
                       aria-pressed={chosen}
-                      onClick={() => setPicked((p) => (p.includes(i) ? p : [...p, i]))}
+                      onClick={() => pick(i)}
                     >
                       {o.text}
                     </button>

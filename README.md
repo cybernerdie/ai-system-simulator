@@ -19,7 +19,7 @@ AISim models both, so you can feel the trade-offs that make AI engineering diffe
 
 | # | Scenario | First wall | What you learn |
 |---|----------|------------|----------------|
-| 1 | The docs chatbot | Missing knowledge | RAG: grounding beats a bigger model |
+| 1 | The store chatbot | Missing knowledge | RAG: grounding beats a bigger model |
 | 2 | Confidently wrong RAG | Retrieval recall | Hybrid search, chunk size, reranking |
 | 3 | Launch day | Tokens-per-minute limit | Semantic caching, model routing, cost per request |
 | 4 | The support agent | No way to act | Agents, step budgets, runaway-loop cost |

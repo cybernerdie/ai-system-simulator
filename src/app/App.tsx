@@ -842,7 +842,7 @@ export default function App() {
             onClose={closeIntro}
           />
         )}
-        {caseOpen && scenario.case && <CaseIntro s={{ ...scenario, case: scenario.case }} kicker={num ? `Level ${num}` : 'Level'} onStart={closeCase} />}
+        {caseOpen && scenario.case && <CaseIntro s={scenario} kicker={num ? `Level ${num}` : 'Level'} onStart={closeCase} />}
         {coach !== null && !caseOpen && (
           <GuideCard
             key={COACH[coach].id}

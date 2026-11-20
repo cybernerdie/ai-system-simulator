@@ -50,7 +50,27 @@ export function stopVoice() {
     audio.pause();
     audio = null;
   }
-  if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+  if (busy()) {
+    speechSynthesis.cancel();
+    cancelledAt = Date.now();
+  }
+}
+
+let cancelledAt = 0;
+const busy = () => typeof speechSynthesis !== 'undefined' && (speechSynthesis.speaking || speechSynthesis.pending);
+
+/**
+ * Queue an utterance. Chrome (and Brave, Edge and Chrome on Android) can silently drop a line spoken
+ * in the same moment as a cancel(), so a line that follows one waits a beat first.
+ */
+function say(u: SpeechSynthesisUtterance, id = current) {
+  const wait = 120 - (Date.now() - cancelledAt);
+  if (wait <= 0) speechSynthesis.speak(u);
+  else
+    window.setTimeout(() => {
+      // a newer line took over while this one waited
+      if (current === id) speechSynthesis.speak(u);
+    }, wait);
 }
 
 /* ---------- choosing a voice and speed ---------- */
@@ -139,7 +159,7 @@ export function previewVoice(name?: string) {
   const v = listVoices().find((x) => x.name === (name ?? chosen)) ?? bestVoice();
   applyVoice(u, v);
   u.rate = rate;
-  speechSynthesis.speak(u);
+  say(u);
 }
 
 /** Say a line. A newer line always cuts off the previous one. */
@@ -166,5 +186,5 @@ function fallbackSpeak(id: string, text: string) {
   applyVoice(u, v);
   u.rate = rate;
   u.pitch = 1;
-  speechSynthesis.speak(u);
+  say(u);
 }

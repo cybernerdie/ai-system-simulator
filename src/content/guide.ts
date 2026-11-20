@@ -147,9 +147,28 @@ export function nudgeLine(key: PressureKey): Line | null {
 
 export const hintLine = (s: Scenario): Line => ({ id: lineId('hint', s.id), text: `Here's a hint. ${s.hint}` });
 
-export const showMeLine = (name: string): Line => ({ id: lineId('showme', name), text: `Try adding ${name}. It's glowing on the left.` });
+export const showMeLine = (name: string): Line => ({ id: lineId('showme', name), text: `Try adding ${name}. It's glowing in the list of components.` });
 
-export const winLine = (s: Scenario): Line => ({ id: lineId('win', s.id), text: `Level cleared! ${firstSentence(s.lesson)}` });
+/** On a case level the idea is named on screen after the quiz, so the voice doesn't give it away first. */
+export const winLine = (s: Scenario): Line => ({
+  id: lineId('win', s.id),
+  text: s.case ? 'Level cleared! Same customer, same question, and this time the answer is right.' : `Level cleared! ${firstSentence(s.lesson)}`,
+});
+
+/** Read when a level's case opens: the exchange, why it's wrong, and the job. */
+export const caseLine = (s: Scenario): Line | null =>
+  s.case
+    ? {
+        id: lineId('case', s.id),
+        text: `A customer asked: ${s.case.chat.user} Your bot said: ${s.case.chat.bot} That's wrong. ${s.case.chat.truth} Your job: ${s.case.job}`,
+      }
+    : null;
+
+/** Read when the player picks a cause in the case's guess. */
+export const guessLine = (s: Scenario, i: number): Line | null => {
+  const o = s.case?.predict.options[i];
+  return o ? { id: lineId('guess', s.id, String(i)), text: `${o.right ? 'Right.' : 'Not quite.'} ${o.why}` } : null;
+};
 
 /** Every line the app can say, for the clip generator. */
 export function allLines(componentNames: string[]): Line[] {
@@ -160,7 +179,11 @@ export function allLines(componentNames: string[]): Line[] {
     if (a) out.push(a);
     if (b) out.push(b);
   }
-  for (const s of SCENARIOS) out.push(hintLine(s), winLine(s));
+  for (const s of SCENARIOS) {
+    out.push(hintLine(s), winLine(s));
+    const c = caseLine(s);
+    if (c) out.push(c, ...(s.case?.predict.options.map((_, i) => guessLine(s, i)!) ?? []));
+  }
   for (const n of componentNames) out.push(showMeLine(n));
   return out;
 }

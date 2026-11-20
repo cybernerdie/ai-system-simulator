@@ -12,10 +12,10 @@ const CORE: Scenario[] = [
     id: 'docs-bot',
     difficulty: 1,
     skills: ['RAG', 'Grounding'],
-    title: '1 · The docs chatbot',
+    title: '1 · The store chatbot',
     tagline: "It sounds confident. It's making things up.",
     brief:
-      "Your company shipped a chatbot that answers questions about its product docs. It's just a prompt and an LLM. Support tickets are piling up: customers got detailed, confident, wrong answers.",
+      "Your online store launched a chatbot to answer customers' questions. It's just a prompt and an LLM. Complaints are piling up: customers got confident, wrong answers about returns, delivery and warranties.",
     traffic: { ...base, kbShare: 0.75, exactTermShare: 0.1 },
     goals: [
       { metric: 'accuracy', op: '>=', value: 0.7 },
@@ -26,29 +26,28 @@ const CORE: Scenario[] = [
       { id: 'llm', type: 'llm', x: 520, y: 120, config: { size: 'medium' } },
     ],
     edges: chain('users', 'llm'),
-    hint: 'The model has never seen your docs. What component lets it look things up at question time?',
+    hint: "The model has never seen your store's policies. What component lets it look them up when a question comes in?",
     case: {
-      job: 'Make the bot answer from your docs instead of guessing.',
+      job: "Make the bot answer from your store's own policies instead of guessing.",
       chat: {
-        user: 'How do I reset my X-200 to factory settings?',
-        bot: 'Go to Settings → System → Factory Reset and confirm. It takes about two minutes.',
-        truth: 'There is no Settings menu on the X-200. Hold the power button for 10 seconds until the light blinks red.',
-        fixed: 'Hold the power button for 10 seconds until the light blinks red. That restores factory settings.',
-        lie: 'Settings → System → Factory Reset',
-        fact: 'power button for 10 seconds',
-        source: 'X-200 manual, page 14',
+        user: 'Can I return a jacket I bought five weeks ago?',
+        bot: 'Yes! You can return any item within 90 days for a full refund. Just print a return label from your account.',
+        truth: 'Returns are only accepted within 30 days of delivery, so five weeks is too late.',
+        fixed: "Sorry, that's past the return window: returns are accepted within 30 days of delivery. If the jacket is faulty, it's still covered by the 1-year warranty.",
+        lie: 'within 90 days',
+        source: 'from your returns policy',
       },
       predict: {
         question: "The bot sounds sure of itself, but it's wrong. Why?",
         options: [
           {
             text: 'The model is too small to be smart enough',
-            why: 'A bigger model is better with language, but it has never read your docs either. It would make things up more fluently, and cost more. Try it if you like: click the LLM and switch it to Large.',
+            why: 'A bigger model writes better, but it has never read your returns policy either. It would make things up more fluently, and cost more. Try it if you like: click the LLM and switch it to Large.',
           },
           {
-            text: 'It has never seen your product docs, so it guesses',
+            text: "It has never read your store's policies, so it guesses",
             right: true,
-            why: "Right. Models learn from public text. Your manual isn't in there, so it fills the gap with something that sounds plausible.",
+            why: "Models learn from public text. Your returns policy isn't in there, so it fills the gap with something that sounds plausible: 90 days is a common policy, just not yours.",
           },
           {
             text: 'Too many customers are asking at once',
@@ -58,7 +57,7 @@ const CORE: Scenario[] = [
       },
       named: {
         term: 'Retrieval-augmented generation (RAG)',
-        text: "You gave the model a way to look up your docs before it answers. That's called RAG: it's how most company chatbots stay accurate. The Embedding Model turns a question into something searchable by meaning, and the Vector DB finds the matching pages.",
+        text: "You gave the model a way to look up your store's documents before it answers. That's called RAG, and it's how most company chatbots stay accurate. The Embedding Model turns a question into something searchable by meaning, and the Vector DB finds the matching pages.",
       },
     },
     lesson:
