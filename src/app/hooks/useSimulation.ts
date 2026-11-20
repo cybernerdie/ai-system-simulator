@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { simulate } from '../../engine/simulate';
-import { TICK_SECONDS, trafficMultiplier, type Pattern } from '../../engine/patterns';
+import { TICK_SECONDS, liveTraffic, trafficMultiplier, type Pattern } from '../../engine/patterns';
 import { bindingPressure, goalMet, type Pressure } from '../../engine/pressures';
 import { INCIDENT_SCENARIO, incidentGoals, incidentTick, incidentTraffic, newIncidentRun, type IncidentKind, type IncidentState } from '../../engine/modes/incident';
 import type { Scenario } from '../../engine/levels/scenarios';
@@ -36,6 +36,7 @@ export function useSimulation({ scenario, graph, designSig, traffic, events }: O
   const [running, setRunning] = useState(false);
   const [rps, setRps] = useState(scenario.traffic.rps);
   const [pattern, setPattern] = useState<Pattern>('steady');
+  const { locked: trafficLocked, rps: liveRps, pattern: livePattern } = liveTraffic(scenario, rps, pattern);
   const [simTime, setSimTime] = useState(0);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [history, setHistory] = useState<Metrics[]>([]);
@@ -68,8 +69,8 @@ export function useSimulation({ scenario, graph, designSig, traffic, events }: O
             incident.active.map((a) => a.kind),
             incident.count,
           )
-        : { ...traffic, rps },
-    [scenario.kind, incident, traffic, rps],
+        : { ...traffic, rps: liveRps },
+    [scenario.kind, incident, traffic, liveRps],
   );
 
   useEffect(() => {
@@ -107,8 +108,8 @@ export function useSimulation({ scenario, graph, designSig, traffic, events }: O
       const inc = scenario.kind === 'incident' ? incidentRef.current : null;
       const activeKinds = inc ? inc.active.map((a) => a.kind) : [];
       const shape = inc ? incidentTraffic(activeKinds, inc.count) : base;
-      const baseRps = inc ? shape.rps * (rps / INCIDENT_SCENARIO.traffic.rps) : rps;
-      const offered = Math.max(0.5, Math.round(baseRps * trafficMultiplier(pattern, simTimeRef.current) * 10) / 10);
+      const baseRps = inc ? shape.rps * (liveRps / INCIDENT_SCENARIO.traffic.rps) : liveRps;
+      const offered = Math.max(0.5, Math.round(baseRps * trafficMultiplier(livePattern, simTimeRef.current) * 10) / 10);
       const raw = simulate(g, { ...shape, rps: offered }, { seed: seed.current++, samples: SAMPLES_PER_TICK });
 
       ticks.current = metricsRef.current ? ticks.current + 1 : 0;
@@ -144,14 +145,15 @@ export function useSimulation({ scenario, graph, designSig, traffic, events }: O
     tick();
     const t = setInterval(tick, TICK_MS);
     return () => clearInterval(t);
-  }, [running, rps, scenario, pattern]);
+  }, [running, liveRps, scenario, livePattern]);
 
   return {
     running,
     setRunning,
-    rps,
+    rps: liveRps,
     setRps,
-    pattern,
+    trafficLocked,
+    pattern: livePattern,
     setPattern,
     simTime,
     metrics,

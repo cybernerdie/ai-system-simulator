@@ -342,12 +342,7 @@
 }
 
 @media (max-width: 1060px) {
-  /* small laptops and narrow windows: the command palette is still on '/', the source link is in the README */
-  .topbar-tools .only-keys,
-  .topbar-tools a[href*='github'] {
-    display: none;
-  }
-
+  /* small laptops and narrow windows */
   .topbar-tools {
     gap: 0;
   }
@@ -371,13 +366,113 @@
   }
 }
 
-@media (max-width: 400px) {
-  /* small phones: the logo alone, so seven tool buttons still fit beside it */
-  .brand span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
+/* ---------- More menu ---------- */
+
+.more {
+  position: relative;
+}
+
+.more-menu {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 250px;
+  padding: 6px;
+  display: grid;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: var(--float);
+}
+
+.more-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.more-item:hover,
+.more-item:focus-visible {
+  background: var(--subtle);
+  outline: none;
+}
+
+.more-icon {
+  display: flex;
+  color: var(--ink-2);
+}
+
+.more-label {
+  flex: 1;
+}
+
+.more-item kbd {
+  font: 500 11px var(--mono);
+  color: var(--ink-3);
+}
+
+/* a small switch, so the sound setting reads as on or off at a glance */
+.more-switch {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--line-2, var(--line));
+  transition: background 0.15s;
+}
+
+.more-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: translate 0.15s;
+}
+
+.more-switch.is-on {
+  background: var(--ok);
+}
+
+.more-switch.is-on::after {
+  translate: 12px 0;
+}
+
+/* a level's traffic: shown, not set */
+.traffic.is-locked {
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more-switch,
+  .more-switch::after {
+    transition: none;
+  }
+}
+
+@media (max-width: 900px) {
+  /* last in the row, after the other tool buttons (which phones reorder), so its menu opens on screen */
+  .more {
+    order: 4;
+  }
+
+  /* a level's fixed traffic is already on the Users card; a whole row for it is too much on a phone */
+  .traffic.is-locked {
+    display: none;
   }
 }

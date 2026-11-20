@@ -36,7 +36,7 @@ export function tourSteps({ setTab, run }: { setTab: (t: Tab) => void; run: () =
     {
       target: '.traffic',
       title: 'Traffic',
-      body: 'How many requests per second hit your system, and their shape: steady, sudden spikes, a daily wave or a slow ramp. Turn it up to find the next wall.',
+      body: 'How many requests per second hit your system. On a level it is set for you, because the load is part of the problem. In the sandbox you can change it and its shape (spikes, a daily wave, a slow ramp) to see what breaks first.',
     },
     {
       target: '.pressure-window',
@@ -61,9 +61,9 @@ export function tourSteps({ setTab, run }: { setTab: (t: Tab) => void; run: () =
       onEnter: () => setTab('mission'),
     },
     {
-      target: '[data-tour="reset"], [data-tour="share"], [data-tour="help"]',
+      target: '[data-tour="reset"], [data-tour="share"], [data-tour="more"]',
       title: 'Share, reset, replay',
-      body: 'Share copies a link to your exact design. Reset puts the scenario back to how it started. The ? button replays this tour. Your progress is saved in this browser.',
+      body: 'Share copies a link to your exact design. Reset puts the scenario back to how it started. Dark mode, sound and this tour are under More. Your progress is saved in this browser.',
     },
   ];
 }

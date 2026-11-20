@@ -727,6 +727,7 @@ export default function App() {
           setPattern: sim.setPattern,
           offered: metrics && sim.pattern !== 'steady' ? metrics.offered : null,
           simTime: sim.simTime,
+          locked: sim.trafficLocked,
         }}
         running={running}
         pinned={!!pinHere}

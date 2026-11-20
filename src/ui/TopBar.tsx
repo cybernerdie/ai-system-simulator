@@ -19,6 +19,7 @@ import {
 import { PATTERNS, type Pattern } from '../engine/patterns';
 import type { Scenario } from '../engine/levels/scenarios';
 import { BrandMark } from './BrandMark';
+import { MoreMenu } from './MoreMenu';
 import { ScenarioTrigger } from './dialogs/ScenarioPicker';
 
 const REPO = 'https://github.com/cybernerdie/ai-system-simulator';
@@ -31,6 +32,8 @@ export interface TrafficControls {
   /** Requests per second actually offered this tick, when the pattern varies it. */
   offered: number | null;
   simTime: number;
+  /** On a level the traffic is fixed: shown, not changed. */
+  locked?: boolean;
 }
 
 export interface TopBarActions {
@@ -64,9 +67,6 @@ interface Props {
   voiceMenuOpen: boolean;
   actions: TopBarActions;
 }
-
-const themeLabel = (t: Props['theme']) => (t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
-const sfxLabel = (on: boolean) => (on ? 'Turn sound effects off' : 'Turn sound effects on');
 
 export function TopBar({ scenario, tag, title, embedLink, traffic, running, pinned, theme, sfx, voice, voiceMenuOpen, actions }: Props) {
   return (
@@ -121,12 +121,6 @@ export function TopBar({ scenario, tag, title, embedLink, traffic, running, pinn
               <BookOpen size={15} aria-hidden />
               <span>Learn</span>
             </button>
-            <button className="btn btn-ghost theme-toggle" onClick={actions.toggleTheme} title={themeLabel(theme)} aria-label={themeLabel(theme)}>
-              {theme === 'dark' ? <Sun size={15} aria-hidden /> : <Moon size={15} aria-hidden />}
-            </button>
-            <button className={`btn btn-ghost theme-toggle${sfx ? '' : ' is-off'}`} onClick={actions.toggleSfx} title={sfxLabel(sfx)} aria-label={sfxLabel(sfx)} aria-pressed={sfx}>
-              <Music2 size={15} aria-hidden />
-            </button>
             <button
               className={`btn btn-ghost theme-toggle${voice ? '' : ' is-off'}`}
               onClick={(e) => actions.toggleVoiceMenu(e.currentTarget.getBoundingClientRect())}
@@ -136,16 +130,15 @@ export function TopBar({ scenario, tag, title, embedLink, traffic, running, pinn
             >
               {voice ? <Volume2 size={15} aria-hidden /> : <VolumeX size={15} aria-hidden />}
             </button>
-            <button className="btn btn-ghost theme-toggle only-keys" onClick={actions.commands} title="Commands and shortcuts ( / )" aria-label="Commands and shortcuts">
-              <CommandIcon size={15} aria-hidden />
-            </button>
-            <button className="btn btn-ghost theme-toggle" data-tour="help" onClick={actions.tour} title="Take the tour" aria-label="Take the tour">
-              <CircleQuestionMark size={15} aria-hidden />
-            </button>
-            <a className="btn btn-ghost btn-icon" href={REPO} target="_blank" rel="noreferrer" title="Source code on GitHub">
-              <Code size={15} aria-hidden />
-              <span className="sr-only">Source code on GitHub</span>
-            </a>
+            <MoreMenu
+              items={[
+                { label: theme === 'dark' ? 'Light mode' : 'Dark mode', icon: theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />, onSelect: actions.toggleTheme },
+                { label: 'Sound effects', icon: <Music2 size={15} />, onSelect: actions.toggleSfx, checked: sfx },
+                { label: 'Commands and shortcuts', icon: <CommandIcon size={15} />, onSelect: actions.commands, keys: '/', keysOnly: true },
+                { label: 'Take the tour', icon: <CircleQuestionMark size={15} />, onSelect: actions.tour },
+                { label: 'Source code on GitHub', icon: <Code size={15} />, href: REPO },
+              ]}
+            />
           </>
         )}
       </div>
@@ -159,7 +152,16 @@ export function TopBar({ scenario, tag, title, embedLink, traffic, running, pinn
   );
 }
 
-function TrafficBar({ rps, setRps, pattern, setPattern, offered, simTime }: TrafficControls) {
+function TrafficBar({ rps, setRps, pattern, setPattern, offered, simTime, locked }: TrafficControls) {
+  if (locked)
+    return (
+      <div className="traffic is-locked" title="Set by this level: the traffic is part of the problem">
+        <span className="traffic-rate">
+          <span>Traffic</span>
+          <output>{offered ?? rps} req/s</output>
+        </span>
+      </div>
+    );
   return (
     <div className="traffic">
       <label className="traffic-rate">

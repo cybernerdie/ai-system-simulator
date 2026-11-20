@@ -27,3 +27,13 @@ export function trafficMultiplier(p: Pattern, t: number): number {
       return 1;
   }
 }
+
+/**
+ * The traffic a scenario actually runs at. On a level it's the level's own, steady: the traffic is
+ * part of the problem, and turning it down would clear a rate-limit level without fixing anything.
+ * Only the sandbox (no goals) and incidents let the player set it.
+ */
+export function liveTraffic(s: { goals: unknown[]; kind?: string; traffic: { rps: number } }, rps: number, pattern: Pattern) {
+  const locked = s.goals.length > 0 && s.kind !== 'incident';
+  return locked ? { locked, rps: s.traffic.rps, pattern: 'steady' as Pattern } : { locked, rps, pattern };
+}
