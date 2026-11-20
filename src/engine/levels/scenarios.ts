@@ -1048,6 +1048,39 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'llm'),
     hint: 'The manual is the same in every request. Is there a way to stop paying full price to process the same tokens every time?',
+    case: {
+      job: 'Keep the answers just as good while cutting what you pay to process the same prompt over and over.',
+      chat: {
+        user: 'Can I pay for my order in instalments?',
+        bot: 'Yes! Orders over \u20ac200 can be split into three monthly payments at checkout.',
+        truthLabel: 'Behind the scenes',
+        truth:
+          "The answer is right. But to write it, the model re-read a 12,000-token system prompt: the full policy manual, the tone guide and twenty examples. That's the same text it read for the last question and will read for the next. About 4 cents per answer, almost all of it for reading the manual again.",
+        fixed: 'Yes! Orders over \u20ac200 can be split into three monthly payments at checkout.',
+      },
+      predict: {
+        question: 'The answers are good, but the bill is almost three times the budget. Where does the money go?',
+        options: [
+          {
+            text: 'The model is too big: switch to the small one',
+            why: "The small model can't take in 12,000 tokens at once, so every single request fails. The prompt has to fit the model's context window.",
+          },
+          {
+            text: 'Paying full price to process the same prompt every time',
+            right: true,
+            why: "Every request starts with the same 12,000 tokens, and the provider processes them from scratch each time. The customer's question is a few dozen tokens at the end.",
+          },
+          {
+            text: 'Customers keep asking the same questions',
+            why: "They don't, much: a cache of past answers barely helps here. What repeats isn't the question, it's the long prompt in front of it.",
+          },
+        ],
+      },
+      named: {
+        term: 'Prompt caching',
+        text: 'When every request starts with the same long prefix, the provider can keep its work on that prefix and reuse it. Cached tokens cost roughly a tenth and are read almost instantly. Put the stable content (manual, examples) first and the changing content (the question) last, so as much as possible gets cached.',
+      },
+    },
     lesson:
       'When every request starts with the same long prefix (system prompt, documents, examples), prompt caching lets the provider reuse its work: cached tokens cost roughly a tenth and are read almost instantly. Put the stable content first and the changing content last, so as much as possible can be cached.',
     solution: {
@@ -1079,6 +1112,40 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'llm'),
     hint: 'Not every request needs an answer in seconds. Where could work that can wait a few hours go instead?',
+    case: {
+      job: 'Stop live customers getting errors and bring the bill down, without hurting answers.',
+      chat: {
+        user: "Where's my refund? I returned the jacket last week.",
+        bot: 'Something went wrong. Please try again in a moment.',
+        lie: 'Something went wrong.',
+        truthLabel: 'Behind the scenes',
+        truth:
+          'Someone started a job summarising a year of support tickets, through the same live API as your chat. That job is now 60% of your traffic and nobody is waiting on it. It\'s using up your rate limit, so the provider rejects about 1 in 4 requests with a 429 error ("too many requests").',
+        fixed: 'Your refund was issued on Tuesday. It usually shows up within 3 to 5 working days.',
+      },
+      predict: {
+        question: 'Why are live customers getting errors?',
+        options: [
+          {
+            text: 'The model is too slow: switch to the small one',
+            why: 'Errors stop and the bill drops, but only about 3 in 4 answers are right, below what you need. And the job still sits in front of your customers.',
+          },
+          {
+            text: 'Work nobody is waiting on is competing with live customers',
+            right: true,
+            why: 'The ticket summaries could arrive tomorrow morning and nobody would mind. Sent through the live API, they take the rate limit your customers need right now.',
+          },
+          {
+            text: 'Failed requests should be retried',
+            why: "Retries don't help: the limit is already full, so the retry is rejected too. You'd be adding more requests to a queue that's already over its limit.",
+          },
+        ],
+      },
+      named: {
+        term: 'Batch processing',
+        text: 'Providers offer a batch API: you send a big pile of requests and get results within hours, at roughly half price, without touching your real-time rate limit. Send work nobody is waiting on there, and keep live capacity for live users.',
+      },
+    },
     lesson:
       "Separate work that someone is waiting on from work that can wait. Providers offer batch APIs at roughly half price with results within hours, and batch jobs don't compete with your live traffic for rate limits. Real-time capacity is precious: keep it for real-time users.",
     solution: {
@@ -1111,6 +1178,40 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: 'Try a fine-tuned model in the LLM settings. Which size? And what happens to the help-centre questions if you remove retrieval?',
+    case: {
+      job: 'Get tickets into your own 40 categories, and keep help questions right, at a fraction of the cost.',
+      chat: {
+        userLabel: 'New ticket',
+        user: 'My CM-5 has been leaking water from the bottom since I descaled it.',
+        bot: 'Category: Water Leak Issues. Priority: medium.',
+        lie: 'Water Leak Issues',
+        truth:
+          "That isn't one of your 40 categories. This ticket belongs in HW-PUMP-SEAL. The model keeps inventing sensible-sounding labels, because it has never seen yours used.",
+        fixed: 'Category: HW-PUMP-SEAL. Priority: medium.',
+      },
+      predict: {
+        question: 'How do you get the bot to use your categories?',
+        options: [
+          {
+            text: 'Use the large model',
+            why: 'It invents fewer labels and just reaches your accuracy goal, but costs five times as much, more than 10 times your budget. It still has never seen your categories.',
+          },
+          {
+            text: 'Fine-tune a small model on your past tickets, and keep retrieval',
+            right: true,
+            why: 'Thousands of correctly labelled past tickets teach a small model your categories and your format. Help-centre questions still need the docs, so search stays.',
+          },
+          {
+            text: "Fine-tune it and drop retrieval: it'll learn the docs too",
+            why: 'Fine-tuning teaches behaviour, not facts. Without search, help questions go wrong and overall accuracy falls below where you started.',
+          },
+        ],
+      },
+      named: {
+        term: 'Fine-tuning',
+        text: "Fine-tuning trains a model further on your own examples. It's great for behaviour: your labels, your format, your tone. A fine-tuned small model often beats a general large one on a narrow task, at a fraction of the price. It doesn't reliably teach facts, and facts change, so knowledge still comes from retrieval.",
+      },
+    },
     lesson:
       "Prompting, RAG and fine-tuning solve different problems. Fine-tuning teaches behaviour: your labels, your format, your tone. A fine-tuned small model often beats a general large one on a narrow task, at a fraction of the price. But it doesn't reliably teach facts, and facts change, so knowledge still comes from retrieval. Most real systems use both.",
     solution: {
@@ -1144,6 +1245,40 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: 'First make quality visible. Then look at what changed outside your code: which model version are you actually running?',
+    case: {
+      job: 'Find out what changed, get answer quality back up, and keep it there.',
+      chat: {
+        user: 'Do CM-5 filters fit the CM-7?',
+        bot: 'Yes, CM-5 filters fit the CM-7 perfectly.',
+        lie: 'fit the CM-7 perfectly',
+        truth:
+          'No: the CM-7 takes the larger F2 filter. Nobody has touched your code in two weeks, yet complaints doubled. Nothing measures answer quality, so all anyone has is a feeling.',
+        source: 'from the CM-7 manual',
+        fixed: "No, the CM-7 needs the larger F2 filter. CM-5 filters won't fit.",
+      },
+      predict: {
+        question: 'No code changed in two weeks. Why did answers get worse?',
+        options: [
+          {
+            text: 'Customers are asking harder questions',
+            why: "Traffic looks the same as last month. And you can't tell either way yet, because nothing measures how many answers are right.",
+          },
+          {
+            text: 'The model behind "latest" changed',
+            right: true,
+            why: 'Your app asks for the provider\'s "latest" model. Two weeks ago that name started pointing at a new version, and your prompts were tuned for the old one. A dependency changed without you deploying anything.',
+          },
+          {
+            text: 'The model is too small now',
+            why: 'A large model behind the same "latest" name barely helps, and costs five times as much. The problem is which version you\'re running, not its size.',
+          },
+        ],
+      },
+      named: {
+        term: 'Pinning model versions',
+        text: 'A model is a dependency, and "latest" is an unpinned one. Pin an exact version, run your evals against a new version before you switch, and upgrade on purpose. Without evals you wouldn\'t notice the drop at all, only the complaints.',
+      },
+    },
     lesson:
       'The model is a dependency, and "latest" is an unpinned dependency. Providers update models behind aliases, and prompts tuned for one version can quietly regress on the next. Pin versions, run your evals against a new version before switching, and upgrade on purpose. Evals are what let you notice at all.',
     solution: {
@@ -1179,6 +1314,39 @@ const CORE: Scenario[] = [
     ],
     edges: chain('users', 'emb', 'vdb', 'llm'),
     hint: 'Personal data can be stripped before it leaves, or the model can run somewhere data never leaves. What does each cost you?',
+    case: {
+      job: 'Stop personal data leaving your systems, without breaking the answers or the budget.',
+      chat: {
+        user: "Hi, I'm Maria Borg, policy 44-1902. My knee MRI cost \u20ac640. Am I covered?",
+        bot: 'Yes, Maria, MRI scans are covered up to \u20ac800 under your policy.',
+        truthLabel: 'Behind the scenes',
+        truth:
+          "The answer is right. But Maria's name, policy number and medical details just went to a third-party AI provider, like half of all claim questions do. Compliance has found out.",
+        fixed: 'Yes, MRI scans are covered up to \u20ac800 under your policy.',
+      },
+      predict: {
+        question: 'How do you stop personal data leaving, without breaking the bot?',
+        options: [
+          {
+            text: 'Block any message that contains personal details',
+            why: 'Half of all questions contain some. Blocking them breaks the product for half your customers, who need those details to get an answer.',
+          },
+          {
+            text: 'Remove personal details before the prompt leaves, put them back in the answer',
+            right: true,
+            why: "Names and numbers become placeholders like [NAME] on the way out, and the real values go back into the reply. The model doesn't need to know who Maria is to read her policy.",
+          },
+          {
+            text: 'Ask the provider not to keep the data',
+            why: 'Retention settings are worth having, but the data still leaves your systems, which is exactly what compliance objects to.',
+          },
+        ],
+      },
+      named: {
+        term: 'PII redaction',
+        text: 'Personally identifiable information (PII) is anything that identifies someone. A redactor swaps it for placeholders before the prompt leaves and restores it in the answer. Or you run sensitive traffic on a model you host yourself. Detection is never perfect, so you combine it with provider agreements, retention settings and sending less data in the first place.',
+      },
+    },
     lesson:
       "Anything in a prompt is data you're sending to whoever runs the model. Redact personal details before they leave (swap them for placeholders and put them back in the answer), or keep sensitive traffic on models you host yourself. Detection is never perfect, so combine it with provider agreements, retention settings and data minimisation.",
     solution: {

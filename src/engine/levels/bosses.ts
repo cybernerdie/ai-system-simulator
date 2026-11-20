@@ -256,6 +256,40 @@ export const BOSSES: Scenario[] = [
     ],
     edges: chain('users', 'llm'),
     hint: 'Where does each dollar go? The same long prompt every call, real-time prices for work nobody waits on, and a big model doing a narrow job.',
+    case: {
+      job: 'Cut the bill by more than 90%, stop personal data leaving, and stop the failures, without hurting answers.',
+      chat: {
+        user: 'Claim 88-301 from Anna Vella, policy 22-0417: water damage to my kitchen floor. What happens next?',
+        bot: 'Something went wrong. Please try again.',
+        lie: 'Something went wrong.',
+        truthLabel: 'Behind the scenes',
+        truth:
+          "Every call carries the same 6,000-token policy prompt to a general medium model, at real-time prices, including the overnight sorting jobs that make up half the traffic. The rate limit is used up, so about half of all requests fail, and every customer's personal details go to the provider.",
+        fixed: 'An assessor will contact you within 2 working days. Please keep photos of the damage.',
+      },
+      predict: {
+        question: 'Finance, legal and support each have a complaint. Where does the money go?',
+        options: [
+          {
+            text: 'The model is too big: switch to the small one',
+            why: 'The bill drops a lot, but right answers fall to about 2 in 3, about 1 in 10 requests still fail, and personal data still leaves.',
+          },
+          {
+            text: 'The same prompt at full price, live prices for work that can wait, and a general model for a narrow job',
+            right: true,
+            why: 'Each is waste you can remove: cache the prompt, batch the overnight work, and fine-tune a small model for the sorting. Redacting personal data is the separate fix legal needs.',
+          },
+          {
+            text: "There's simply too much traffic",
+            why: 'Half of it is overnight work nobody waits for. Taken off the live API, it stops using up the rate limit and costs about half as much.',
+          },
+        ],
+      },
+      named: {
+        term: 'Cache, batch, specialise, redact',
+        text: 'Most of an AI bill is waste you can see: the same tokens processed again and again, real-time prices for patient work, and a general model doing a narrow job. Prompt caching, batch APIs and a fine-tuned small model remove it, and a PII redactor keeps personal data inside.',
+      },
+    },
     lesson:
       'Most of an AI bill is waste you can see: the same tokens resent, urgent prices for patient work, and a general model for a narrow task. Cache it, batch it, specialise it, and strip personal data before any of it leaves.',
     solution: {
