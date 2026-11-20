@@ -17,7 +17,18 @@ export interface CaseFile {
   /** What the player has to achieve, in one plain sentence. */
   job: string;
   /** One customer exchange: the question, the bot's bad answer, the truth, and the answer once fixed. */
-  chat: { user: string; bot: string; truth: string; fixed: string };
+  chat: {
+    user: string;
+    bot: string;
+    truth: string;
+    fixed: string;
+    /** The part of \`bot\` that's wrong, highlighted so it's the first thing the eye lands on. */
+    lie?: string;
+    /** The part of \`truth\` (and \`fixed\`) that contradicts it. */
+    fact?: string;
+    /** Where the truth comes from, e.g. "X-200 manual, page 14". */
+    source?: string;
+  };
   /** Asked before playing. Exactly one option is right; each explains itself once picked. */
   predict: { question: string; options: { text: string; right?: true; why: string }[] };
   /** Revealed after the win: what they built is called this. */

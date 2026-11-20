@@ -32,8 +32,11 @@ const CORE: Scenario[] = [
       chat: {
         user: 'How do I reset my X-200 to factory settings?',
         bot: 'Go to Settings → System → Factory Reset and confirm. It takes about two minutes.',
-        truth: 'The X-200 has no Settings menu. You hold the power button for 10 seconds until the light blinks red.',
-        fixed: 'Hold the power button for 10 seconds until the light blinks red. (From: X-200 manual, page 14.)',
+        truth: 'There is no Settings menu on the X-200. Hold the power button for 10 seconds until the light blinks red.',
+        fixed: 'Hold the power button for 10 seconds until the light blinks red. That restores factory settings.',
+        lie: 'Settings → System → Factory Reset',
+        fact: 'power button for 10 seconds',
+        source: 'X-200 manual, page 14',
       },
       predict: {
         question: "The bot sounds sure of itself, but it's wrong. Why?",
