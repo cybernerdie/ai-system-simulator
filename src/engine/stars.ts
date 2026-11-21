@@ -60,6 +60,14 @@ export interface StarTips {
 }
 
 const SMALLER: Record<string, string> = { large: 'medium', medium: 'small' };
+
+/** "the Output Judge", or "the LLM on provider A" when there's more than one of that kind to tell apart. */
+function which(g: SimGraph, n: SimGraph['nodes'][number]): string {
+  const name = COMPONENTS[n.type].name;
+  if (g.nodes.filter((x) => x.type === n.type).length < 2) return `the ${name}`;
+  if (n.type === 'llm') return `the ${String(n.config?.size ?? 'medium')} LLM on provider ${String(n.config?.provider ?? 'A')}`;
+  return `one of the ${name}s`;
+}
 const money2 = (v: number) => `$${v.toFixed(2)}`;
 
 /**
@@ -89,7 +97,7 @@ export function starTips(s: Scenario, graph: SimGraph, traffic: TrafficProfile, 
 
   if (!r.lean) {
     const cut = removals[0];
-    if (cut) tips.lean = `Try it without the ${COMPONENTS[cut.node.type].name}: every goal still holds.`;
+    if (cut) tips.lean = `Try it without ${which(graph, cut.node)}: every goal still holds.`;
     else {
       // the player's components that the reference build has no counterpart for
       const left = new Map<string, number>();
@@ -112,7 +120,7 @@ export function starTips(s: Scenario, graph: SimGraph, traffic: TrafficProfile, 
     const cut = removals.find((x) => x.m.costPer1k <= r.par.cost);
     if (shrink)
       tips.budget = `Try a ${shrink.to} model instead of ${String(shrink.node.config!.size)}: every goal still holds, and cost falls to ${money2(shrink.m.costPer1k)} per 1k.`;
-    else if (cut) tips.budget = `Try it without the ${COMPONENTS[cut.node.type].name}: every goal still holds, and cost falls to ${money2(cut.m.costPer1k)} per 1k.`;
+    else if (cut) tips.budget = `Try it without ${which(graph, cut.node)}: every goal still holds, and cost falls to ${money2(cut.m.costPer1k)} per 1k.`;
     else tips.budget = `No single part or smaller model gets under ${money2(r.par.cost)} while keeping every goal. The full review shows what each part costs and buys you.`;
   }
   return tips;

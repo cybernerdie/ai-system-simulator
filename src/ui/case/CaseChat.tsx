@@ -25,6 +25,12 @@ export function CaseChat({ chat, fixed = false, compact = false }: { chat: CaseF
           <dt>{chat.userLabel ?? 'Customer'}</dt>
           <dd>{chat.user}</dd>
         </div>
+        {fixed && chat.sent && (
+          <div className="transcript-row is-sent">
+            <dt>Provider saw</dt>
+            <dd>{chat.sent}</dd>
+          </div>
+        )}
         <div className="transcript-row">
           <dt>Your bot</dt>
           <dd>{fixed ? chat.fixed : <WithLie text={chat.bot} lie={chat.lie} />}</dd>

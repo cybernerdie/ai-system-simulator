@@ -21,6 +21,8 @@ export interface CaseFile {
     user: string;
     bot: string;
     truth: string;
+    /** After the fix, what actually left your systems, when that's the point (redacted personal data). */
+    sent?: string;
     fixed: string;
     /** The part of \`bot\` that's wrong, highlighted so it's the first thing the eye lands on. */
     lie?: string;

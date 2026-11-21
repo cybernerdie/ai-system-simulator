@@ -38,13 +38,4 @@ describe('settings that open up later', () => {
   it('are all open when everything is unlocked', () => {
     expect(settingLocks(SCENARIOS[0], true)).toBeNull();
   });
-
-  it('marks the settings a level is the first to show', () => {
-    expect(
-      settingLocks(
-        SCENARIOS.find((s) => s.id === 'broke-parser')!,
-        false,
-      )?.fresh.has('llm.jsonMode'),
-    ).toBe(true);
-  });
 });

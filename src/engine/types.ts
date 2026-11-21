@@ -74,6 +74,11 @@ export interface TrafficProfile {
   qualityHidden?: boolean;
   /** Share of calls each model provider fails (outages, 5xx). */
   providerErrors?: Partial<Record<'A' | 'B', number>>;
+  /**
+   * An outage on whichever provider the design calls first, at this failure rate. You can't know in advance
+   * which provider will go down, so moving everything to another one isn't resilience; a backup is.
+   */
+  outage?: number;
   /** Multi-part research tasks that need several lookups (3–6 sub-questions each). */
   complexShare?: number;
   /** Requests whose answer must be valid JSON for your code to use it. */

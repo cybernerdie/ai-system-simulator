@@ -58,6 +58,7 @@ export function ChangeNote({ what, shifts, onClose }: { what: string; shifts: Sh
       ) : (
         <p className="change-none">None of your goals moved.</p>
       )}
+      {shifts.some((s) => !s.revealed) && <p className="change-foot">Where the live numbers are heading; they wobble around it.</p>}
     </div>
   );
 }

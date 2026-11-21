@@ -70,28 +70,37 @@ export function Telemetry({ m, history, goals, focus = false, showAll = false, o
           series: history.map((h) => h.avgHistoryTokens),
         }
       : { key: 'rec', label: 'Right page found', value: m.recall == null ? '—' : pct(m.recall), series: history.map((h) => h.recall ?? 0) },
-    goals.some((g) => g.metric === 'fairnessGap')
-      ? {
+    // safety and operations numbers: a card for each one the level has a goal on (the final boss has three),
+    // or attacks by default
+    ...(() => {
+      const has = (metric: GoalMetric) => goals.some((g) => g.metric === metric);
+      const extra = [
+        has('fairnessGap') && {
           key: 'fair',
           label: 'Group gap',
           value: m.fairnessVisible ? METRIC_META.fairnessGap.fmt(m.fairnessGap) : '?',
           series: history.map((h) => (h.fairnessVisible ? h.fairnessGap : 0)),
           metric: 'fairnessGap' as const,
           title: m.fairnessVisible ? undefined : 'Nothing measures quality per group yet',
-        }
-      : goals.some((g) => g.metric === 'diagnoseHours')
-        ? { key: 'diag', label: 'Find a bug', value: METRIC_META.diagnoseHours.fmt(m.diagnoseHours), series: history.map((h) => h.diagnoseHours), metric: 'diagnoseHours' as const }
-        : goals.some((g) => g.metric === 'harmfulActions')
-          ? {
-              key: 'harm',
-              label: 'Hijacked',
-              value: METRIC_META.harmfulActions.fmt(m.harmfulActions),
-              series: history.map((h) => h.harmfulActions),
-              metric: 'harmfulActions' as const,
-            }
-          : goals.some((g) => g.metric === 'piiLeak')
-            ? { key: 'pii', label: 'Personal data leaked', value: pct(m.piiLeak), series: history.map((h) => h.piiLeak), metric: 'piiLeak' as const }
-            : { key: 'inj', label: 'Attacks that worked', value: pct(m.injection), series: history.map((h) => h.injection), metric: 'injection' as const },
+        },
+        has('diagnoseHours') && {
+          key: 'diag',
+          label: 'Find a bug',
+          value: METRIC_META.diagnoseHours.fmt(m.diagnoseHours),
+          series: history.map((h) => h.diagnoseHours),
+          metric: 'diagnoseHours' as const,
+        },
+        has('harmfulActions') && {
+          key: 'harm',
+          label: 'Hijacked',
+          value: METRIC_META.harmfulActions.fmt(m.harmfulActions),
+          series: history.map((h) => h.harmfulActions),
+          metric: 'harmfulActions' as const,
+        },
+        has('piiLeak') && { key: 'pii', label: 'Personal data leaked', value: pct(m.piiLeak), series: history.map((h) => h.piiLeak), metric: 'piiLeak' as const },
+      ].filter((c) => c !== false);
+      return extra.length ? extra : [{ key: 'inj', label: 'Attacks that worked', value: pct(m.injection), series: history.map((h) => h.injection), metric: 'injection' as const }];
+    })(),
     { key: 'err', label: 'Failed requests', value: pct(m.errorRate), series: history.map((h) => h.errorRate), metric: 'errorRate' },
     { key: 'p50', label: 'Typical response', value: ms(m.p50), series: history.map((h) => h.p50), metric: 'p50' },
     { key: 'ttft', label: m.voice ? 'First audio' : 'First word', value: ms(m.ttftP50), series: history.map((h) => h.ttftP50), metric: 'ttftP50' },
@@ -132,7 +141,10 @@ export function Telemetry({ m, history, goals, focus = false, showAll = false, o
           <div key={c.key} className={`tele ${state}`} title={c.title}>
             <div className="tele-label">{c.label}</div>
             <div className="tele-row">
-              <span className="tele-value">{goal && state === 'unmet' ? goalValue(goal, metricValue(seen, goal.metric), false) : c.value}</span>
+              <span className="tele-value">
+                {/* precise only for a number that's visible: '?' and '—' mean it isn't measured or scored yet */}
+                {goal && state === 'unmet' && c.value !== '?' && c.value !== '—' ? goalValue(goal, metricValue(seen, goal.metric), false) : c.value}
+              </span>
               {goal && (
                 <span className="tele-goal">
                   {goal.op === '>=' ? '≥' : '≤'}

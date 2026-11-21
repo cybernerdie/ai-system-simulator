@@ -107,7 +107,7 @@ export const PRESSURES: Record<PressureKey, Omit<Pressure, 'key'>> = {
   },
   cache_false_hit: {
     title: 'Cache serving wrong answers',
-    why: "Your similarity threshold is so loose that different questions match each other and get someone else's answer.",
+    why: "Answers are being reused for questions that only sound alike, so customers get someone else's answer.",
     look: 'Open a few wrong answers. Did the model write them, or were they reused from another question?',
     idea: 'Questions that are only similar are being treated as the same. Make the match stricter.',
     try: 'Raise the cache similarity threshold. Fewer hits, but the hits are actually the same question.',
@@ -410,6 +410,9 @@ export function bindingPressure(m: Metrics, goals: Goal[]): Pressure {
       const other = (m.causes.weak_reasoning ?? 0) + (m.causes.handoff_loss ?? 0);
       return pick(loops > other ? 'agent_loop' : 'handoff_loss');
     }
+    // thousands of tokens of old chat per message bury the facts that matter: that's the cause of these wrong
+    // answers, even though they read as noise or reasoning failures, and a bigger model would only cost more
+    if (bloated) return pick('history_bloat');
     const q = causes.find(([c]) => !['rate_limit', 'context_overflow', 'injection', 'provider_down', 'gpu_saturated', 'invalid_output', 'voice_pipeline'].includes(c));
     // an out-of-date index and scrambled tables are one problem (how documents get in), so weigh them together
     const stale = m.causes.stale_index ?? 0;

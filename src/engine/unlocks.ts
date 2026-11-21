@@ -1,5 +1,5 @@
 import { SCENARIOS, type Scenario } from './levels/scenarios';
-import { levelNumber, unlockCap } from './catalog';
+import { unlockCap } from './catalog';
 import { COMPONENTS } from './components';
 import type { ComponentType } from './types';
 
@@ -33,8 +33,6 @@ export function unlockLevels(): Map<ComponentType, number> {
 export interface PaletteLocks {
   /** Components not yet reachable, with the level that unlocks each. */
   locks: Map<ComponentType, number>;
-  /** Components this level introduces, highlighted as new. */
-  fresh: Set<ComponentType>;
 }
 
 /**
@@ -49,10 +47,8 @@ export function paletteLocks(s: Scenario, onCanvas: Set<ComponentType>, unlockAl
   first.forEach((lvl, t) => {
     if (lvl > cap && !onCanvas.has(t)) locks.set(t, lvl);
   });
-  const startsHere = new Set(s.nodes.map((n) => n.type));
-  const fresh = new Set<ComponentType>();
-  if (levelNumber(s) !== null) first.forEach((lvl, t) => lvl === cap && !startsHere.has(t) && fresh.add(t));
-  return { locks, fresh };
+  // nothing is badged "New": the parts a level introduces are usually its answer
+  return { locks };
 }
 
 /**
@@ -92,18 +88,14 @@ export function settingLevels(): Map<string, number> {
 }
 
 /**
- * Settings a level keeps out of the inspector because a later level teaches them (`hidden`), and the
- * ones this level is the first to show (`fresh`, badged "New"), as `type.key`. Null when everything
- * is open (sandbox, modes, "unlock everything").
+ * Settings a level keeps out of the inspector because a later level teaches them, as `type.key`.
+ * Null when everything is open (sandbox, modes, "unlock everything"). Nothing marks the ones that just
+ * opened up: a "New" badge would point straight at the answer.
  */
-export function settingLocks(s: Scenario, unlockAll: boolean): { hidden: Set<string>; fresh: Set<string> } | null {
+export function settingLocks(s: Scenario, unlockAll: boolean): { hidden: Set<string> } | null {
   const cap = unlockCap(s);
   if (unlockAll || cap === null) return null;
   const hidden = new Set<string>();
-  const fresh = new Set<string>();
-  settingLevels().forEach((lvl, id) => {
-    if (lvl > cap) hidden.add(id);
-    else if (lvl === levelNumber(s)) fresh.add(id);
-  });
-  return { hidden, fresh };
+  settingLevels().forEach((lvl, id) => lvl > cap && hidden.add(id));
+  return { hidden };
 }

@@ -91,17 +91,6 @@
 }
 
 /* palette: unlocks */
-.palette-new {
-  margin-left: auto;
-  padding: 1px 7px;
-  border-radius: 99px;
-  background: var(--blue-bg);
-  color: var(--blue-text, #2563eb);
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 600;
-}
-
 .palette-item.is-locked {
   cursor: not-allowed;
 }
@@ -210,7 +199,6 @@
     min-width: 0;
   }
 
-  .palette-new,
   .palette-lock {
     flex-shrink: 0;
   }
@@ -228,7 +216,6 @@
 
   .pal-collapsed .palette-head > span,
   .pal-collapsed .palette-name,
-  .pal-collapsed .palette-new,
   .pal-collapsed .palette-lock,
   .pal-collapsed .palette-help {
     display: none;

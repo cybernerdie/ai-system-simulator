@@ -704,7 +704,7 @@ const CORE: Scenario[] = [
     tagline: '503, 503, 503. Your status page is getting traffic.',
     brief:
       'Your model provider is having a bad day: 70% of calls fail with 503 errors. Your whole product depends on that one provider, so your users see errors too. Keep the product up without wrecking speed or quality.',
-    traffic: { ...base, rps: 8, kbShare: 0.6, exactTermShare: 0.2, easyShare: 0.6, repeatShare: 0.1, providerErrors: { A: 0.7 } },
+    traffic: { ...base, rps: 8, kbShare: 0.6, exactTermShare: 0.2, easyShare: 0.6, repeatShare: 0.1, outage: 0.7 },
     goals: [
       { metric: 'errorRate', op: '<=', value: 0.01 },
       { metric: 'accuracy', op: '>=', value: 0.74 },
@@ -1323,7 +1323,8 @@ const CORE: Scenario[] = [
         bot: 'Yes, Maria, MRI scans are covered up to €800 under your policy.',
         truthLabel: 'Behind the scenes',
         truth:
-          "The answer is right. But Maria's name, policy number and medical details just went to a third-party AI provider. Half of all claim questions carry details like these, and every one of them is sent as it is. Compliance has found out.",
+          "The answer is right. But Maria's name, policy number and medical details (personally identifiable information, or PII) just went to a third-party AI provider. Half of all claim questions carry details like these, and every one of them is sent as it is. Compliance has found out.",
+        sent: "Hi, I'm [NAME], policy [POLICY]. My [BODY PART] MRI cost €640. Am I covered?",
         fixed: 'Yes, Maria, MRI scans are covered up to €800 under your policy.',
       },
       predict: {

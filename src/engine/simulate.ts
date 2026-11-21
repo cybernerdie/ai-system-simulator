@@ -335,9 +335,11 @@ export function simulate(graph: SimGraph, traffic: TrafficProfile, opts: SimOpti
   const retries = fb ? cfgNum(fb, 'retries', 2) : 0;
   const failover = fb ? fb.config.failover === true : false;
   // A struggling provider gets worse the harder everyone retries against it (retry storm)
+  // with an outage, it's the provider the design calls first that's down, whichever that is
+  const outageHost = traffic.outage !== undefined && llms.length ? P(llms[0]).host : null;
   const errOf = (n: SimNode) => {
     const h = P(n).host;
-    const base = h === 'self' ? 0 : (traffic.providerErrors?.[h] ?? 0);
+    const base = h === 'self' ? 0 : traffic.outage !== undefined ? (h === outageHost ? traffic.outage : 0) : (traffic.providerErrors?.[h] ?? 0);
     return base > 0 ? Math.min(0.97, base * (1 + 0.08 * retries)) : 0;
   };
   if (fb && failover && new Set(llms.map((l) => P(l).host)).size < 2)

@@ -10,7 +10,6 @@ const GROUPS = ['Retrieval', 'Memory', 'Generation', 'Inference', 'Voice', 'Effi
 export function Palette({
   onAdd,
   locks,
-  fresh,
   onLocked,
   collapsed,
   onToggleCollapsed,
@@ -20,8 +19,6 @@ export function Palette({
   onAdd: (t: ComponentType) => void;
   /** components not reached yet → the level that unlocks them */
   locks?: Map<ComponentType, number>;
-  /** components that are new on this level */
-  fresh?: Set<ComponentType>;
   onLocked?: (t: ComponentType, level: number) => void;
 }) {
   return (
@@ -69,9 +66,7 @@ export function Palette({
                       <Lock size={11} aria-hidden />
                       <span className="sr-only">, unlocks in level</span> {lockedAt}
                     </em>
-                  ) : (
-                    fresh?.has(t) && <em className="palette-new">New</em>
-                  )}
+                  ) : null}
                 </button>
               );
             })}

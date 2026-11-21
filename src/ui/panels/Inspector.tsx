@@ -12,7 +12,6 @@ export function Inspector({
   kind,
   config,
   hidden,
-  fresh,
   onChange,
   onDelete,
   onLearn,
@@ -22,8 +21,6 @@ export function Inspector({
   config: NodeConfig;
   /** Settings a later level teaches, as `type.key`. Still shown if this node already uses them. */
   hidden?: Set<string> | null;
-  /** Settings this level is the first to show, badged "New" like new components. */
-  fresh?: Set<string> | null;
   onChange: (id: string, key: string, v: ConfigValue) => void;
   onDelete: (id: string) => void;
   onLearn: (termId: string) => void;
@@ -50,10 +47,7 @@ export function Inspector({
           {fields.map((f) => (
             <label key={f.key} className="field">
               <span className="field-label">
-                <span>
-                  {f.label}
-                  {fresh?.has(`${kind}.${f.key}`) && <span className="palette-new field-new">New</span>}
-                </span>
+                <span>{f.label}</span>
                 {f.kind === 'range' && <output>{rangeText(f, Number(config[f.key]))}</output>}
               </span>
               {f.kind === 'select' && (

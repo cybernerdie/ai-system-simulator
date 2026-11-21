@@ -125,7 +125,7 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
         key: 'threshold',
         label: 'Similarity threshold',
         kind: 'range',
-        min: 0.8,
+        min: 0.6,
         max: 0.99,
         step: 0.01,
         help: 'Lower = more hits, but different questions start getting the wrong cached answer.',
@@ -148,7 +148,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'EMB',
     group: 'Retrieval',
     color: '#8b5cf6',
-    blurb: 'Turns the question into a vector so a vector DB can find semantically similar chunks.',
+    blurb:
+      'Turns text into a list of numbers that captures its meaning (a vector), so questions and passages that mean the same thing end up close together. Search by meaning needs it.',
     defaults: { multilingual: false },
     fields: [
       {
@@ -165,7 +166,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'VDB',
     group: 'Retrieval',
     color: '#6366f1',
-    blurb: 'Finds the chunks of your documents closest in meaning to the question. Great at paraphrases, weak at exact codes and names.',
+    blurb:
+      'Holds your own documents (policies, manuals, price lists), cut into short passages called chunks, and finds the ones closest in meaning to the question. Great at reworded questions, weak at exact codes and names.',
     defaults: { topK: 5, chunk: 'medium', refresh: 'weekly', parser: 'plain' },
     fields: [
       {
@@ -228,7 +230,8 @@ export const COMPONENTS: Record<ComponentType, ComponentSpec> = {
     short: 'RR',
     group: 'Retrieval',
     color: '#d946ef',
-    blurb: 'Cross-encoder that rescores retrieved chunks and passes only the best few to the model. Lets you retrieve wide without drowning the LLM.',
+    blurb:
+      'A second, more careful reader (a cross-encoder) that re-scores what search found and passes only the best few chunks to the model. Lets you search wide without drowning the model in text.',
     defaults: { keep: 4 },
     fields: [
       {

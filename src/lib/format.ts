@@ -8,7 +8,7 @@ export const usd = (v: number) => `$${v < 10 ? v.toFixed(2) : v.toFixed(0)}`;
 export const METRIC_META: Record<GoalMetric, { label: string; term?: string; fmt: (v: number) => string }> = {
   diagnoseHours: { label: 'Time to find a bug', fmt: (v) => (v >= 10 ? `${Math.round(v)}h` : `${+v.toFixed(1)}h`) },
   fairnessGap: { label: 'Gap between user groups', fmt: (v) => `${Math.round(v * 100)} pts` },
-  piiLeak: { label: 'Personal data leaked', term: 'PII leakage', fmt: pct },
+  piiLeak: { label: 'Personal data leaked', term: 'PII: personally identifiable information', fmt: pct },
   harmfulActions: { label: 'Hijacked actions', fmt: (v) => (v > 0 && v < 0.001 ? '<0.1%' : `${(v * 100).toFixed(1)}%`) },
   evalGap: { label: 'Gap between eval score and reality', fmt: (v) => `${Math.round(v * 100)} pts` },
   accuracy: { label: 'Right answers', term: 'accuracy', fmt: pct },

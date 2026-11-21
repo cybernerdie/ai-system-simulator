@@ -791,7 +791,6 @@ export default function App() {
       <Palette
         onAdd={(t) => addNode(t)}
         locks={unlock?.locks}
-        fresh={unlock?.fresh}
         onLocked={(t, lvl) => showToast(`${COMPONENTS[t].name} unlocks in level ${lvl}. Clear the levels before it to use it.`)}
         collapsed={palCollapsed}
         onToggleCollapsed={togglePal}
@@ -871,7 +870,7 @@ export default function App() {
         />
         <Telemetry m={metrics} history={sim.history} goals={goals} focus={goals.length > 0} showAll={allNumbers} onToggleAll={toggleAllNumbers} />
         {banner && <IncidentBanner title={banner.title} text={banner.text} />}
-        <Complaints samples={metrics?.samples} running={running && !guide.celebrate} />
+        <Complaints samples={metrics?.samples} running={running && !guide.celebrate && streak === 0} />
         {changeNote && !won && <ChangeNote key={changeNote.id} what={changeNote.what} shifts={changeNote.shifts} onClose={dismissChangeNote} />}
       </main>
 
@@ -884,7 +883,7 @@ export default function App() {
         streak={streak}
         needed={HOLD_TICKS}
         warnings={metrics?.warnings ?? []}
-        selected={selected ? { id: selected.id, kind: selected.data.kind, config: selected.data.config, hidden: fieldLocks?.hidden, fresh: fieldLocks?.fresh } : undefined}
+        selected={selected ? { id: selected.id, kind: selected.data.kind, config: selected.data.config, hidden: fieldLocks?.hidden } : undefined}
         onChange={updateConfig}
         onDelete={deleteNode}
         tab={tab}

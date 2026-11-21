@@ -76,10 +76,10 @@ export const QUIZ: Record<string, QuizQuestion> = {
     why: 'GPUs are paid for by the hour, busy or idle. Batching keeps them busy. Each request waits a little longer, but far more get served per dollar.',
   },
   'provider-down': {
-    q: 'Why did retries alone make the outage worse?',
-    options: ['Retries are billed double', "Retrying a provider that's down just piles more load and waiting onto it", 'Retries turn off streaming'],
+    q: "Why can't retries alone get you through an outage?",
+    options: ['Retries are billed double', "Retrying a provider that's down asks the same struggling service again, and piles more load onto it", 'Retries turn off streaming'],
     answer: 1,
-    why: 'Retries help with blips, not outages. When a provider is down, you need failover to a different one.',
+    why: 'Retries help with blips, not outages: a few more calls get through, but most still fail, and the provider struggles more. You need somewhere else to go.',
   },
   'research-team': {
     q: 'Why was the agent team faster than one agent?',

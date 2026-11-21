@@ -176,7 +176,7 @@ export const BOSSES: Scenario[] = [
       staleShare: 0.25,
       tableShare: 0.2,
       structuredShare: 0.4,
-      providerErrors: { A: 0.6 },
+      outage: 0.6,
     },
     goals: [
       { metric: 'errorRate', op: '<=', value: 0.01 },
@@ -485,6 +485,7 @@ export const BOSSES: Scenario[] = [
         truthLabel: 'Behind the scenes',
         truth:
           "Strangers are using your leaked app key, so the bill is three times budget and many requests fail. Lucía's name and order number go to the AI provider. Nothing is recorded when an answer goes wrong. And search was built for English, so Spanish questions find the wrong pages.",
+        sent: 'Soy [NAME], pedido [ORDER]. ¿Puedo devolver la cafetera?',
         fixed: 'Sí, Lucía: el pedido 7731 está dentro de los 30 días. Te enviamos la etiqueta de devolución.',
       },
       predict: {

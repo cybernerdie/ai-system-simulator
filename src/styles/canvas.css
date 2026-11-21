@@ -449,3 +449,9 @@
   text-overflow: ellipsis;
   font-size: calc(11.5px * var(--far));
 }
+
+.change-foot {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}

@@ -217,7 +217,7 @@ body {
   display: none;
 }
 
-@media (pointer: coarse) {
+@media (pointer: coarse), (hover: none) {
   .only-keys {
     display: none !important;
   }
