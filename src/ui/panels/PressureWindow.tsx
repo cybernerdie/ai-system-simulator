@@ -12,14 +12,27 @@ interface Props {
   hasRun: boolean;
   /** On a level: how many ticks every goal has held, out of how many it takes to clear. */
   hold?: { streak: number; needed: number };
+  /** The last hint, tailored to the design (it won't suggest what's already there). */
+  fix?: string;
+  /** Told how far into the hints the player has gone (1 to 3). */
+  onHint?: (depth: number) => void;
   hud?: React.ReactNode;
 }
 
-export function PressureWindow({ p, running, hasRun, hold, hud }: Props) {
+const HINT_LABELS = ['Look:', 'Idea:', 'Fix:'];
+
+export function PressureWindow({ p, running, hasRun, hold, fix, onHint, hud }: Props) {
   const met = !!hold && hold.streak > 0;
   const state = !hasRun || !p ? 'idle' : met ? 'met' : p.key === 'stable' ? 'stable' : 'binding';
-  const [showFix, setShowFix] = useState(false);
-  useEffect(() => setShowFix(false), [p?.key]);
+  // hints come one step at a time: where to look, the kind of fix, then the exact change
+  const [depth, setDepth] = useState(0);
+  useEffect(() => setDepth(0), [p?.key]);
+  const steps = p ? [p.look, p.idea, fix ?? p.try] : [];
+  const more = () => {
+    const next = Math.min(3, depth + 1);
+    setDepth(next);
+    onHint?.(next);
+  };
   return (
     <section className={`pressure-window is-${state}`} aria-live="polite">
       <header className="window-bar">
@@ -55,17 +68,27 @@ export function PressureWindow({ p, running, hasRun, hold, hud }: Props) {
               {p!.title}
             </p>
             <p className="pressure-why">{p!.why}</p>
-            {state === 'binding' &&
-              (showFix ? (
-                <p className="pressure-try">
-                  <Lightbulb size={14} strokeWidth={2.25} aria-hidden />
-                  <span>{p!.try}</span>
-                </p>
-              ) : (
-                <button className="link-btn pressure-ask" onClick={() => setShowFix(true)}>
-                  <Lightbulb size={13} aria-hidden /> What could fix this?
-                </button>
-              ))}
+            {state === 'binding' && (
+              <div className="pressure-hints" aria-live="polite">
+                {depth > 0 && (
+                  <div className="pressure-try">
+                    <Lightbulb size={14} strokeWidth={2.25} aria-hidden />
+                    <div className="pressure-steps">
+                      {steps.slice(0, depth).map((text, i) => (
+                        <p key={i}>
+                          <strong>{HINT_LABELS[i]}</strong> {text}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {depth < 3 && (
+                  <button className="link-btn pressure-ask" onClick={more}>
+                    <Lightbulb size={13} aria-hidden /> {depth === 0 ? 'Need a hint?' : depth === 1 ? 'Another hint' : 'Show me the fix'}
+                  </button>
+                )}
+              </div>
+            )}
             {state === 'stable' && <p className="pressure-try">{p!.try}</p>}
           </>
         )}

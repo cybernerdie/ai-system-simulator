@@ -117,7 +117,7 @@ export const PROD_LEVELS: Scenario[] = [
           {
             text: 'A record of what each failed request saw and did',
             right: true,
-            why: 'Keep a trace of every failed request, plus a small sample of the rest: the question, what search returned and the exact prompt the model received. Then a wrong answer can be explained in an hour or two.',
+            why: 'Nothing records the question, what search returned or the exact prompt the model received. Without that, every wrong answer is two days of guessing.',
           },
           {
             text: 'A record of timings and errors, without the prompts',

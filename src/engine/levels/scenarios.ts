@@ -320,7 +320,7 @@ const CORE: Scenario[] = [
           {
             text: 'Nothing checks the messages going in or the answers coming out',
             right: true,
-            why: 'Whatever a customer types goes straight to the model, and whatever it writes goes straight back. One check on the way in catches most attacks; another on the way out catches what slips through.',
+            why: 'Whatever a customer types goes straight to the model, and whatever it writes goes straight back. Nothing in between looks for tricks.',
           },
           {
             text: 'Too many people are using it at once',
@@ -461,7 +461,7 @@ const CORE: Scenario[] = [
           {
             text: 'Nothing is shown until the whole answer is written and checked',
             right: true,
-            why: "The model writes word by word, but the Output Judge has to read the finished answer before anything is shown. Sending words as they're written fixes the wait, but only once nothing downstream needs the full answer.",
+            why: "The model writes word by word, but the Output Judge has to read the finished answer before anything is shown. Until nothing has to wait for the whole answer, the first word can't arrive early.",
           },
           {
             text: 'Searching the help pages is slow',
@@ -730,19 +730,19 @@ const CORE: Scenario[] = [
         fixed: 'Yes, Saturday delivery is available. You can change the day under Orders until 6pm the day before.',
       },
       predict: {
-        question: 'Your provider is failing 7 in 10 calls. What keeps your bot answering?',
+        question: "Why does one provider's outage take your whole bot down?",
         options: [
           {
-            text: 'Retry failed calls more times',
+            text: "The failed calls aren't being retried enough",
             why: "A retry or two helps with brief blips. In a real outage, extra retries pile more load onto a struggling provider: at five retries almost 9 in 10 calls fail, and replies get slower. That's called a retry storm.",
           },
           {
-            text: 'Send failed calls to a second provider',
+            text: 'Every call depends on that one provider, with nowhere else to go',
             right: true,
-            why: "If one provider fails, the call goes somewhere else that's up. The backup doesn't need to be identical, just good enough to keep you answering.",
+            why: "When the only provider fails, every request that needs it fails too. Asking the same struggling service again doesn't change that; the call needs somewhere else that's up.",
           },
           {
-            text: 'Wait for the provider to fix it',
+            text: "It's temporary: the provider will fix it soon",
             why: 'Outages can last hours, and every minute your customers see errors. If you depend on one provider, you can never be more reliable than it is.',
           },
         ],
@@ -864,20 +864,20 @@ const CORE: Scenario[] = [
         fixed: '€50. €40 is 80% of the original, and 40 ÷ 0.8 = 50.',
       },
       predict: {
-        question: 'How do you get the hard ones right without blowing the budget?',
+        question: 'Why does it get questions like this wrong?',
         options: [
           {
-            text: 'Use the large model for everything',
-            why: 'It gets more right, but costs five times as much, over budget. Most of that goes on questions the medium model already handled.',
+            text: 'The model is too small for maths',
+            why: 'A large model gets more right, but costs five times as much, over budget. And it still answers in one go, the same way that produced €48.',
           },
           {
-            text: 'Let the model think a little before answering',
+            text: 'It answers in one go, without working through the steps',
             right: true,
-            why: 'Working through the steps before answering fixes most multi-step mistakes. A low thinking budget gets most of the gain for a fraction of the cost and wait.',
+            why: 'A person solves this in two steps: €40 is 80% of the price, so divide by 0.8. The model writes its answer straight away, and "add 20% back" is the tempting shortcut. Given room to work through the steps first, it gets most of these right.',
           },
           {
-            text: 'Turn thinking all the way up',
-            why: "It's the most accurate, but answers take about 40 seconds and cost seven times as much. Thinking is written before the first visible word, and you pay for every token of it.",
+            text: 'The question is ambiguous',
+            why: 'It has exactly one right answer, €50, and people who work it through get there. The problem is how the model answers, not the question.',
           },
         ],
       },
@@ -1191,20 +1191,20 @@ const CORE: Scenario[] = [
         fixed: 'Category: HW-PUMP-SEAL. Priority: medium.',
       },
       predict: {
-        question: 'How do you get the bot to use your categories?',
+        question: 'Why does the bot keep inventing categories?',
         options: [
           {
-            text: 'Use the large model',
-            why: 'It invents fewer labels and just reaches your accuracy goal, but costs five times as much, more than 10 times your budget. It still has never seen your categories.',
+            text: 'The model is too small to follow a list of 40',
+            why: 'A large model invents fewer and just reaches your accuracy goal, but costs more than 10 times your budget. It still has never seen your categories used.',
           },
           {
-            text: 'Fine-tune a small model on your past tickets, and keep retrieval',
+            text: 'It has never seen your categories used',
             right: true,
-            why: 'Thousands of correctly labelled past tickets teach a small model your categories and your format. Help-centre questions still need the docs, so search stays.',
+            why: 'Your 40 labels are yours alone. Listing them in a prompt helps a little, but the model has never seen thousands of tickets sorted into them, so it falls back on sensible-sounding labels of its own.',
           },
           {
-            text: "Fine-tune it and drop retrieval: it'll learn the docs too",
-            why: 'Fine-tuning teaches behaviour, not facts. Without search, help questions go wrong and overall accuracy falls below where you started.',
+            text: "The help-centre docs don't mention the categories",
+            why: "Search finds help pages, and that's what answers customers' questions. Sorting tickets is a different job: it's about knowing your labels, not looking up facts.",
           },
         ],
       },
@@ -1327,20 +1327,20 @@ const CORE: Scenario[] = [
         fixed: 'Yes, Maria, MRI scans are covered up to €800 under your policy.',
       },
       predict: {
-        question: 'How do you stop personal data leaving, without breaking the bot?',
+        question: "The answer is right. So what's the problem?",
         options: [
           {
-            text: 'Block any message that contains personal details',
-            why: 'Half of all questions contain some. Blocking them breaks the product for half your customers, who need those details to get an answer.',
+            text: "Customers shouldn't be sharing personal details",
+            why: 'They need to: half of all claim questions only make sense with them. Turning those away would break the product for half your customers.',
           },
           {
-            text: 'Remove personal details before the prompt leaves, put them back in the answer',
+            text: 'Personal details leave your systems with every claim question',
             right: true,
-            why: "Names and numbers become placeholders like [NAME] on the way out, and the real values go back into the reply. The model doesn't need to know who Maria is to read her policy.",
+            why: "Maria's name, policy number and medical details reach the provider, and so do everyone else's. The model doesn't need to know who she is to read her policy; it only needs the question.",
           },
           {
-            text: 'Ask the provider not to keep the data',
-            why: 'Retention settings are worth having, but the data still leaves your systems, which is exactly what compliance objects to.',
+            text: "It's the provider's job to keep the data safe",
+            why: 'Their retention settings are worth having, but the data has still left your systems, which is exactly what compliance objects to.',
           },
         ],
       },
@@ -1537,7 +1537,7 @@ const CORE: Scenario[] = [
           {
             text: 'The model is set to pick words adventurously',
             right: true,
-            why: "At each step the model chooses from likely next tokens. A high temperature lets it pick less likely ones, which is good for varied product descriptions and bad when there's exactly one right number.",
+            why: "At each step the model chooses from likely next tokens. It's set to pick less likely ones now and then, which is good for varied product descriptions and bad when there's exactly one right number.",
           },
         ],
       },
@@ -1660,17 +1660,20 @@ const CORE: Scenario[] = [
         fixed: 'Filed the invoice under Billing. No other action needed.',
       },
       predict: {
-        question: 'How do you stop this without stopping the agent sending replies?',
+        question: 'Why did the agent forward the invoices?',
         options: [
           {
-            text: 'Add an Input Guardrail',
-            why: 'It only reads what users type in the chat, and this attack arrived inside an email. Almost every hijack still gets through, and the guard blocks some honest requests.',
+            text: 'A customer attacked it through the chat',
+            why: 'Nobody typed anything suspicious. A check on what users type would never have seen this, because it arrived inside an email the agent read.',
           },
-          { text: 'Take away its permission to send', why: 'No more forwarded invoices, but customers lose the replies they rely on: far fewer requests get done.' },
           {
-            text: 'Clean what it reads, and check risky actions before they happen',
+            text: 'It obeyed instructions hidden in an email, and could send without asking',
             right: true,
-            why: 'A sanitiser strips or flags instructions hidden in content, and an approval step checks actions like sending to a new address. Each one alone still lets some attacks through; together they stop them.',
+            why: "To the model, text inside an email looks just like an instruction, and nothing stood between reading it and acting on it. Two things went wrong: what it read was trusted, and a risky action needed nobody's OK.",
+          },
+          {
+            text: "It shouldn't be allowed to send email at all",
+            why: 'That would stop this attack, but customers rely on the replies it sends for them: far fewer requests would get done.',
           },
         ],
       },

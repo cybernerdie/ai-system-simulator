@@ -210,7 +210,7 @@ export const BOSSES: Scenario[] = [
           {
             text: 'None: each problem needs its own fix',
             right: true,
-            why: "Failover handles the outage, structured output handles the format, and a fresh, table-aware index handles the figures. None of them helps with the others' problem.",
+            why: 'The outage, the out-of-date figures and the broken format have different causes, so each needs its own fix. Work out which earlier lesson each one is.',
           },
           { text: 'A bigger model', why: 'It fails just as often, because the provider is down, reads the same old figures, and costs five times as much.' },
         ],
@@ -277,9 +277,9 @@ export const BOSSES: Scenario[] = [
             why: 'The bill drops a lot, but right answers fall to about 2 in 3, about 1 in 10 requests still fail, and personal data still leaves.',
           },
           {
-            text: 'The same prompt at full price, live prices for work that can wait, and a general model for a narrow job',
+            text: "Paying full price for things that don't need it",
             right: true,
-            why: 'Each is waste you can remove: cache the prompt, batch the overnight work, and fine-tune a small model for the sorting. Redacting personal data is the separate fix legal needs.',
+            why: 'Three kinds of waste: the same long prompt processed again and again, live prices for work nobody is waiting on, and a general model doing a narrow job. Personal data leaving is a separate problem, the one legal cares about.',
           },
           {
             text: "There's simply too much traffic",
@@ -339,18 +339,21 @@ export const BOSSES: Scenario[] = [
         fixed: 'The invoice total is €1,284.00, due 15 December.',
       },
       predict: {
-        question: 'Four things are going wrong. What do they have in common?',
+        question: "The answer is right. So what's the problem?",
         options: [
           {
-            text: 'Nothing: rate-limit the scripts and the rest goes away',
-            why: 'Failures drop to almost nothing, but hijacked emails still trigger forwards just as often, and totals are still random.',
+            text: "Customers shouldn't be sharing personal details",
+            why: 'They need to: half of all claim questions only make sense with them. Turning those away would break the product for half your customers.',
           },
           {
-            text: 'Each needs a control at a different point',
+            text: 'Personal details leave your systems with every claim question',
             right: true,
-            why: "Who sends (per-user limits), what the agent reads (a sanitiser), what it may do without asking (approval) and how random it is (temperature). One layer can't cover another's problem.",
+            why: "Who can send how much, what the agent reads, what it may do without asking, and how random its answers are. Each is a different point in the system, and fixing one doesn't touch the others.",
           },
-          { text: "Turn off sending until it's safe", why: 'No forwarded invoices, but far fewer requests get done, and scripts still crowd out real users.' },
+          {
+            text: "It's the provider's job to keep the data safe",
+            why: 'Their retention settings are worth having, but the data has still left your systems, which is exactly what compliance objects to.',
+          },
         ],
       },
       named: {
@@ -419,7 +422,7 @@ export const BOSSES: Scenario[] = [
           {
             text: 'Fast cache hits are hiding slow, expensive model calls',
             right: true,
-            why: 'Most answers come straight from the cache, so the typical time looks great. The rest go through a reranker keeping only one chunk, to a model thinking hard about everything. Three bugs, each hiding the others.',
+            why: 'Most answers come straight from the cache, so the typical time looks great. The rest go on to search and a model whose settings someone changed, and those are slow and expensive. Three bugs, each hiding the others.',
           },
           {
             text: 'Turn off the cache and the problems go away',

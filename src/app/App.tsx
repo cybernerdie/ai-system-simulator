@@ -10,6 +10,7 @@ import { INCIDENTS, INCIDENT_SCENARIO, formatDuration, type IncidentState } from
 import { ACHIEVEMENTS, type Progress } from '../engine/modes/achievements';
 import { autoWire, removeAndHeal, tidyLayout } from '../engine/autowire';
 import { scoreStars, starTips, type StarResult } from '../engine/stars';
+import { fixFor } from '../engine/pressures';
 import { paletteLocks, settingLocks } from '../engine/unlocks';
 import type { Review } from '../engine/review';
 import type { ComponentType, ConfigValue, Metrics, TrafficProfile } from '../engine/types';
@@ -136,6 +137,9 @@ export default function App() {
   /** Stars already celebrated this session per level, so improving a level celebrates again. */
   const awarded = useRef(new Map<string, number>());
   const heldNotice = useRef<string | null>(null);
+  // how far into the hints this attempt has gone; clearing without the last step earns "no hints"
+  const [hintDepth, setHintDepth] = useState(0);
+  const noteHint = useCallback((d: number) => setHintDepth((h) => Math.max(h, d)), []);
 
   // preferences
   const [theme, toggleTheme] = useTheme();
@@ -272,6 +276,7 @@ export default function App() {
       // a fresh start (load or reset) is a fresh attempt: clearing it again shows the results again
       awarded.current.delete(s.id);
       heldNotice.current = null;
+      setHintDepth(0);
       setNodes(f.nodes);
       setEdges(f.edges);
       setRps(s.traffic.rps);
@@ -860,6 +865,8 @@ export default function App() {
           running={running}
           hasRun={!!metrics}
           hold={goals.length && !isIncident ? { streak, needed: HOLD_TICKS } : undefined}
+          fix={pressure ? fixFor(pressure, graph) : undefined}
+          onHint={noteHint}
           hud={isIncident && incident ? <IncidentHud s={incident} /> : undefined}
         />
         <Telemetry m={metrics} history={sim.history} goals={goals} focus={goals.length > 0} showAll={allNumbers} onToggleAll={toggleAllNumbers} />
@@ -891,6 +898,7 @@ export default function App() {
         onResetMix={() => setMixOverride(null)}
         onReview={EMBED ? undefined : openReview}
         onShowCase={() => setCaseOpen(true)}
+        onHint={() => noteHint(3)}
       />
 
       <ErrorBoundary>
@@ -1025,6 +1033,7 @@ export default function App() {
               kicker={winKicker}
               result={result}
               tips={starTipsShown}
+              noHints={hintDepth < 3}
               best={stars[scenario.id] ?? 0}
               nextLabel={nextLabel}
               quiz={QUIZ[scenario.id]}

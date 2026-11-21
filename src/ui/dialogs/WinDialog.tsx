@@ -13,6 +13,7 @@ export function WinDialog({
   kicker,
   result,
   tips,
+  noHints,
   best,
   nextLabel,
   lesson,
@@ -35,6 +36,8 @@ export function WinDialog({
   result: StarResult | null;
   /** For each missed star, one change that would have earned it. */
   tips?: StarTips | null;
+  /** Cleared without opening the last hint (the exact fix) or the level's own hint. */
+  noHints?: boolean;
   best: number;
   nextLabel: string;
   lesson?: Lesson;
@@ -69,6 +72,7 @@ export function WinDialog({
           {best > n && ` · your best is ${best} stars`}
         </p>
         <h2 id="win-title">{displayTitle(s)}</h2>
+        {noHints && <p className="win-badge">Worked out without being shown the fix</p>}
         {s.case && (
           <section className="win-replay">
             <p className="win-replay-label">{s.case.chat.userLabel ? 'Same request, this time:' : 'Same customer, same question:'}</p>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SCENARIOS } from './scenarios';
 import { BOSSES } from './bosses';
+import { COMPONENTS } from '../components';
 
 /** Case files are read word for word by players, so their structure has to hold. */
 describe('case files', () => {
@@ -26,4 +27,20 @@ describe('case files', () => {
       expect(c.job).toMatch(/\.$/);
     });
   }
+});
+
+describe('case files explain the cause, not the fix', () => {
+  // naming the part to add would turn the level into following instructions; the win screen names it instead
+  it('never name a component the solution adds, in the story, the question or any answer', () => {
+    const giveaways: string[] = [];
+    for (const s of [...SCENARIOS, ...BOSSES]) {
+      if (!s.case) continue;
+      const start = new Set(s.nodes.map((n) => n.type));
+      const added = [...new Set(s.solution.nodes.map((n) => n.type))].filter((t) => !start.has(t));
+      const c = s.case;
+      const text = [c.job, c.chat.truth, c.predict.question, ...c.predict.options.flatMap((o) => [o.text, o.why])].join(' ').toLowerCase();
+      for (const t of added) if (text.includes(COMPONENTS[t].name.toLowerCase())) giveaways.push(`${s.id}: ${COMPONENTS[t].name}`);
+    }
+    expect(giveaways).toEqual([]);
+  });
 });

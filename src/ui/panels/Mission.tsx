@@ -54,8 +54,11 @@ export function Mission({
   onResetMix,
   onReview,
   onShowCase,
+  onHint,
 }: {
   onShowCase?: () => void;
+  /** The level's own hint gives the plan away, so it counts as using every hint. */
+  onHint?: () => void;
   scenario: Scenario;
   m: Metrics | null;
   streak: number;
@@ -142,7 +145,13 @@ export function Mission({
             <span>{s.hint}</span>
           </div>
         ) : (
-          <button className="btn btn-ghost btn-block" onClick={() => setHint(true)}>
+          <button
+            className="btn btn-ghost btn-block"
+            onClick={() => {
+              setHint(true);
+              onHint?.();
+            }}
+          >
             <Lightbulb size={14} aria-hidden /> Show a hint
           </button>
         ))}

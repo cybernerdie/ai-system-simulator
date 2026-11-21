@@ -45,17 +45,14 @@ export const BUG_LEVELS: Scenario[] = [
         options: [
           {
             text: 'The small model is too weak',
-            why: 'The model never saw this question. A medium model behind the same cache gets barely more right and costs almost 20 times as much.',
+            why: 'The model never saw this question. A medium model behind the same setup gets barely more right and costs almost 20 times as much.',
           },
           {
-            text: "The cache treats questions as the same when they're only similar",
+            text: 'It was served an answer written for a different question',
             right: true,
-            why: 'A semantic cache compares meanings, and its threshold sets how close two questions must be. Set too loose, "cancel Pro" and "upgrade to Pro" count as the same question, so one gets the other\'s stored answer.',
+            why: 'The bot didn\'t misunderstand. It handed back an answer stored for an earlier question that sounds similar, "How do I upgrade to Pro?". Something in your system decided the two were the same.',
           },
-          {
-            text: 'The cancellation docs are wrong',
-            why: "They're right, but they were never read. The answer was served straight from the cache, before search or the model ran.",
-          },
+          { text: 'The cancellation docs are wrong', why: "They're right, but they were never read: the answer came back before search or the model ran." },
         ],
       },
       named: {
@@ -113,12 +110,12 @@ export const BUG_LEVELS: Scenario[] = [
         options: [
           {
             text: 'The model has a bad memory: use the large one',
-            why: "Models don't remember anything between messages; they only see what they're sent. A large model gets the same 2 messages, barely does better, and costs five times as much.",
+            why: "Models don't remember anything between messages; they only see what they're sent. A large model gets the same partial chat, barely does better, and costs five times as much.",
           },
           {
-            text: "It's only sent the last two messages each time",
+            text: 'Most of the conversation never reaches the model',
             right: true,
-            why: 'The memory window is set to 2, so anything said earlier never reaches the model. Cheap, but the plan, the goal and the sore knee all fall out of view.',
+            why: "Each new message goes to the model with only part of the chat, and the plan, the goal and the sore knee are in the part that's left out. Something is dropping too much.",
           },
           {
             text: 'Send the whole conversation every time',
@@ -182,14 +179,14 @@ export const BUG_LEVELS: Scenario[] = [
         options: [
           {
             text: "It isn't: customers just need to rephrase",
-            why: "They're asking ordinary questions in ordinary words. They don't know what tripped the guard, so most give up, and right answers fall to about 6 in 10.",
+            why: "They're asking ordinary questions in ordinary words. They don't know what tripped the check, so most give up, and right answers fall to about 6 in 10.",
           },
           {
-            text: 'The guard is so strict it blocks honest messages too',
+            text: 'Real customers are being turned away too',
             right: true,
-            why: 'Every guard trades blocked attacks for blocked customers. At maximum strictness it flags anything slightly unusual, and many real questions look slightly unusual.',
+            why: 'Whatever is stopping attacks is also stopping "How do I reset my password?". A check set to catch everything slightly unusual catches a lot of honest questions.',
           },
-          { text: 'Turn the guard off: the output judge is enough', why: 'Without it, about 1 in 4 attacks get through. You need it on, just not at maximum.' },
+          { text: 'Take the safety checks off: attacks are rare', why: 'Without them, about 1 in 4 attacks get through. The checks are needed, just not like this.' },
         ],
       },
       named: {
@@ -247,11 +244,14 @@ export const BUG_LEVELS: Scenario[] = [
       predict: {
         question: "Search found both pages. Why does the bot say it couldn't find them?",
         options: [
-          { text: 'Search needs to bring back more results', why: 'It already finds the right pages. Bringing back 30 changes nothing, because only one reaches the model.' },
           {
-            text: 'The reranker only lets one chunk through',
+            text: 'Search needs to bring back more results',
+            why: "It already finds the right pages. Bringing back 30 changes nothing, because the extra ones don't reach the model either.",
+          },
+          {
+            text: 'Only part of what search found reaches the model',
             right: true,
-            why: 'The reranker is set to keep 1. A question that needs two facts can never get both, so the model guesses or gives up.',
+            why: 'Search found both pages, but somewhere between search and the model, all but one chunk is thrown away. A question that needs two facts can never get both.',
           },
           {
             text: 'The model is too small to combine two facts',
@@ -312,15 +312,15 @@ export const BUG_LEVELS: Scenario[] = [
       predict: {
         question: 'Why does a simple question take 40 seconds?',
         options: [
-          { text: 'The model is too big: switch to the small one', why: "It's cheaper, but still thinks hard about everything, so replies still take about 18 seconds." },
+          { text: 'The model is too big: switch to the small one', why: "It's cheaper, but still spends ages on every question, so replies still take about 18 seconds." },
           {
-            text: 'Turning thinking down to low will fix it',
-            why: 'Better, but every reply still takes about 13 seconds and costs twice your budget. Three in four of these questions are simple and need no thinking at all.',
+            text: 'Simple questions need less reasoning than hard ones',
+            why: "True, but the model doesn't decide that for itself here: something tells it how much to work on every question.",
           },
           {
-            text: 'It thinks hard about every question, even simple ones',
+            text: 'It does a lot of hidden work before answering, even for simple questions',
             right: true,
-            why: 'Thinking is written before the first visible word and billed like any output. Most of your questions are simple; turned off, answers are still right more than 9 times in 10.',
+            why: 'Something makes the model reason at length before writing a word, on every question, and you pay for every token of it. "What are your opening hours?" doesn\'t need any of it.',
           },
         ],
       },

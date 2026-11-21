@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { PortraitContext } from './portrait';
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { Handle, Position, useViewportStore, type Node, type NodeProps } from '@xyflow/react';
 import { COMPONENTS } from '../../engine/components';
 import type { ComponentType, NodeConfig, NodeStat } from '../../engine/types';
 import type { ZoneKey } from './zones';
@@ -73,24 +73,36 @@ function chips(kind: ComponentType, config: NodeConfig): string[] {
       return config.multilingual ? ['multilingual'] : [];
     case 'input_guard':
       return [`strict ${Number(config.strictness).toFixed(2)}`];
+    case 'batch_queue':
+      // drawn in the path, so say plainly that live requests don't wait in it
+      return ['only work that can wait', 'live chats pass straight through'];
     default:
       return [];
   }
 }
+
+/** Below this zoom, card text would be too small to read. */
+const FAR_ZOOM = 0.85;
+
+/** How much to enlarge text at the current zoom: 1 when it's readable as is, up to 2.6 when zoomed far out. */
+const useFar = () => useViewportStore((st) => Math.round(Math.min(2.6, Math.max(1, FAR_ZOOM / st.transform[2])) * 10) / 10);
 
 export function SimNodeView({ data, selected }: NodeProps<SimFlowNode>) {
   const portrait = useContext(PortraitContext);
   const spec = COMPONENTS[data.kind];
   const status = data.running ? (data.stat?.status ?? 'idle') : 'idle';
   const tags = chips(data.kind, data.config);
+  // zoomed far out (a busy design fitted to the screen), names and status grow so they stay readable
+  // and the detail chips step aside; rounded so panning doesn't re-render every node every frame
+  const far = useFar();
   return (
-    <div className={`simnode status-${status}${selected ? ' is-selected' : ''}`}>
+    <div className={`simnode status-${status}${selected ? ' is-selected' : ''}${far > 1 ? ' is-far' : ''}`} style={far > 1 ? ({ '--far': far } as React.CSSProperties) : undefined}>
       {data.kind !== 'users' && <Handle type="target" position={portrait ? Position.Top : Position.Left} />}
       <div className="simnode-head">
         <KindIcon kind={data.kind} />
         <span className="simnode-name">{spec.name}</span>
       </div>
-      {tags.length > 0 && (
+      {tags.length > 0 && far === 1 && (
         <div className="simnode-chips">
           {tags.map((t) => (
             <span key={t}>{t}</span>
@@ -109,8 +121,9 @@ export function SimNodeView({ data, selected }: NodeProps<SimFlowNode>) {
 export type ZoneFlowNode = Node<{ zone: ZoneKey; label: string }, 'zone'>;
 
 export function ZoneView({ data }: NodeProps<ZoneFlowNode>) {
+  const far = useFar();
   return (
-    <div className={`zone zone-${data.zone}`} aria-hidden>
+    <div className={`zone zone-${data.zone}${far > 1 ? ' is-far' : ''}`} style={far > 1 ? ({ '--far': far } as React.CSSProperties) : undefined} aria-hidden>
       <span className="zone-label">{data.label}</span>
     </div>
   );

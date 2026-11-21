@@ -258,7 +258,31 @@
   margin-top: var(--sp-2);
 }
 
+.pressure-hints {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.pressure-hints .pressure-ask {
+  justify-self: start;
+}
+
+.pressure-try strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
 .pressure-hold {
   max-width: 320px;
   margin-top: 10px;
+}
+
+.pressure-steps {
+  display: grid;
+  gap: 6px;
+}
+
+.pressure-steps p {
+  margin: 0;
 }

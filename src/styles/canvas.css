@@ -425,3 +425,27 @@
 .change-shifts .is-revealed .change-values strong {
   color: var(--ink);
 }
+
+/* zoomed far out: the name and status grow by --far (set per node from the zoom) so they stay readable */
+.simnode.is-far .simnode-name {
+  font-size: calc(13.5px * var(--far));
+  font-weight: 600;
+}
+
+.simnode.is-far .simnode-stat {
+  font-size: calc(11.5px * var(--far));
+}
+
+.simnode.is-far .simnode-head svg {
+  width: calc(16px * var(--far));
+  height: calc(16px * var(--far));
+}
+
+.zone.is-far .zone-label {
+  /* bigger text, but never wider than its own band: neighbouring labels would run into each other */
+  right: 14px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: calc(11.5px * var(--far));
+}

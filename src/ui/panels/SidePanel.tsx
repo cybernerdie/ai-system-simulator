@@ -29,9 +29,11 @@ export function SidePanel({
   onResetMix,
   onReview,
   onShowCase,
+  onHint,
 }: {
   onReview?: () => void;
   onShowCase?: () => void;
+  onHint?: () => void;
   traffic: TrafficProfile;
   onMix: (patch: Partial<TrafficProfile>) => void;
   onResetMix: () => void;
@@ -86,6 +88,7 @@ export function SidePanel({
           onResetMix={onResetMix}
           onReview={onReview}
           onShowCase={onShowCase}
+          onHint={onHint}
         />
       ) : tab === 'requests' ? (
         <RequestsPanel samples={m?.samples ?? []} running={running} picked={picked} onPick={onPick} qualityVisible={m?.qualityVisible ?? true} />
